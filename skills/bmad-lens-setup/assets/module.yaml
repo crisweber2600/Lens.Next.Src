@@ -1,0 +1,73 @@
+code: lens
+name: "LENS"
+description: "BMAD-native slice orchestration and evolving knowledge topology for discovery, focused execution, traceability, validation, and correction."
+module_version: 1.0.0
+default_selected: false
+module_greeting: >
+  LENS is registered. Use bmad-lens-help to choose a top-down discovery,
+  bottom-up slice, BMAD packet, guard, validation, Salmon, Doctor, or Auspex path.
+
+lens_output_folder:
+  prompt: "Where should LENS store its archive, landscape, graph, bridge, validation, Salmon, and Auspex artifacts?"
+  default: "{project-root}/_bmad-output/lens"
+  result: "{project-root}/{value}"
+
+lens_archive_folder:
+  prompt: "Where should the LENS Work Archive live?"
+  default: "{project-root}/_bmad-output/lens/archive"
+  result: "{project-root}/{value}"
+
+lens_landscape_folder:
+  prompt: "Where should the LENS Living Landscape live?"
+  default: "{project-root}/_bmad-output/lens/landscape"
+  result: "{project-root}/{value}"
+
+lens_graph_folder:
+  prompt: "Where should LENS write Derived Map projections?"
+  default: "{project-root}/_bmad-output/lens/graph"
+  result: "{project-root}/{value}"
+
+lens_slices_folder:
+  prompt: "Where should LENS store active slice records?"
+  default: "{project-root}/_bmad-output/lens/slices"
+  result: "{project-root}/{value}"
+
+lens_journeys_folder:
+  prompt: "Where should LENS store journey records?"
+  default: "{project-root}/_bmad-output/lens/journeys"
+  result: "{project-root}/{value}"
+
+lens_intent_folder:
+  prompt: "Where should LENS store system intent artifacts?"
+  default: "{project-root}/_bmad-output/lens/intent"
+  result: "{project-root}/{value}"
+
+lens_gates_folder:
+  prompt: "Where should LENS store gates and readiness checks?"
+  default: "{project-root}/_bmad-output/lens/gates"
+  result: "{project-root}/{value}"
+
+lens_bridge_folder:
+  prompt: "Where should LENS store BMAD bridge packets and sync reports?"
+  default: "{project-root}/_bmad-output/lens/bmad-bridge"
+  result: "{project-root}/{value}"
+
+lens_implementation_folder:
+  prompt: "Where should LENS store implementation guard artifacts?"
+  default: "{project-root}/_bmad-output/lens/implementation"
+  result: "{project-root}/{value}"
+
+lens_validation_folder:
+  prompt: "Where should LENS store validation results?"
+  default: "{project-root}/_bmad-output/lens/validation-results"
+  result: "{project-root}/{value}"
+
+lens_salmon_folder:
+  prompt: "Where should LENS store Salmon correction artifacts?"
+  default: "{project-root}/_bmad-output/lens/salmon"
+  result: "{project-root}/{value}"
+
+lens_auspex_folder:
+  prompt: "Where should LENS store Auspex read-only status artifacts?"
+  default: "{project-root}/_bmad-output/lens/auspex"
+  result: "{project-root}/{value}"

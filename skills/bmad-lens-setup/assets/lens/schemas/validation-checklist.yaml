@@ -1,0 +1,11 @@
+checks:
+  - module structure includes bmad-lens-setup and all required bmad-lens-* skills
+  - setup skill includes assets/module.yaml and assets/module-help.csv
+  - module-help.csv exposes all LENS capabilities with unique menu codes
+  - marketplace manifest lists all LENS skill folders
+  - schemas include required knowledge states, confidence levels, entities, relationship types, and gates
+  - templates include slice, discovery epoch, BMAD packet, impact map, story guard, Salmon, Doctor, and Auspex shapes
+  - examples cover top-down education and bottom-up model images without scaffolding an application
+  - evals cover discovery routing, bottom-up slice discipline, promotion pressure, focused BMAD packets, guard-story, Salmon, Doctor, and Auspex
+  - Derived Map is documented as generated projection, not source truth
+  - project-context.md includes traceability, scope, architecture, and Salmon rules

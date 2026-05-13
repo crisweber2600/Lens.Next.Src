@@ -1,0 +1,24 @@
+salmon_signal:
+  id: salmon.001
+  kind: salmon_signal
+  name: Upstream Correction Signal
+  status: raw
+  confidence: medium
+  created_at: "YYYY-MM-DD"
+  updated_at: "YYYY-MM-DD"
+  source_refs: []
+  relationships: []
+  open_questions: []
+  raised_from: story.example
+  severity: low|medium|high|critical
+  discovery: ""
+  impacted_nodes: []
+  recommended_action:
+    type: local_note|landscape_update|validate_again|correct_course
+    reason: ""
+  bmad_action:
+    suggested_workflow: null
+  propagation_report: []
+  decision_record:
+    status: pending
+  sync_status: not_synced

@@ -1,0 +1,148 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LENS Entity Metadata Schema",
+  "type": "object",
+  "required": [
+    "id",
+    "kind",
+    "name",
+    "status",
+    "confidence",
+    "created_at",
+    "updated_at",
+    "source_refs",
+    "relationships",
+    "open_questions"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "system",
+        "system_thesis",
+        "discovery_epoch",
+        "session",
+        "source",
+        "extraction",
+        "slice",
+        "artifact",
+        "adjacency",
+        "relationship",
+        "role",
+        "stakeholder",
+        "outcome",
+        "operating_loop",
+        "journey",
+        "journey_step",
+        "capability",
+        "domain",
+        "service",
+        "workstream",
+        "program",
+        "decision",
+        "assumption",
+        "unknown",
+        "risk",
+        "evidence",
+        "salmon_signal",
+        "auspex_status",
+        "bmad_packet",
+        "validation_result"
+      ]
+    },
+    "name": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "raw",
+        "extracted",
+        "hypothesized",
+        "challenged",
+        "reviewed",
+        "approved",
+        "validated",
+        "superseded",
+        "archived"
+      ]
+    },
+    "confidence": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ]
+    },
+    "created_at": {
+      "type": "string"
+    },
+    "updated_at": {
+      "type": "string"
+    },
+    "source_refs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "relationships": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "open_questions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "validity": {
+      "type": "string",
+      "enum": [
+        "current",
+        "stale",
+        "needs_review"
+      ]
+    }
+  },
+  "additionalProperties": true,
+  "x_lens_entities": [
+    "system",
+    "system_thesis",
+    "discovery_epoch",
+    "session",
+    "source",
+    "extraction",
+    "slice",
+    "artifact",
+    "adjacency",
+    "relationship",
+    "role",
+    "stakeholder",
+    "outcome",
+    "operating_loop",
+    "journey",
+    "journey_step",
+    "capability",
+    "domain",
+    "service",
+    "workstream",
+    "program",
+    "decision",
+    "assumption",
+    "unknown",
+    "risk",
+    "evidence",
+    "salmon_signal",
+    "auspex_status",
+    "bmad_packet",
+    "validation_result"
+  ]
+}

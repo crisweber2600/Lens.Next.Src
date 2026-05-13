@@ -1,0 +1,85 @@
+{
+  "skill_name": "bmad-lens-module",
+  "evals": [
+    {
+      "id": "top_down_routes_to_discovery",
+      "prompt": "Run headless. A user says they want a large ambiguous school improvement platform. Produce the LENS routing decision and first artifact plan.",
+      "expected_output": "Routes to LENS discovery and context sufficiency before BMAD PRD.",
+      "expectations": [
+        "Recommends bmad-lens-discover before bmad-create-prd.",
+        "Mentions discovery epoch, raw capture, extracted hypotheses, context sufficiency, and selected vertical slice.",
+        "States that PRD is not ready until context sufficiency passes."
+      ]
+    },
+    {
+      "id": "bottom_up_remains_slice",
+      "prompt": "Run headless. A user says: I want to download images from 3D printing model websites. Produce the LENS artifact plan.",
+      "expected_output": "Creates a slice and does not create platform/system/domain/capability by default.",
+      "expectations": [
+        "Creates or recommends slice.download_model_images.",
+        "Records artifact.model_image_set as produced output.",
+        "Explicitly avoids creating a platform, system, domain, service, or capability by default."
+      ]
+    },
+    {
+      "id": "repeated_pressure_promotion_candidate",
+      "prompt": "Run headless. Multiple slices reuse artifact.model_image_set and repeat image metadata classification. Produce the promotion response.",
+      "expected_output": "Creates an evidence-backed promotion candidate but not automatic promotion.",
+      "expectations": [
+        "Lists repeated pressure evidence.",
+        "Creates a promotion_candidate or promotion_gate.",
+        "Sets automatic promotion to false and requires human review."
+      ]
+    },
+    {
+      "id": "focused_bmad_packet",
+      "prompt": "Run headless. Prepare a BMAD packet for slice.evidence_visible_to_teacher.",
+      "expected_output": "Focused BMAD packet with included scope, explicit exclusions, capabilities, decisions, risks, and acceptance evidence.",
+      "expectations": [
+        "Includes active slice, slice goal, included scope, explicit out of scope, required capabilities, required decisions, risks, and acceptance evidence.",
+        "Excludes AI recommendations, coaching dashboards, district analytics, and family views.",
+        "Does not dump the whole system into BMAD."
+      ]
+    },
+    {
+      "id": "guard_story_traceability",
+      "prompt": "Run headless. Validate one story that traces to slice.evidence_visible_to_teacher and one story that adds coaching dashboards without trace.",
+      "expected_output": "Passes the traceable story and fails or flags the scope-expanding story.",
+      "expectations": [
+        "Checks story_traces_to_active_slice.",
+        "Checks story_does_not_expand_scope.",
+        "Flags the coaching dashboard story as fail or needs_review."
+      ]
+    },
+    {
+      "id": "salmon_upstream_impact",
+      "prompt": "Run headless. Implementation reveals teacher access cannot be determined from class roster alone. Produce a Salmon signal.",
+      "expected_output": "Raises upstream impact and recommends BMAD correct-course when appropriate.",
+      "expectations": [
+        "Creates a salmon_signal with raised_from, severity, discovery, impacted_nodes, and recommended_action.",
+        "Includes impacted access policy or role-based visibility nodes.",
+        "Suggests bmad-correct-course for material scope or architecture assumption changes."
+      ]
+    },
+    {
+      "id": "doctor_invalid_topology",
+      "prompt": "Run headless. The LENS graph has duplicate IDs and an orphan relationship. Produce Doctor findings.",
+      "expected_output": "Detects invalid topology and writes warnings and doctor report paths.",
+      "expectations": [
+        "Detects duplicate IDs.",
+        "Detects orphaned or missing referenced relationships.",
+        "Mentions _bmad-output/lens/graph/warnings.yaml and _bmad-output/lens/graph/doctor-report.md."
+      ]
+    },
+    {
+      "id": "auspex_read_only_status",
+      "prompt": "Run headless. Produce Auspex stakeholder status from an existing Derived Map.",
+      "expected_output": "Creates read-only status artifacts from Derived Map without mutating source truth.",
+      "expectations": [
+        "Reads from _bmad-output/lens/graph/derived-map.json.",
+        "Writes status.yaml, status.json, and stakeholder-summary.md under _bmad-output/lens/auspex.",
+        "States that Auspex is read-only and not source truth."
+      ]
+    }
+  ]
+}

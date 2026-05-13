@@ -1,0 +1,53 @@
+example:
+  id: example.bottom_up_model_images
+  input: I want to download images from 3D printing model websites.
+  expected_progression:
+    - Create slice.download_model_images.
+    - Do not create system, domain, service, or capability by default.
+    - Record produced artifact artifact.model_image_set.
+    - If later slices reuse that artifact, create weak adjacency.
+    - Only after repeated pressure, suggest optional promotion.
+    - Promotion must be human-reviewed and evidence-based.
+slice:
+  id: slice.download_model_images
+  kind: slice
+  status: active
+  confidence: high
+  goal: Download model listing images locally.
+  scope:
+    includes:
+      - fetch model listing page
+      - identify image URLs
+      - download images locally
+      - record source metadata
+    excludes:
+      - model description generation
+      - safety detection
+      - moderation workflow
+      - marketplace publishing
+      - model intelligence platform
+  produces:
+    - artifact.model_image_set
+  acceptance_evidence:
+    - downloads images from supported listing URL
+    - stores source URL metadata
+    - handles missing images safely
+adjacency_example:
+  from: slice.download_model_images
+  to: slice.generate_model_description
+  reason: shared_artifact
+  shared_artifacts:
+    - artifact.model_image_set
+  strength: weak
+  recommendation: keep_independent_for_now
+promotion_candidate_example:
+  type: capability
+  id: capability.model_image_processing
+  confidence: medium
+  automatic: false
+  human_review_required: true
+  reason:
+    - repeated artifact reuse
+    - repeated workflow
+    - repeated classification need
+    - repeated metadata dependency

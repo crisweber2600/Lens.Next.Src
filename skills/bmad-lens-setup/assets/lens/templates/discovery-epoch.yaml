@@ -1,0 +1,32 @@
+discovery_epoch:
+  id: epoch.001
+  kind: discovery_epoch
+  name: Discovery Epoch
+  status: active
+  confidence: medium
+  created_at: "YYYY-MM-DD"
+  updated_at: "YYYY-MM-DD"
+  source_refs: []
+  relationships: []
+  open_questions: []
+  system: null
+  purpose: ""
+  sessions: []
+  current_focus:
+    level: null
+    target: null
+  context_sufficiency:
+    system_thesis: low
+    role_map: low
+    stakeholder_map: low
+    outcome_matrix: low
+    operating_loop_readiness: low
+    journey_map: low
+    slice_readiness: low
+    capability_readiness: low
+    architecture_readiness: not_ready
+    bmad_prd_readiness: not_ready
+  recommended_next_bmad_skills: []
+  recommended_next_lens_skills: []
+  promotion_candidates: []
+  blockers: []

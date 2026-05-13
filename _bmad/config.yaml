@@ -7,3 +7,22 @@ bmb:
   default_selected: false
   bmad_builder_output_folder: '{project-root}/skills'
   bmad_builder_reports: '{project-root}/skills/reports'
+lens:
+  name: LENS
+  description: BMAD-native slice orchestration and evolving knowledge topology for
+    discovery, focused execution, traceability, validation, and correction.
+  version: 1.0.0
+  default_selected: false
+  lens_output_folder: '{project-root}/_bmad-output/lens'
+  lens_archive_folder: '{project-root}/_bmad-output/lens/archive'
+  lens_landscape_folder: '{project-root}/_bmad-output/lens/landscape'
+  lens_graph_folder: '{project-root}/_bmad-output/lens/graph'
+  lens_slices_folder: '{project-root}/_bmad-output/lens/slices'
+  lens_journeys_folder: '{project-root}/_bmad-output/lens/journeys'
+  lens_intent_folder: '{project-root}/_bmad-output/lens/intent'
+  lens_gates_folder: '{project-root}/_bmad-output/lens/gates'
+  lens_bridge_folder: '{project-root}/_bmad-output/lens/bmad-bridge'
+  lens_implementation_folder: '{project-root}/_bmad-output/lens/implementation'
+  lens_validation_folder: '{project-root}/_bmad-output/lens/validation-results'
+  lens_salmon_folder: '{project-root}/_bmad-output/lens/salmon'
+  lens_auspex_folder: '{project-root}/_bmad-output/lens/auspex'

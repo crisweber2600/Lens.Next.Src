@@ -1,0 +1,28 @@
+slice:
+  id: slice.example
+  kind: slice
+  name: Example Slice
+  status: raw
+  confidence: low
+  created_at: "YYYY-MM-DD"
+  updated_at: "YYYY-MM-DD"
+  source_refs: []
+  relationships: []
+  open_questions: []
+  goal: ""
+  scope:
+    includes: []
+    excludes: []
+  produces: []
+  consumes: []
+  acceptance_evidence: []
+  risks: []
+  decisions_needed: []
+  optional_context:
+    system: null
+    outcome: null
+    journey: null
+    capabilities: []
+    domains: []
+    services: []
+  validation_status: not_validated

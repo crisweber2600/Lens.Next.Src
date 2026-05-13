@@ -1,0 +1,46 @@
+evals:
+  - id: lens.eval.top_down_routes_to_discovery
+    input: Large ambiguous school improvement platform idea.
+    expected:
+      - route_to: bmad-lens-discover
+      - not_route_directly_to: bmad-create-prd
+      - requires_context_check: true
+  - id: lens.eval.bottom_up_remains_slice
+    input: I want to download images from 3D printing model websites.
+    expected:
+      - creates: slice.download_model_images
+      - does_not_create_by_default: [system, domain, service, capability, platform]
+  - id: lens.eval.repeated_pressure_promotion_candidate
+    input: Multiple slices reuse artifact.model_image_set and image metadata workflow.
+    expected:
+      - creates: promotion_candidate
+      - automatic: false
+      - human_review_required: true
+  - id: lens.eval.focused_bmad_packet
+    input: Focused top-down slice evidence_visible_to_teacher.
+    expected:
+      - includes: [active_slice, included_scope, explicit_exclusions, required_capabilities, decisions, risks, acceptance_evidence]
+      - excludes: [adjacent_future_slices, speculative_platform_architecture]
+  - id: lens.eval.guard_story_traceability
+    input: One story traces to active slice and one expands scope without trace.
+    expected:
+      - traceable_story: pass
+      - untraceable_story: fail
+      - scope_expanding_story: fail
+  - id: lens.eval.salmon_upstream_impact
+    input: Implementation reveals teacher access cannot be determined from roster alone.
+    expected:
+      - creates: salmon_signal
+      - severity: high
+      - suggests_bmad_correct_course: true
+  - id: lens.eval.doctor_invalid_topology
+    input: Derived map has duplicate IDs and orphaned relationship.
+    expected:
+      - detects: [duplicate_ids, orphaned_relationship]
+      - writes: [_bmad-output/lens/graph/warnings.yaml, _bmad-output/lens/graph/doctor-report.md]
+  - id: lens.eval.auspex_read_only_status
+    input: Derived Map exists with active slices, risks, and Salmon signals.
+    expected:
+      - reads_from: _bmad-output/lens/graph/derived-map.json
+      - writes: [_bmad-output/lens/auspex/status.yaml, _bmad-output/lens/auspex/status.json, _bmad-output/lens/auspex/stakeholder-summary.md]
+      - mutates_source_truth: false

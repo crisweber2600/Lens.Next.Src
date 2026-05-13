@@ -1,0 +1,16 @@
+validation_result:
+  id: validation.001
+  kind: validation_result
+  name: Validation Result
+  status: raw
+  confidence: medium
+  created_at: "YYYY-MM-DD"
+  updated_at: "YYYY-MM-DD"
+  source_refs: []
+  relationships: []
+  open_questions: []
+  validates: slice.example
+  result: pass|fail|partial|blocked|needs_review
+  evidence: []
+  gaps: []
+  salmon_recommended: false

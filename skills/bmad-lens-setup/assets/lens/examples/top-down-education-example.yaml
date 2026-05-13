@@ -1,0 +1,63 @@
+example:
+  id: example.top_down_learning_improvement
+  purpose: Illustrative top-down LENS fixture only. It must not scaffold NorthStarET.
+  input: >
+    I want to build a platform for schools where students, teachers, coaches,
+    and leaders all work from the same learning improvement system. It should
+    use evidence from student work, help teachers know what to do next, help
+    coaches support teachers, and help leaders see where the school needs support.
+  expected_progression:
+    candidate_system: learning improvement platform
+    candidate_roles:
+      - student
+      - teacher
+      - coach
+      - school leader
+      - district leader
+      - family: low-confidence stakeholder unless confirmed
+    candidate_operating_loop:
+      - assess
+      - set goals
+      - learn
+      - apply
+      - evidence
+      - improve
+    candidate_outcomes:
+      - student understands next goal
+      - teacher turns evidence into action
+      - coach identifies support need
+      - leader sees implementation health
+    candidate_risks:
+      - AI overreach
+      - student privacy
+      - teacher surveillance
+      - dashboard sprawl
+    focused_outcome: teacher turns evidence into action
+    journey:
+      - evidence captured
+      - teacher views evidence
+      - system interprets evidence
+      - evidence aligns to goal or standard
+      - system suggests next action
+      - teacher accepts, adjusts, or rejects
+      - decision is recorded
+      - coaching signal may be created
+    slice_roadmap:
+      - evidence visible to teacher
+      - evidence interpreted for teacher
+      - evidence aligned to goal
+      - guidance recommended to teacher
+      - teacher decision recorded
+      - coach signal created
+    first_bmad_packet:
+      active_slice: evidence visible to teacher
+      include:
+        - slice scope
+        - acceptance evidence
+        - risks
+        - decisions needed
+      exclude:
+        - AI recommendations
+        - coaching dashboards
+        - district analytics
+        - family portal

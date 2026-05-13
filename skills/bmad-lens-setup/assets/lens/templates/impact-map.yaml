@@ -1,0 +1,14 @@
+workstream_impact:
+  active_slice: slice.example
+  directly_impacted: []
+  possibly_conflicting: []
+  shared_files: []
+  shared_contracts: []
+  artifacts_produced: []
+  artifacts_consumed: []
+  tests_to_prove: []
+  observability: []
+  rollout_controls: []
+  data_privacy_policy_boundaries: []
+  decisions_needed: []
+  recommendation: continue

@@ -1,0 +1,11 @@
+{
+  "generated_at": "2026-05-13T19:39:32.844853+00:00",
+  "source_truth": false,
+  "derived_map": "_bmad-output/lens/graph/derived-map.json",
+  "node_count": 0,
+  "warning_count": 0,
+  "active_slices": [],
+  "risks": [],
+  "blockers": [],
+  "salmon_signals": []
+}

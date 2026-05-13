@@ -1,0 +1,61 @@
+{
+  "name": "lens-bmad-module",
+  "owner": {
+    "name": "NextLens"
+  },
+  "license": "UNLICENSED",
+  "homepage": "https://bmad-builder-docs.bmad-method.org/llms-full.txt",
+  "repository": "local",
+  "keywords": [
+    "bmad",
+    "lens",
+    "slice",
+    "traceability",
+    "validation"
+  ],
+  "plugins": [
+    {
+      "name": "lens",
+      "source": "./",
+      "description": "BMAD-native slice orchestration and evolving knowledge topology module.",
+      "version": "1.0.0",
+      "author": {
+        "name": "NextLens"
+      },
+      "skills": [
+        "./skills/bmad-lens-setup",
+        "./skills/bmad-lens-help",
+        "./skills/bmad-lens-intake",
+        "./skills/bmad-lens-slice-new",
+        "./skills/bmad-lens-slice-frame",
+        "./skills/bmad-lens-slice-scope",
+        "./skills/bmad-lens-detect-adjacency",
+        "./skills/bmad-lens-detect-repetition",
+        "./skills/bmad-lens-suggest-promotion",
+        "./skills/bmad-lens-discover",
+        "./skills/bmad-lens-capture",
+        "./skills/bmad-lens-synthesize",
+        "./skills/bmad-lens-context-check",
+        "./skills/bmad-lens-research-plan",
+        "./skills/bmad-lens-map-system",
+        "./skills/bmad-lens-map-outcomes",
+        "./skills/bmad-lens-map-loops",
+        "./skills/bmad-lens-map-journeys",
+        "./skills/bmad-lens-slice-journey",
+        "./skills/bmad-lens-map-capabilities",
+        "./skills/bmad-lens-analyze-impact",
+        "./skills/bmad-lens-promote-landscape",
+        "./skills/bmad-lens-map-rebuild",
+        "./skills/bmad-lens-prepare-bmad",
+        "./skills/bmad-lens-sync-bmad",
+        "./skills/bmad-lens-guard-story",
+        "./skills/bmad-lens-validate-slice",
+        "./skills/bmad-lens-validate-journey",
+        "./skills/bmad-lens-validate-outcome",
+        "./skills/bmad-lens-salmon",
+        "./skills/bmad-lens-doctor",
+        "./skills/bmad-lens-auspex"
+      ]
+    }
+  ]
+}

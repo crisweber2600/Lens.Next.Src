@@ -1,0 +1,16 @@
+relationship:
+  id: rel.example
+  kind: relationship
+  name: Example Relationship
+  from: source.id
+  type: realized_by
+  to: target.id
+  status: hypothesized
+  confidence: medium
+  discovered_from: []
+  review:
+    status: human_review_needed
+  promotion:
+    landscape_status: not_promoted
+  validation:
+    implementation_status: not_validated

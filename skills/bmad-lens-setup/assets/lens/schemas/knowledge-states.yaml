@@ -1,0 +1,26 @@
+knowledge_states:
+  raw:
+    meaning: Captured directly from a user, session, whiteboard, document, codebase, BMAD artifact, or source.
+  extracted:
+    meaning: Identified as a possible concept, role, outcome, journey, artifact, risk, relationship, or capability.
+  hypothesized:
+    meaning: Structured by LENS but not yet confirmed.
+  challenged:
+    meaning: Reviewed for contradictions, missing pieces, or weak assumptions.
+  reviewed:
+    meaning: Human reviewed and accepted as plausible.
+  approved:
+    meaning: Accepted as current working truth.
+  validated:
+    meaning: Supported by implementation, stakeholder evidence, test evidence, or repeated evidence.
+  superseded:
+    meaning: Replaced by a newer model.
+  archived:
+    meaning: Kept for history but no longer active.
+confidence_levels:
+  low:
+    meaning: Weak signal, inferred, ambiguous, or contested.
+  medium:
+    meaning: Likely correct but not fully validated.
+  high:
+    meaning: Confirmed by stakeholder, artifact, implementation, or repeated evidence.

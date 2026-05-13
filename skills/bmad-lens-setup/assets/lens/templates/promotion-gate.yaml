@@ -1,0 +1,11 @@
+promotion_gate:
+  candidate: capability.example
+  promoted_from: []
+  evidence: []
+  recommendation: monitor
+  automatic: false
+  human_review_required: true
+  decision:
+    status: pending
+    decided_by: null
+    decided_at: null

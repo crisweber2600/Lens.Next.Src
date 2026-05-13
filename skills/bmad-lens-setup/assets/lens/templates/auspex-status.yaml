@@ -1,0 +1,15 @@
+auspex_status:
+  generated_from: _bmad-output/lens/graph/derived-map.json
+  source_truth: false
+  system_status: unknown
+  active_outcomes: []
+  active_journeys: []
+  active_slices: []
+  artifact_freshness: []
+  open_decisions: []
+  risks: []
+  blockers: []
+  bmad_progress: []
+  validation_evidence: []
+  salmon_signals: []
+  source_traceability: []

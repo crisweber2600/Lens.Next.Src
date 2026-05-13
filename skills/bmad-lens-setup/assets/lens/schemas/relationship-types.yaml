@@ -1,0 +1,37 @@
+relationship_types:
+  - expresses
+  - serves
+  - realized_by
+  - decomposed_into
+  - produces_artifact
+  - consumes_artifact
+  - adjacent_to
+  - requires
+  - participates_in
+  - implemented_by
+  - planned_by
+  - decomposed_by
+  - implemented_by_story
+  - validated_by
+  - impacted_by
+  - supersedes
+relationship_lifecycle:
+  - raw
+  - extracted
+  - hypothesized
+  - challenged
+  - reviewed
+  - promoted
+  - planned
+  - implemented
+  - validated
+  - superseded
+  - archived
+relationship_gates:
+  - discovery
+  - challenge
+  - promotion
+  - bmad
+  - implementation
+  - salmon
+  - validation

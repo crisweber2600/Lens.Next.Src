@@ -1,0 +1,22 @@
+source_truth:
+  work_archive: _bmad-output/lens/archive
+  living_landscape: _bmad-output/lens/landscape
+derived_projection:
+  graph: _bmad-output/lens/graph
+layers:
+  capture: _bmad-output/lens/archive/capture
+  extraction: _bmad-output/lens/archive/extractions
+  intent: _bmad-output/lens/intent
+  journey: _bmad-output/lens/journeys
+  slice: _bmad-output/lens/slices
+  landscape: _bmad-output/lens/landscape
+  graph: _bmad-output/lens/graph
+  bmad_bridge: _bmad-output/lens/bmad-bridge
+  implementation_guard: _bmad-output/lens/implementation
+  salmon: _bmad-output/lens/salmon
+  auspex: _bmad-output/lens/auspex
+rules:
+  - Archive records history.
+  - Landscape records current truth.
+  - Graph records generated projections.
+  - Derived Map files are rebuildable and must not be hand-edited.

@@ -1,0 +1,18 @@
+[
+  {
+    "query": "Help me start LENS discovery for a large ambiguous platform idea.",
+    "should_trigger": true
+  },
+  {
+    "query": "Create a bottom-up LENS slice for downloading model images.",
+    "should_trigger": true
+  },
+  {
+    "query": "Run LENS Doctor on this topology.",
+    "should_trigger": true
+  },
+  {
+    "query": "What is the weather tomorrow?",
+    "should_trigger": false
+  }
+]

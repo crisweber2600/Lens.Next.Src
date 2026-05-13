@@ -1,0 +1,21 @@
+story:
+  id: story.example
+  bmad_story_file: _bmad-output/planning-artifacts/epics/epic-001/story-example.md
+lens_trace:
+  system: null
+  outcome: null
+  journey: null
+  slice: slice.example
+  capabilities: []
+guard_result:
+  status: pass|fail|needs_review
+checks:
+  - name: story_traces_to_active_slice
+    status: pending
+  - name: story_does_not_expand_scope
+    status: pending
+  - name: acceptance_evidence_present
+    status: pending
+  - name: privacy_boundary_acknowledged
+    status: pending
+salmon_recommended: false
