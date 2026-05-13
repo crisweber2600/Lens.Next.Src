@@ -13,6 +13,21 @@ relationship:
   type: realized_by
   to: target.id
   discovered_from: []
+  gates:
+    discovery:
+      status: pending
+    challenge:
+      status: pending
+    promotion:
+      status: pending
+    bmad:
+      status: pending
+    implementation:
+      status: pending
+    salmon:
+      status: pending
+    validation:
+      status: pending
   review:
     status: human_review_needed
   promotion:

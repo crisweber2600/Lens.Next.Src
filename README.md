@@ -35,6 +35,8 @@ Use `bmad-lens-discover` for a large ambiguous system idea. The top-down path is
 
 Use `bmad-lens-slice-new` for one useful bottom-up thing. A bottom-up slice can remain complete without a system, domain, service, capability, program, initiative, or roadmap.
 
+The canonical slice artifact is `slice.yaml`: scope includes/excludes, acceptance evidence, and risks live inline in that file. `slice.md` can summarize the same record for humans, but separate acceptance-evidence or risks YAML files are not source truth.
+
 Use `bmad-lens-context-check` as the required gate before BMAD handoff. It can block PRD or architecture work when discovery is still weak.
 
 Use `bmad-lens-prepare-bmad` only after the active slice is focused enough to feed BMAD. It produces both `bmad-packet.md` for humans and `bmad-packet.yaml` for deterministic traceability. Use `bmad-lens-guard-story`, `bmad-lens-validate-slice`, `bmad-lens-salmon`, `bmad-lens-doctor`, and `bmad-lens-auspex` during implementation and review.

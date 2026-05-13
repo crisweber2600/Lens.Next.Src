@@ -10,6 +10,13 @@ evals:
     expected:
       - creates: slice.download_model_images
       - does_not_create_by_default: [system, domain, service, capability, platform]
+      - slice_contract: inline_acceptance_evidence_and_risks_in_slice_yaml
+  - id: lens.eval.relationship_contract_validation
+    input: Relationship fixture has an unknown type, non-lifecycle status, or missing gate.
+    expected:
+      - validator: validate_lens_assets.py
+      - detects: [unknown_relationship_type, non_lifecycle_relationship_status, missing_relationship_gate]
+      - canonical_source: skills/bmad-lens-setup/assets/lens/schemas/relationship-types.yaml
   - id: lens.eval.repeated_pressure_promotion_candidate
     input: Multiple slices reuse artifact.model_image_set and image metadata workflow.
     expected:

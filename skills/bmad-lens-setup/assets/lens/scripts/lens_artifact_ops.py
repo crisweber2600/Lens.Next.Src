@@ -255,8 +255,9 @@ def add_trace(projection: Projection, slice_id: str, key: str, value: Any) -> No
 
 def collect_relationships(projection: Projection, item: dict[str, Any], path: Path, parent_key: str | None) -> None:
     entity_id = str(item.get("id", "")).strip()
+    is_adjacency = parent_key == "adjacency" or {"from", "to", "shared_artifacts"} <= set(item.keys())
 
-    if item.get("from") and item.get("to"):
+    if item.get("from") and item.get("to") and not (is_adjacency and entity_kind(parent_key, item) != "relationship"):
         if not (item.get("type") or item.get("reason")):
             add_warning(
                 projection,
@@ -268,7 +269,7 @@ def collect_relationships(projection: Projection, item: dict[str, Any], path: Pa
         rel_type = str(item.get("type") or item.get("reason") or "related_to")
         add_relationship(projection, str(item["from"]), rel_type, str(item["to"]), path, evidence=entity_id or parent_key)
 
-    if parent_key == "adjacency" or {"from", "to", "shared_artifacts"} <= set(item.keys()):
+    if is_adjacency:
         if item.get("from") and item.get("to"):
             add_relationship(projection, str(item["from"]), "adjacent_to", str(item["to"]), path, evidence=str(item.get("reason", "")))
 

@@ -25,6 +25,17 @@ REQUIRED_TESTS = [
 ]
 REQUIRED_METADATA = ['id', 'kind', 'name', 'status', 'confidence', 'created_at', 'updated_at', 'source_refs', 'relationships', 'open_questions']
 SEMANTIC_ROOTS = ['templates', 'fixtures']
+REQUIRED_EVAL_IDS = {
+    'top_down_routes_to_discovery',
+    'bottom_up_remains_slice',
+    'relationship_contract_validation',
+    'repeated_pressure_promotion_candidate',
+    'focused_bmad_packet',
+    'guard_story_traceability',
+    'salmon_upstream_impact',
+    'doctor_invalid_topology',
+    'auspex_read_only_status',
+}
 
 
 def fail(findings, category, message):
@@ -58,6 +69,90 @@ def manifest_skills(root: Path) -> list[str]:
             for path in plugin.get('skills', []):
                 skills.append(Path(path).name)
     return skills or REQUIRED_SKILLS
+
+
+def iter_asset_items(assets: Path):
+    for semantic_root in SEMANTIC_ROOTS:
+        root = assets / semantic_root
+        if not root.exists():
+            continue
+        for path in sorted(root.rglob('*.yaml')):
+            for doc in yaml_docs(path):
+                for item in iter_dicts(doc):
+                    yield path, item
+
+
+def load_relationship_contract(assets: Path, findings) -> dict[str, set[str]]:
+    path = assets / 'schemas' / 'relationship-types.yaml'
+    if not path.is_file():
+        fail(findings, 'relationship-contract', 'missing schemas/relationship-types.yaml')
+        return {'types': set(), 'lifecycle': set(), 'gates': set()}
+    data = yaml.safe_load(path.read_text(encoding='utf-8')) or {}
+    contract = {
+        'types': set(data.get('relationship_types') or []),
+        'lifecycle': set(data.get('relationship_lifecycle') or []),
+        'gates': set(data.get('relationship_gates') or []),
+    }
+    for key, values in contract.items():
+        if not values:
+            fail(findings, 'relationship-contract', f'relationship-types.yaml missing {key}')
+    return contract
+
+
+def validate_relationship_contract(assets: Path, statuses: set[str], findings) -> None:
+    contract = load_relationship_contract(assets, findings)
+    relationship_types = contract['types']
+    relationship_lifecycle = contract['lifecycle']
+    relationship_gates = contract['gates']
+
+    for state in sorted(relationship_lifecycle):
+        if state not in statuses:
+            fail(findings, 'relationship-contract', f'relationship lifecycle state {state} is not allowed by lens-entity.schema.json status enum')
+
+    for path, item in iter_asset_items(assets):
+        if 'id' not in item:
+            continue
+        kind = item.get('kind')
+        status = item.get('status')
+        if status == 'promoted' and kind != 'relationship':
+            fail(findings, 'relationship-contract', f'{path} entity {item.get("id")} uses relationship-only status promoted')
+        if kind != 'relationship':
+            continue
+        rel_type = item.get('type')
+        if rel_type not in relationship_types:
+            fail(findings, 'relationship-contract', f'{path} relationship {item.get("id")} uses unknown type {rel_type}')
+        if status not in relationship_lifecycle:
+            fail(findings, 'relationship-contract', f'{path} relationship {item.get("id")} uses non-lifecycle status {status}')
+        gates = item.get('gates')
+        if not isinstance(gates, dict):
+            fail(findings, 'relationship-contract', f'{path} relationship {item.get("id")} missing gates map')
+            continue
+        missing_gates = relationship_gates - set(gates)
+        unknown_gates = set(gates) - relationship_gates
+        if missing_gates:
+            fail(findings, 'relationship-contract', f'{path} relationship {item.get("id")} missing gates {sorted(missing_gates)}')
+        if unknown_gates:
+            fail(findings, 'relationship-contract', f'{path} relationship {item.get("id")} uses unknown gates {sorted(unknown_gates)}')
+
+
+def validate_slice_contract(assets: Path, findings) -> None:
+    for stale_name in ['acceptance-evidence.yaml', 'risks.yaml']:
+        for path in sorted((assets / 'templates').rglob(stale_name)) + sorted((assets / 'fixtures').rglob(stale_name)):
+            fail(findings, 'slice-contract', f'{path} violates canonical inline slice contract; keep acceptance_evidence and risks in slice.yaml')
+
+    for path, item in iter_asset_items(assets):
+        if item.get('kind') != 'slice':
+            continue
+        scope = item.get('scope')
+        if not isinstance(scope, dict):
+            fail(findings, 'slice-contract', f'{path} slice {item.get("id")} missing scope map')
+        else:
+            for key in ['includes', 'excludes']:
+                if not isinstance(scope.get(key), list):
+                    fail(findings, 'slice-contract', f'{path} slice {item.get("id")} scope.{key} must be a list')
+        for key in ['acceptance_evidence', 'risks']:
+            if not isinstance(item.get(key), list):
+                fail(findings, 'slice-contract', f'{path} slice {item.get("id")} must define inline {key} list')
 
 
 def main() -> int:
@@ -145,6 +240,9 @@ def main() -> int:
                             if key not in item:
                                 fail(findings, 'semantic', f'{path} entity {item.get("id")} missing metadata key {key}')
 
+    validate_relationship_contract(assets, statuses, findings)
+    validate_slice_contract(assets, findings)
+
     directory_map = assets / 'schemas' / 'directory-map.yaml'
     if directory_map.is_file():
         text = directory_map.read_text(encoding='utf-8')
@@ -188,8 +286,12 @@ def main() -> int:
     evals = assets / 'evals' / 'lens-evals.yaml'
     if evals.is_file():
         text = evals.read_text(encoding='utf-8')
+        eval_data = yaml.safe_load(text) or {}
+        asset_eval_ids = {str(item.get('id', '')).removeprefix('lens.eval.') for item in eval_data.get('evals', [])}
         if text.count('id: lens.eval.') < 8:
             fail(findings, 'evals', 'expected at least 8 eval cases')
+        for eval_id in sorted(REQUIRED_EVAL_IDS - asset_eval_ids):
+            fail(findings, 'evals', f'lens-evals.yaml missing required eval {eval_id}')
     else:
         fail(findings, 'evals', 'missing lens-evals.yaml')
 
@@ -197,8 +299,11 @@ def main() -> int:
     runner_triggers = root / 'evals' / 'lens' / 'triggers.json'
     if runner_evals.is_file():
         data = json.loads(runner_evals.read_text(encoding='utf-8'))
+        runner_eval_ids = {item.get('id') for item in data.get('evals', [])}
         if len(data.get('evals', [])) < 8:
             fail(findings, 'evals', 'evals/lens/evals.json must contain at least 8 evals')
+        for eval_id in sorted(REQUIRED_EVAL_IDS - runner_eval_ids):
+            fail(findings, 'evals', f'evals/lens/evals.json missing required eval {eval_id}')
     else:
         fail(findings, 'evals', 'missing evals/lens/evals.json')
     if runner_triggers.is_file():

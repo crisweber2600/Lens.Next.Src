@@ -35,7 +35,7 @@ Creates a bottom-up or top-down slice using stable IDs, explicit scope, artifact
 2. Assign a stable slice ID.
 3. Separate included scope from explicit exclusions.
 4. Record produced and consumed artifacts.
-5. Add acceptance evidence and risks.
+5. Add acceptance evidence and risks inline in `slice.yaml`.
 
 ## Required Output Discipline
 
@@ -45,6 +45,12 @@ Creates a bottom-up or top-down slice using stable IDs, explicit scope, artifact
 - For top-down work, do not recommend BMAD PRD creation until `bmad-lens-context-check` says PRD readiness is ready or explicitly accepted by the user.
 - When a BMAD workflow is the correct next step, recommend the BMAD skill by name and explain what LENS packet or evidence should feed it.
 
+## Canonical Slice Artifact Contract
+
+`slice.yaml` is the source-truth artifact for a slice. It includes `scope.includes`, `scope.excludes`, `acceptance_evidence`, and `risks` inline so graph rebuild, Doctor, Auspex, and BMAD packet generation can read one canonical record.
+
+`slice.md` may be produced as a human-readable summary, but separate `acceptance-evidence.yaml` or `risks.yaml` files are not canonical LENS slice outputs.
+
 ## Produces
 
-slice.yaml, slice.md, acceptance-evidence.yaml.
+slice.yaml and optional slice.md.

@@ -18,7 +18,19 @@
       "expectations": [
         "Creates or recommends slice.download_model_images.",
         "Records artifact.model_image_set as produced output.",
-        "Explicitly avoids creating a platform, system, domain, service, or capability by default."
+        "Explicitly avoids creating a platform, system, domain, service, or capability by default.",
+        "Keeps acceptance_evidence and risks inline in slice.yaml as the canonical slice source truth."
+      ]
+    },
+    {
+      "id": "relationship_contract_validation",
+      "prompt": "Run headless. Validate a LENS relationship fixture that has an unknown relationship type, a status outside relationship_lifecycle, and a missing gate.",
+      "expected_output": "Flags the relationship contract violations against relationship-types.yaml.",
+      "expectations": [
+        "Treats skills/bmad-lens-setup/assets/lens/schemas/relationship-types.yaml as the canonical source.",
+        "Flags unknown relationship types.",
+        "Flags relationship statuses outside relationship_lifecycle.",
+        "Flags missing or unknown relationship gates."
       ]
     },
     {

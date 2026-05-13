@@ -46,8 +46,13 @@ def test_map_rebuild_projects_relationship_traceability_freshness_and_warnings(t
     traceability = yaml.safe_load((graph / "traceability-index.yaml").read_text())["traceability"]
     freshness = yaml.safe_load((graph / "freshness-index.yaml").read_text())["items"]
     warnings = yaml.safe_load((graph / "warnings.yaml").read_text())["warnings"]
+    relationship_contract = yaml.safe_load(
+        (REPO_ROOT / "skills/bmad-lens-setup/assets/lens/schemas/relationship-types.yaml").read_text(encoding="utf-8")
+    )
+    allowed_types = set(relationship_contract["relationship_types"])
 
     assert any(rel["from"] == "slice.evidence_visible_to_teacher" for rel in relationships)
+    assert {rel["type"] for rel in relationships} <= allowed_types
     assert any(rel["type"] == "possibly_conflicts_with" for rel in relationships)
     assert any(rel["type"] == "touches_file" for rel in relationships)
     assert any(row["slice"] == "slice.evidence_visible_to_teacher" for row in traceability)

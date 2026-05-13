@@ -1,9 +1,9 @@
 auspex_status:
-  generated_at: '2026-05-13T21:35:42.326096+00:00'
+  generated_at: '2026-05-13T22:38:36.062795+00:00'
   source_truth: false
   derived_map: _bmad-output/lens/graph/derived-map.json
   node_count: 17
-  relationship_count: 41
+  relationship_count: 40
   warning_count: 37
   active_outcomes:
   - id: outcome.teacher_turns_evidence_into_action

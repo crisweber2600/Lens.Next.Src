@@ -14,6 +14,11 @@ relationship_types:
   - implemented_by_story
   - validated_by
   - impacted_by
+  - possibly_conflicts_with
+  - touches_file
+  - touches_contract
+  - promotes_to
+  - related_to
   - supersedes
 relationship_lifecycle:
   - raw

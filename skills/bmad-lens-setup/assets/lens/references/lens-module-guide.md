@@ -46,6 +46,8 @@ The central unit of LENS is the slice. A slice is a small, useful, testable, end
 
 A slice is allowed to exist without a system, domain, service, capability, program, initiative, or roadmap. Those higher-order structures are optional landscape metadata that may emerge later.
 
+The canonical slice source-truth artifact is `slice.yaml`. It keeps `scope.includes`, `scope.excludes`, `acceptance_evidence`, and `risks` inline with the slice record. `slice.md` can be generated for human review, but separate `acceptance-evidence.yaml` or `risks.yaml` files are not canonical LENS slice records.
+
 ## No Growth Without Pressure
 
 Do not promote a slice into a capability, domain, program, or system just because the model can imagine one. Promotion is optional, explicit, evidence-driven, and human-reviewed.
@@ -197,7 +199,7 @@ Lifecycle:
 raw -> extracted -> hypothesized -> challenged -> reviewed -> promoted -> planned -> implemented -> validated -> superseded -> archived
 ```
 
-Required relationship types: expresses, serves, realized_by, decomposed_into, produces_artifact, consumes_artifact, adjacent_to, requires, participates_in, implemented_by, planned_by, decomposed_by, implemented_by_story, validated_by, impacted_by, supersedes.
+Required relationship types: expresses, serves, realized_by, decomposed_into, produces_artifact, consumes_artifact, adjacent_to, requires, participates_in, implemented_by, planned_by, decomposed_by, implemented_by_story, validated_by, impacted_by, possibly_conflicts_with, touches_file, touches_contract, promotes_to, related_to, and supersedes.
 
 Relationship gates: discovery, challenge, promotion, BMAD, implementation, Salmon, and validation.
 

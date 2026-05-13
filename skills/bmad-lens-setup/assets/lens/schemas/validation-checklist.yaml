@@ -3,7 +3,9 @@ checks:
   - setup skill includes assets/module.yaml and assets/module-help.csv
   - module-help.csv exposes all LENS capabilities with unique menu codes
   - marketplace manifest lists all LENS skill folders
-  - schemas include required knowledge states, confidence levels, entities, relationship types, and gates
+  - schemas include required knowledge states, confidence levels, entities, and the relationship lifecycle/type/gate contract from relationship-types.yaml
+  - validator enforces relationship-types.yaml for relationship lifecycle states, types, gates, and relationship-only status usage
+  - validator enforces the canonical inline slice contract: slice.yaml contains scope, acceptance_evidence, and risks
   - templates include slice, journey, discovery epoch, BMAD packet Markdown and YAML, impact map, story guard, Salmon, Doctor, and Auspex shapes
   - validation paths use _bmad-output/lens/validation for current validation and _bmad-output/lens/archive/validation-results for historical records
   - fixtures exist for top-down evidence-visible-to-teacher and bottom-up download-model-images modes

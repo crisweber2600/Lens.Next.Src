@@ -20,7 +20,7 @@ Capture the incoming request, classify mode, identify current knowns, unknowns, 
 
 ## bmad-lens-slice-new
 
-Create `slice.yaml`, `slice.md`, `acceptance-evidence.yaml`, and `risks.yaml` for a thin, useful slice. For bottom-up work, system/outcome/journey/capability are optional and can be omitted.
+Create `slice.yaml` for a thin, useful slice, with `scope.includes`, `scope.excludes`, `acceptance_evidence`, and `risks` inline. `slice.md` may summarize the slice for humans. Do not split source-truth acceptance or risk data into separate YAML files. For bottom-up work, system/outcome/journey/capability are optional and can be omitted.
 
 ## bmad-lens-slice-frame
 

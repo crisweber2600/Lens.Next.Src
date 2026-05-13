@@ -1,9 +1,9 @@
 # LENS Doctor Report
 
-Generated: 2026-05-13T21:35:42.322032+00:00
+Generated: 2026-05-13T22:38:36.059617+00:00
 
 Nodes indexed: 17
-Relationships indexed: 41
+Relationships indexed: 40
 Traceability records: 2
 Warnings: 37
 

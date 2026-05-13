@@ -69,6 +69,7 @@
         "hypothesized",
         "challenged",
         "reviewed",
+        "promoted",
         "approved",
         "validated",
         "superseded",
@@ -179,6 +180,7 @@
     "hypothesized",
     "challenged",
     "reviewed",
+    "promoted",
     "approved",
     "validated",
     "superseded",
@@ -195,5 +197,18 @@
     "fail",
     "partial",
     "needs_review"
+  ],
+  "x_lens_relationship_lifecycle": [
+    "raw",
+    "extracted",
+    "hypothesized",
+    "challenged",
+    "reviewed",
+    "promoted",
+    "planned",
+    "implemented",
+    "validated",
+    "superseded",
+    "archived"
   ]
 }
