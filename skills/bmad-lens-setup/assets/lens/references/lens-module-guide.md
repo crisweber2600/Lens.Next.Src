@@ -9,9 +9,36 @@ LENS is not a standalone app, not a PRD generator, not a replacement for BMAD, a
 Official references for maintainers:
 
 - BMAD Builder documentation: https://bmad-builder-docs.bmad-method.org/llms-full.txt
-- BMAD Method documentation: https://docs.bmad-method.org//llms-full.txt
+- BMAD Method documentation: https://docs.bmad-method.org/llms-full.txt
 
 Use BMAD Builder conventions for module packaging, skill structure, setup, manifests, `module-help.csv`, validation, packaging, marketplace/plugin shape, tests, evals, and triggers. Use BMAD Method conventions for lifecycle phases, artifact locations, project context behavior, implementation workflow behavior, and correct-course behavior.
+
+## Installation And Validation
+
+Custom module install examples:
+
+```bash
+npx bmad-method install
+npx bmad-method install --custom-source /home/cweber/github/NextLens --tools claude-code --yes
+bmad-lens-setup --headless
+```
+
+Validation commands:
+
+```bash
+python3 .agents/skills/bmad-module-builder/scripts/validate-module.py skills
+python3 skills/bmad-lens-setup/assets/lens/scripts/validate_lens_assets.py --module-root .
+pytest skills/bmad-lens-setup/assets/lens/scripts/tests -q
+python3 skills/bmad-lens-setup/assets/lens/scripts/lens_artifact_ops.py init --project-root .
+python3 skills/bmad-lens-setup/assets/lens/scripts/lens_artifact_ops.py map-rebuild --project-root .
+python3 skills/bmad-lens-setup/assets/lens/scripts/lens_artifact_ops.py doctor --project-root .
+python3 skills/bmad-lens-setup/assets/lens/scripts/lens_artifact_ops.py auspex --project-root .
+```
+
+Canonical fixtures:
+
+- `skills/bmad-lens-setup/assets/lens/fixtures/top-down/evidence-visible-to-teacher/`
+- `skills/bmad-lens-setup/assets/lens/fixtures/bottom-up/download-model-images/`
 
 ## Central Unit
 
@@ -121,6 +148,8 @@ _bmad-output/lens/archive/
   salmon-signals/
 ```
 
+Validation history that must be retained for audit belongs under `archive/validation-results/`. Current validation working outputs belong under `_bmad-output/lens/validation/`.
+
 ### Living Landscape
 
 The Living Landscape preserves current truth. It is curated, reorganizable, and human-readable.
@@ -195,6 +224,8 @@ LENS feeds BMAD. LENS does not replace BMAD.
 - Graph: `_bmad-output/lens/graph/`
 - BMAD bridge: `_bmad-output/lens/bmad-bridge/`
 - Implementation guard: `_bmad-output/lens/implementation/`
+- Validation: `_bmad-output/lens/validation/`
+- Validation archive: `_bmad-output/lens/archive/validation-results/`
 - Salmon: `_bmad-output/lens/salmon/`
 - Auspex: `_bmad-output/lens/auspex/`
 
@@ -229,3 +260,59 @@ Doctor audits orphaned entities, missing source references, missing IDs, duplica
 ## Auspex
 
 Auspex is read-only stakeholder visibility. It shows system status, active outcomes, journeys, slices, artifact freshness, decisions, risks, blockers, BMAD progress, validation evidence, Salmon signals, and source traceability. Auspex reads the Derived Map and must not become source truth.
+
+## Usage Examples
+
+Top-down example:
+
+```text
+User: I want a learning improvement platform where evidence helps teachers know what to do next.
+LENS: bmad-lens-discover -> bmad-lens-capture -> bmad-lens-synthesize -> bmad-lens-context-check -> bmad-lens-map-outcomes -> bmad-lens-map-journeys -> bmad-lens-slice-journey -> bmad-lens-analyze-impact -> bmad-lens-prepare-bmad.
+```
+
+Bottom-up example:
+
+```text
+User: I want to download images from 3D printing model websites.
+LENS: bmad-lens-slice-new creates slice.download_model_images, records artifact.model_image_set, and does not create a system, domain, service, or capability unless repeated pressure appears later.
+```
+
+## Mermaid Relationship Diagram
+
+```mermaid
+flowchart LR
+  system["system.learning_improvement_platform"]
+  outcome["outcome.teacher_turns_evidence_into_action"]
+  journey["journey.evidence_to_teacher_action"]
+  slice["slice.evidence_visible_to_teacher"]
+  packet["bmad_packet.evidence_visible_to_teacher"]
+  story["story.evidence_detail_view"]
+  validation["validation.slice_result"]
+  salmon["salmon.access_policy_correction"]
+
+  system --> outcome
+  outcome --> journey
+  journey --> slice
+  slice --> packet
+  packet --> story
+  story --> validation
+  story --> salmon
+  salmon --> outcome
+```
+
+## Mermaid Implementation Timeline
+
+```mermaid
+sequenceDiagram
+  participant L as LENS
+  participant B as BMAD
+  participant I as Implementation
+  L->>L: Discovery epoch, capture, extraction
+  L->>L: Context sufficiency and slice selection
+  L->>B: Focused BMAD packet
+  B->>B: PRD, UX, architecture, epics, stories
+  B->>I: Story implementation
+  I->>L: Evidence and downstream discoveries
+  L->>L: Guard story and validate slice/journey/outcome
+  L->>B: Salmon signal or correct-course recommendation when needed
+```

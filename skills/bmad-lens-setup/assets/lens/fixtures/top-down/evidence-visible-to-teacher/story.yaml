@@ -1,0 +1,17 @@
+story:
+  id: story.evidence_detail_view
+  kind: story
+  name: Evidence Detail View
+  status: planned
+  confidence: medium
+  created_at: "2026-05-13"
+  updated_at: "2026-05-13"
+  source_refs:
+    - bmad_packet.evidence_visible_to_teacher
+  relationships: []
+  open_questions: []
+  active_slice: slice.evidence_visible_to_teacher
+  bmad_story_file: _bmad-output/planning-artifacts/epics/epic-001/story-evidence-detail-view.md
+  acceptance_evidence:
+    - permitted teacher can open evidence artifact
+    - unauthorized teacher cannot access artifact

@@ -10,19 +10,34 @@ slice:
   relationships: []
   open_questions: []
   goal: ""
+
+  # Top-down context is optional. Bottom-up slices remain valid with these null
+  # or empty.
+  system: null
+  role: null
+  outcome: null
+  operating_loop: null
+  journey: null
+  why_first: ""
+  starts_with: []
+  ends_with: []
+  vertical_path:
+    experience: []
+    data: []
+    policy: []
+    contracts: []
+    tests: []
+  required_capabilities: []
+
   scope:
     includes: []
     excludes: []
   produces: []
   consumes: []
+  artifacts_produced: []
+  artifacts_consumed: []
   acceptance_evidence: []
   risks: []
   decisions_needed: []
-  optional_context:
-    system: null
-    outcome: null
-    journey: null
-    capabilities: []
-    domains: []
-    services: []
+  bmad_packet_refs: []
   validation_status: not_validated

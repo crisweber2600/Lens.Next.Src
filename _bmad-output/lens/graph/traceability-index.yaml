@@ -1,1 +1,35 @@
-traceability: []
+traceability:
+- slice: slice.download_model_images
+  systems: []
+  outcomes: []
+  journeys: []
+  capabilities: []
+  artifacts:
+  - artifact.model_image_set
+  bmad_artifacts: []
+  stories: []
+  validation_results: []
+  salmon_signals: []
+- slice: slice.evidence_visible_to_teacher
+  systems:
+  - system.learning_improvement_platform
+  outcomes:
+  - outcome.teacher_turns_evidence_into_action
+  journeys:
+  - journey.evidence_to_teacher_action
+  capabilities:
+  - capability.evidence_artifact_model
+  - capability.evidence_source_metadata
+  - capability.role_based_visibility
+  - capability.teacher_workspace
+  artifacts:
+  - artifact.student_evidence
+  - artifact.teacher_visible_evidence
+  bmad_artifacts:
+  - bmad_packet.evidence_visible_to_teacher
+  stories:
+  - story.evidence_detail_view
+  validation_results:
+  - validation.evidence_visible_to_teacher.slice
+  salmon_signals:
+  - salmon.teacher_access_policy

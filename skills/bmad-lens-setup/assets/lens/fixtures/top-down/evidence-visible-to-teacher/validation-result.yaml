@@ -1,0 +1,20 @@
+validation_result:
+  id: validation.evidence_visible_to_teacher.slice
+  kind: validation_result
+  name: Evidence Visible To Teacher Slice Validation
+  status: reviewed
+  confidence: medium
+  created_at: "2026-05-13"
+  updated_at: "2026-05-13"
+  source_refs:
+    - story.evidence_detail_view
+  relationships: []
+  open_questions: []
+  validates: slice.evidence_visible_to_teacher
+  result: partial
+  evidence:
+    - permitted teacher can open evidence artifact
+    - source metadata is visible
+  gaps:
+    - support staff access policy is unresolved
+  salmon_recommended: true

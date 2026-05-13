@@ -1,5 +1,13 @@
 workstream_impact:
+  id: impact.slice.example
+  kind: impact_map
   active_slice: slice.example
+  status: draft
+  confidence: medium
+  created_at: "YYYY-MM-DD"
+  updated_at: "YYYY-MM-DD"
+  source_refs: []
+  relationships: []
   directly_impacted: []
   possibly_conflicting: []
   shared_files: []
@@ -10,5 +18,9 @@ workstream_impact:
   observability: []
   rollout_controls: []
   data_privacy_policy_boundaries: []
+  architecture_decisions_needed: []
   decisions_needed: []
+  related_workstream_gate:
+    result: no_impact|impact_found|blocked|split_recommended|correct_course_recommended
+    rationale: ""
   recommendation: continue

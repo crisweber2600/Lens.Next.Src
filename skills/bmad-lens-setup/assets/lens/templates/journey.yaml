@@ -1,0 +1,29 @@
+journey:
+  id: journey.example
+  kind: journey
+  name: Example Journey
+  status: hypothesized
+  confidence: medium
+  created_at: "YYYY-MM-DD"
+  updated_at: "YYYY-MM-DD"
+  source_refs: []
+  relationships: []
+  open_questions: []
+  system: null
+  role: null
+  outcome: null
+  starts_with: []
+  ends_with: []
+  steps:
+    - id: journey_step.example.001
+      kind: journey_step
+      name: First Step
+      actor: null
+      surface: null
+      evidence_or_data: []
+      decision: null
+      state_change: null
+      success_evidence: []
+  risks: []
+  decisions_needed: []
+  slice_candidates: []

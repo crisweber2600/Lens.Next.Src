@@ -1,0 +1,28 @@
+promotion_gate:
+  id: promotion_gate.model_image_processing
+  kind: promotion_gate
+  name: Model Image Processing Promotion Gate
+  status: reviewed
+  confidence: medium
+  created_at: "2026-05-13"
+  updated_at: "2026-05-13"
+  source_refs:
+    - fixture.bottom_up.model_images
+  relationships: []
+  open_questions: []
+  candidate: capability.model_image_processing
+  promoted_from:
+    - slice.download_model_images
+    - slice.generate_model_description
+    - slice.detect_duplicate_models
+  evidence:
+    - repeated use of artifact.model_image_set
+    - repeated image processing workflow
+    - repeated metadata dependency
+  recommendation: consider_promotion
+  automatic: false
+  human_review_required: true
+  decision:
+    status: pending
+    decided_by: null
+    decided_at: null

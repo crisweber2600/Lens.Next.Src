@@ -1,0 +1,86 @@
+slice:
+  id: slice.evidence_visible_to_teacher
+  kind: slice
+  name: Evidence Visible To Teacher
+  status: approved
+  confidence: medium
+  created_at: "2026-05-13"
+  updated_at: "2026-05-13"
+  source_refs:
+    - fixture.top_down.learning_improvement
+  relationships:
+    - rel.slice.evidence_visible_to_teacher.realizes.journey.evidence_to_teacher_action
+  open_questions:
+    - What is the minimum teacher access policy?
+  system: system.learning_improvement_platform
+  role: role.teacher
+  outcome: outcome.teacher_turns_evidence_into_action
+  journey: journey.evidence_to_teacher_action
+  why_first: >
+    This establishes the minimum evidence object, visibility rule, and teacher
+    workspace touchpoint before introducing AI interpretation or coaching rollups.
+  starts_with:
+    - student evidence artifact exists
+    - teacher has relationship to student or class
+    - artifact has source metadata
+  ends_with:
+    - teacher can view artifact
+    - teacher can see source and timestamp
+    - unauthorized users cannot view artifact
+    - missing artifact state is handled clearly
+  vertical_path:
+    experience:
+      - teacher evidence inbox
+      - evidence detail page
+    data:
+      - EvidenceArtifact
+      - EvidenceSource
+      - StudentContext
+      - TeacherAccessPolicy
+    policy:
+      - teacher can view evidence for assigned students
+      - source metadata must be visible
+      - stale or missing evidence must be indicated
+    contracts:
+      - EvidenceArtifact
+      - TeacherAccessPolicy
+    tests:
+      - permitted teacher can open evidence artifact
+      - unauthorized teacher cannot access artifact
+  required_capabilities:
+    - capability.evidence_artifact_model
+    - capability.evidence_source_metadata
+    - capability.teacher_workspace
+    - capability.role_based_visibility
+  scope:
+    includes:
+      - evidence artifact visibility
+      - source metadata
+      - timestamp or freshness display
+      - role-based visibility check
+      - safe missing state
+    excludes:
+      - AI interpretation
+      - goal alignment
+      - next-action guidance
+      - coaching dashboards
+      - district analytics
+      - family portal
+  produces:
+    - artifact.teacher_visible_evidence
+  consumes:
+    - artifact.student_evidence
+  acceptance_evidence:
+    - permitted teacher can open evidence artifact
+    - artifact source is visible
+    - artifact timestamp is visible
+    - unauthorized teacher cannot access artifact
+    - missing artifact renders safe empty state
+  risks:
+    - risk.student_privacy
+    - risk.teacher_surveillance
+  decisions_needed:
+    - decision.teacher_access_policy
+  bmad_packet_refs:
+    - bmad_packet.evidence_visible_to_teacher
+  validation_status: not_validated

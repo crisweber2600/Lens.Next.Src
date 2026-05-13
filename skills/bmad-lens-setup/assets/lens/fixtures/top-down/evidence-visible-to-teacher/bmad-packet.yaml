@@ -1,0 +1,27 @@
+bmad_packet:
+  id: bmad_packet.evidence_visible_to_teacher
+  kind: bmad_packet
+  name: Evidence Visible To Teacher Packet
+  status: approved
+  validity: current
+  confidence: medium
+  created_at: "2026-05-13"
+  updated_at: "2026-05-13"
+  source_refs:
+    - fixture.top_down.learning_improvement
+  relationships: []
+  open_questions: []
+  active_slice: slice.evidence_visible_to_teacher
+  include:
+    - slice_goal
+    - included_scope
+    - explicit_exclusions
+    - required_capabilities
+    - risks
+    - decisions_needed
+    - acceptance_evidence
+  exclude:
+    - AI recommendations
+    - coaching dashboards
+    - district analytics
+    - family portal

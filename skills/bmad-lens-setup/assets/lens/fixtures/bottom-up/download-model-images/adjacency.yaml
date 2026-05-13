@@ -1,0 +1,19 @@
+adjacency:
+  id: adjacency.download_model_images.to_generate_model_description
+  kind: adjacency
+  name: Download Images To Generate Description
+  status: hypothesized
+  confidence: medium
+  created_at: "2026-05-13"
+  updated_at: "2026-05-13"
+  source_refs:
+    - fixture.bottom_up.model_images
+  relationships: []
+  open_questions: []
+  from: slice.download_model_images
+  to: slice.generate_model_description
+  reason: shared_artifact
+  shared_artifacts:
+    - artifact.model_image_set
+  strength: weak
+  recommendation: keep_independent_for_now

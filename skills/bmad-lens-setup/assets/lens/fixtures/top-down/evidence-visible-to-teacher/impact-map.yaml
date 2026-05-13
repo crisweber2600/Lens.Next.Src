@@ -1,0 +1,47 @@
+workstream_impact:
+  id: impact.evidence_visible_to_teacher
+  kind: impact_map
+  active_slice: slice.evidence_visible_to_teacher
+  status: draft
+  confidence: medium
+  created_at: "2026-05-13"
+  updated_at: "2026-05-13"
+  source_refs:
+    - fixture.top_down.learning_improvement
+  relationships: []
+  directly_impacted:
+    - teacher-workspace
+    - evidence-access
+  possibly_conflicting:
+    - coaching-dashboard
+  shared_files:
+    - apps/teacher/src/evidence/EvidenceInbox.tsx
+    - packages/evidence-contracts/src/EvidenceArtifact.ts
+  shared_contracts:
+    - EvidenceArtifact
+    - EvidenceSource
+    - TeacherAccessPolicy
+  artifacts_produced:
+    - artifact.teacher_visible_evidence
+  artifacts_consumed:
+    - artifact.student_evidence
+  tests_to_prove:
+    - permitted teacher can open evidence artifact
+    - unauthorized teacher cannot access artifact
+    - missing artifact renders safe empty state
+  observability:
+    - evidence_detail_opened
+    - evidence_access_denied
+  rollout_controls:
+    - teacher_evidence_visibility_flag
+  data_privacy_policy_boundaries:
+    - student evidence visibility
+    - teacher-student relationship
+  architecture_decisions_needed:
+    - decision.teacher_access_policy
+  decisions_needed:
+    - Should access policy be roster-based or relationship-based?
+  related_workstream_gate:
+    result: impact_found
+    rationale: Evidence visibility touches access policy and teacher workspace.
+  recommendation: update_bmad_packet

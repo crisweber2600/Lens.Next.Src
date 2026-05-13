@@ -1,0 +1,31 @@
+salmon_signal:
+  id: salmon.teacher_access_policy
+  kind: salmon_signal
+  name: Teacher Access Policy Correction
+  status: reviewed
+  confidence: high
+  created_at: "2026-05-13"
+  updated_at: "2026-05-13"
+  source_refs:
+    - story.evidence_detail_view
+  relationships: []
+  open_questions: []
+  raised_from: story.evidence_detail_view
+  severity: high
+  discovery: >
+    Teacher access cannot be determined from class roster alone. Some support
+    staff need limited visibility without being assigned classroom teachers.
+  impacted_nodes:
+    - slice.evidence_visible_to_teacher
+    - capability.role_based_visibility
+    - decision.teacher_access_policy
+  recommended_action:
+    type: correct_course
+    reason: Current acceptance criteria depend on an incomplete access model.
+  bmad_action:
+    suggested_workflow: bmad-correct-course
+  propagation_report:
+    - impacted slice and access decision identified
+  decision_record:
+    status: pending
+  sync_status: not_synced

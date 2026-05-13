@@ -59,7 +59,7 @@ lens_implementation_folder:
 
 lens_validation_folder:
   prompt: "Where should LENS store validation results?"
-  default: "{project-root}/_bmad-output/lens/validation-results"
+  default: "{project-root}/_bmad-output/lens/validation"
   result: "{project-root}/{value}"
 
 lens_salmon_folder:

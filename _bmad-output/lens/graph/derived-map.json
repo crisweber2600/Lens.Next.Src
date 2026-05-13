@@ -1,11 +1,468 @@
 {
-  "generated_at": "2026-05-13T19:39:29.846809+00:00",
+  "generated_at": "2026-05-13T20:20:44.582274+00:00",
   "source_truth": false,
   "source_roots": [
-    "_bmad-output/lens/archive",
-    "_bmad-output/lens/landscape"
+    "_bmad-output/lens",
+    "skills/bmad-lens-setup/assets/lens/fixtures"
   ],
-  "nodes": [],
-  "relationships": [],
-  "warnings": []
+  "nodes": [
+    {
+      "id": "adjacency.download_model_images.to_generate_model_description",
+      "kind": "adjacency",
+      "name": "Download Images To Generate Description",
+      "status": "hypothesized",
+      "confidence": "medium",
+      "validity": null,
+      "updated_at": "2026-05-13",
+      "source_path": "skills/bmad-lens-setup/assets/lens/fixtures/bottom-up/download-model-images/adjacency.yaml"
+    },
+    {
+      "id": "promotion_gate.model_image_processing",
+      "kind": "promotion_gate",
+      "name": "Model Image Processing Promotion Gate",
+      "status": "reviewed",
+      "confidence": "medium",
+      "validity": null,
+      "updated_at": "2026-05-13",
+      "source_path": "skills/bmad-lens-setup/assets/lens/fixtures/bottom-up/download-model-images/promotion-gate.yaml"
+    },
+    {
+      "id": "slice.download_model_images",
+      "kind": "slice",
+      "name": "Download Model Images",
+      "status": "active",
+      "confidence": "high",
+      "validity": null,
+      "updated_at": "2026-05-13",
+      "source_path": "skills/bmad-lens-setup/assets/lens/fixtures/bottom-up/download-model-images/slice.yaml"
+    },
+    {
+      "id": "bmad_packet.evidence_visible_to_teacher",
+      "kind": "bmad_packet",
+      "name": "Evidence Visible To Teacher Packet",
+      "status": "approved",
+      "confidence": "medium",
+      "validity": "current",
+      "updated_at": "2026-05-13",
+      "source_path": "skills/bmad-lens-setup/assets/lens/fixtures/top-down/evidence-visible-to-teacher/bmad-packet.yaml"
+    },
+    {
+      "id": "impact.evidence_visible_to_teacher",
+      "kind": "impact_map",
+      "name": "impact-map",
+      "status": "draft",
+      "confidence": "medium",
+      "validity": null,
+      "updated_at": "2026-05-13",
+      "source_path": "skills/bmad-lens-setup/assets/lens/fixtures/top-down/evidence-visible-to-teacher/impact-map.yaml"
+    },
+    {
+      "id": "journey.evidence_to_teacher_action",
+      "kind": "journey",
+      "name": "Evidence To Teacher Action",
+      "status": "reviewed",
+      "confidence": "medium",
+      "validity": null,
+      "updated_at": "2026-05-13",
+      "source_path": "skills/bmad-lens-setup/assets/lens/fixtures/top-down/evidence-visible-to-teacher/journey.yaml"
+    },
+    {
+      "id": "journey_step.evidence_to_teacher_action.001",
+      "kind": "journey_step",
+      "name": "Evidence Captured",
+      "status": null,
+      "confidence": null,
+      "validity": null,
+      "updated_at": null,
+      "source_path": "skills/bmad-lens-setup/assets/lens/fixtures/top-down/evidence-visible-to-teacher/journey.yaml"
+    },
+    {
+      "id": "journey_step.evidence_to_teacher_action.002",
+      "kind": "journey_step",
+      "name": "Teacher Views Evidence",
+      "status": null,
+      "confidence": null,
+      "validity": null,
+      "updated_at": null,
+      "source_path": "skills/bmad-lens-setup/assets/lens/fixtures/top-down/evidence-visible-to-teacher/journey.yaml"
+    },
+    {
+      "id": "outcome.teacher_turns_evidence_into_action",
+      "kind": "outcome",
+      "name": "Teacher Turns Evidence Into Action",
+      "status": "reviewed",
+      "confidence": "medium",
+      "validity": null,
+      "updated_at": "2026-05-13",
+      "source_path": "skills/bmad-lens-setup/assets/lens/fixtures/top-down/evidence-visible-to-teacher/journey.yaml"
+    },
+    {
+      "id": "decision.teacher_access_policy",
+      "kind": "decision",
+      "name": "Teacher Access Policy",
+      "status": "draft",
+      "confidence": "medium",
+      "validity": null,
+      "updated_at": "2026-05-13",
+      "source_path": "skills/bmad-lens-setup/assets/lens/fixtures/top-down/evidence-visible-to-teacher/journey.yaml"
+    },
+    {
+      "id": "risk.student_privacy",
+      "kind": "risk",
+      "name": "Student Privacy",
+      "status": "reviewed",
+      "confidence": "high",
+      "validity": null,
+      "updated_at": "2026-05-13",
+      "source_path": "skills/bmad-lens-setup/assets/lens/fixtures/top-down/evidence-visible-to-teacher/journey.yaml"
+    },
+    {
+      "id": "salmon.teacher_access_policy",
+      "kind": "salmon_signal",
+      "name": "Teacher Access Policy Correction",
+      "status": "reviewed",
+      "confidence": "high",
+      "validity": null,
+      "updated_at": "2026-05-13",
+      "source_path": "skills/bmad-lens-setup/assets/lens/fixtures/top-down/evidence-visible-to-teacher/salmon-signal.yaml"
+    },
+    {
+      "id": "slice.evidence_visible_to_teacher",
+      "kind": "slice",
+      "name": "Evidence Visible To Teacher",
+      "status": "approved",
+      "confidence": "medium",
+      "validity": null,
+      "updated_at": "2026-05-13",
+      "source_path": "skills/bmad-lens-setup/assets/lens/fixtures/top-down/evidence-visible-to-teacher/slice.yaml"
+    },
+    {
+      "id": "story.evidence_detail_view",
+      "kind": "story",
+      "name": "Evidence Detail View",
+      "status": "planned",
+      "confidence": "medium",
+      "validity": null,
+      "updated_at": "2026-05-13",
+      "source_path": "skills/bmad-lens-setup/assets/lens/fixtures/top-down/evidence-visible-to-teacher/story.yaml"
+    },
+    {
+      "id": "validation.evidence_visible_to_teacher.slice",
+      "kind": "validation_result",
+      "name": "Evidence Visible To Teacher Slice Validation",
+      "status": "reviewed",
+      "confidence": "medium",
+      "validity": null,
+      "updated_at": "2026-05-13",
+      "source_path": "skills/bmad-lens-setup/assets/lens/fixtures/top-down/evidence-visible-to-teacher/validation-result.yaml"
+    }
+  ],
+  "relationships": [
+    {
+      "from": "slice.download_model_images",
+      "type": "shared_artifact",
+      "to": "slice.generate_model_description",
+      "source_path": "skills/bmad-lens-setup/assets/lens/fixtures/bottom-up/download-model-images/adjacency.yaml",
+      "evidence": "adjacency.download_model_images.to_generate_model_description"
+    },
+    {
+      "from": "slice.download_model_images",
+      "type": "adjacent_to",
+      "to": "slice.generate_model_description",
+      "source_path": "skills/bmad-lens-setup/assets/lens/fixtures/bottom-up/download-model-images/adjacency.yaml",
+      "evidence": "shared_artifact"
+    },
+    {
+      "from": "slice.download_model_images",
+      "type": "promotes_to",
+      "to": "capability.model_image_processing",
+      "source_path": "skills/bmad-lens-setup/assets/lens/fixtures/bottom-up/download-model-images/promotion-gate.yaml",
+      "evidence": "promotion_gate"
+    },
+    {
+      "from": "slice.generate_model_description",
+      "type": "promotes_to",
+      "to": "capability.model_image_processing",
+      "source_path": "skills/bmad-lens-setup/assets/lens/fixtures/bottom-up/download-model-images/promotion-gate.yaml",
+      "evidence": "promotion_gate"
+    },
+    {
+      "from": "slice.detect_duplicate_models",
+      "type": "promotes_to",
+      "to": "capability.model_image_processing",
+      "source_path": "skills/bmad-lens-setup/assets/lens/fixtures/bottom-up/download-model-images/promotion-gate.yaml",
+      "evidence": "promotion_gate"
+    },
+    {
+      "from": "slice.download_model_images",
+      "type": "produces_artifact",
+      "to": "artifact.model_image_set",
+      "source_path": "skills/bmad-lens-setup/assets/lens/fixtures/bottom-up/download-model-images/slice.yaml",
+      "evidence": null
+    },
+    {
+      "from": "bmad_packet.evidence_visible_to_teacher",
+      "type": "planned_by",
+      "to": "slice.evidence_visible_to_teacher",
+      "source_path": "skills/bmad-lens-setup/assets/lens/fixtures/top-down/evidence-visible-to-teacher/bmad-packet.yaml",
+      "evidence": "active_slice"
+    },
+    {
+      "from": "impact.evidence_visible_to_teacher",
+      "type": "produces_artifact",
+      "to": "artifact.teacher_visible_evidence",
+      "source_path": "skills/bmad-lens-setup/assets/lens/fixtures/top-down/evidence-visible-to-teacher/impact-map.yaml",
+      "evidence": null
+    },
+    {
+      "from": "impact.evidence_visible_to_teacher",
+      "type": "consumes_artifact",
+      "to": "artifact.student_evidence",
+      "source_path": "skills/bmad-lens-setup/assets/lens/fixtures/top-down/evidence-visible-to-teacher/impact-map.yaml",
+      "evidence": null
+    },
+    {
+      "from": "impact.evidence_visible_to_teacher",
+      "type": "planned_by",
+      "to": "slice.evidence_visible_to_teacher",
+      "source_path": "skills/bmad-lens-setup/assets/lens/fixtures/top-down/evidence-visible-to-teacher/impact-map.yaml",
+      "evidence": "active_slice"
+    },
+    {
+      "from": "journey.evidence_to_teacher_action",
+      "type": "participates_in",
+      "to": "system.learning_improvement_platform",
+      "source_path": "skills/bmad-lens-setup/assets/lens/fixtures/top-down/evidence-visible-to-teacher/journey.yaml",
+      "evidence": "system"
+    },
+    {
+      "from": "journey.evidence_to_teacher_action",
+      "type": "serves",
+      "to": "outcome.teacher_turns_evidence_into_action",
+      "source_path": "skills/bmad-lens-setup/assets/lens/fixtures/top-down/evidence-visible-to-teacher/journey.yaml",
+      "evidence": "outcome"
+    },
+    {
+      "from": "salmon.teacher_access_policy",
+      "type": "impacted_by",
+      "to": "story.evidence_detail_view",
+      "source_path": "skills/bmad-lens-setup/assets/lens/fixtures/top-down/evidence-visible-to-teacher/salmon-signal.yaml",
+      "evidence": "raised_from"
+    },
+    {
+      "from": "salmon.teacher_access_policy",
+      "type": "impacted_by",
+      "to": "slice.evidence_visible_to_teacher",
+      "source_path": "skills/bmad-lens-setup/assets/lens/fixtures/top-down/evidence-visible-to-teacher/salmon-signal.yaml",
+      "evidence": "salmon"
+    },
+    {
+      "from": "salmon.teacher_access_policy",
+      "type": "impacted_by",
+      "to": "capability.role_based_visibility",
+      "source_path": "skills/bmad-lens-setup/assets/lens/fixtures/top-down/evidence-visible-to-teacher/salmon-signal.yaml",
+      "evidence": "salmon"
+    },
+    {
+      "from": "salmon.teacher_access_policy",
+      "type": "impacted_by",
+      "to": "decision.teacher_access_policy",
+      "source_path": "skills/bmad-lens-setup/assets/lens/fixtures/top-down/evidence-visible-to-teacher/salmon-signal.yaml",
+      "evidence": "salmon"
+    },
+    {
+      "from": "slice.evidence_visible_to_teacher",
+      "type": "produces_artifact",
+      "to": "artifact.teacher_visible_evidence",
+      "source_path": "skills/bmad-lens-setup/assets/lens/fixtures/top-down/evidence-visible-to-teacher/slice.yaml",
+      "evidence": null
+    },
+    {
+      "from": "slice.evidence_visible_to_teacher",
+      "type": "consumes_artifact",
+      "to": "artifact.student_evidence",
+      "source_path": "skills/bmad-lens-setup/assets/lens/fixtures/top-down/evidence-visible-to-teacher/slice.yaml",
+      "evidence": null
+    },
+    {
+      "from": "slice.evidence_visible_to_teacher",
+      "type": "participates_in",
+      "to": "system.learning_improvement_platform",
+      "source_path": "skills/bmad-lens-setup/assets/lens/fixtures/top-down/evidence-visible-to-teacher/slice.yaml",
+      "evidence": "system"
+    },
+    {
+      "from": "slice.evidence_visible_to_teacher",
+      "type": "serves",
+      "to": "outcome.teacher_turns_evidence_into_action",
+      "source_path": "skills/bmad-lens-setup/assets/lens/fixtures/top-down/evidence-visible-to-teacher/slice.yaml",
+      "evidence": "outcome"
+    },
+    {
+      "from": "slice.evidence_visible_to_teacher",
+      "type": "realized_by",
+      "to": "journey.evidence_to_teacher_action",
+      "source_path": "skills/bmad-lens-setup/assets/lens/fixtures/top-down/evidence-visible-to-teacher/slice.yaml",
+      "evidence": "journey"
+    },
+    {
+      "from": "slice.evidence_visible_to_teacher",
+      "type": "requires",
+      "to": "capability.evidence_artifact_model",
+      "source_path": "skills/bmad-lens-setup/assets/lens/fixtures/top-down/evidence-visible-to-teacher/slice.yaml",
+      "evidence": "capability"
+    },
+    {
+      "from": "slice.evidence_visible_to_teacher",
+      "type": "requires",
+      "to": "capability.evidence_source_metadata",
+      "source_path": "skills/bmad-lens-setup/assets/lens/fixtures/top-down/evidence-visible-to-teacher/slice.yaml",
+      "evidence": "capability"
+    },
+    {
+      "from": "slice.evidence_visible_to_teacher",
+      "type": "requires",
+      "to": "capability.teacher_workspace",
+      "source_path": "skills/bmad-lens-setup/assets/lens/fixtures/top-down/evidence-visible-to-teacher/slice.yaml",
+      "evidence": "capability"
+    },
+    {
+      "from": "slice.evidence_visible_to_teacher",
+      "type": "requires",
+      "to": "capability.role_based_visibility",
+      "source_path": "skills/bmad-lens-setup/assets/lens/fixtures/top-down/evidence-visible-to-teacher/slice.yaml",
+      "evidence": "capability"
+    },
+    {
+      "from": "story.evidence_detail_view",
+      "type": "planned_by",
+      "to": "slice.evidence_visible_to_teacher",
+      "source_path": "skills/bmad-lens-setup/assets/lens/fixtures/top-down/evidence-visible-to-teacher/story.yaml",
+      "evidence": "active_slice"
+    },
+    {
+      "from": "validation.evidence_visible_to_teacher.slice",
+      "type": "validated_by",
+      "to": "slice.evidence_visible_to_teacher",
+      "source_path": "skills/bmad-lens-setup/assets/lens/fixtures/top-down/evidence-visible-to-teacher/validation-result.yaml",
+      "evidence": "validates"
+    }
+  ],
+  "warnings": [
+    {
+      "severity": "high",
+      "type": "orphan_ref",
+      "ref": "artifact.model_image_set"
+    },
+    {
+      "severity": "high",
+      "type": "orphan_ref",
+      "ref": "artifact.student_evidence"
+    },
+    {
+      "severity": "high",
+      "type": "orphan_ref",
+      "ref": "artifact.teacher_visible_evidence"
+    },
+    {
+      "severity": "high",
+      "type": "orphan_ref",
+      "ref": "capability.evidence_artifact_model"
+    },
+    {
+      "severity": "high",
+      "type": "orphan_ref",
+      "ref": "capability.evidence_source_metadata"
+    },
+    {
+      "severity": "high",
+      "type": "orphan_ref",
+      "ref": "capability.model_image_processing"
+    },
+    {
+      "severity": "high",
+      "type": "orphan_ref",
+      "ref": "capability.role_based_visibility"
+    },
+    {
+      "severity": "high",
+      "type": "orphan_ref",
+      "ref": "capability.teacher_workspace"
+    },
+    {
+      "severity": "high",
+      "type": "orphan_ref",
+      "ref": "slice.detect_duplicate_models"
+    },
+    {
+      "severity": "high",
+      "type": "orphan_ref",
+      "ref": "slice.generate_model_description"
+    },
+    {
+      "severity": "high",
+      "type": "orphan_ref",
+      "ref": "system.learning_improvement_platform"
+    },
+    {
+      "severity": "medium",
+      "type": "unresolved_promoted_ref",
+      "ref": "capability.model_image_processing",
+      "source_path": "skills/bmad-lens-setup/assets/lens/fixtures/bottom-up/download-model-images/promotion-gate.yaml"
+    },
+    {
+      "severity": "medium",
+      "type": "unresolved_promoted_ref",
+      "ref": "capability.model_image_processing",
+      "source_path": "skills/bmad-lens-setup/assets/lens/fixtures/bottom-up/download-model-images/promotion-gate.yaml"
+    },
+    {
+      "severity": "medium",
+      "type": "unresolved_promoted_ref",
+      "ref": "capability.model_image_processing",
+      "source_path": "skills/bmad-lens-setup/assets/lens/fixtures/bottom-up/download-model-images/promotion-gate.yaml"
+    },
+    {
+      "severity": "medium",
+      "type": "unresolved_promoted_ref",
+      "ref": "system.learning_improvement_platform",
+      "source_path": "skills/bmad-lens-setup/assets/lens/fixtures/top-down/evidence-visible-to-teacher/journey.yaml"
+    },
+    {
+      "severity": "medium",
+      "type": "unresolved_promoted_ref",
+      "ref": "capability.role_based_visibility",
+      "source_path": "skills/bmad-lens-setup/assets/lens/fixtures/top-down/evidence-visible-to-teacher/salmon-signal.yaml"
+    },
+    {
+      "severity": "medium",
+      "type": "unresolved_promoted_ref",
+      "ref": "system.learning_improvement_platform",
+      "source_path": "skills/bmad-lens-setup/assets/lens/fixtures/top-down/evidence-visible-to-teacher/slice.yaml"
+    },
+    {
+      "severity": "medium",
+      "type": "unresolved_promoted_ref",
+      "ref": "capability.evidence_artifact_model",
+      "source_path": "skills/bmad-lens-setup/assets/lens/fixtures/top-down/evidence-visible-to-teacher/slice.yaml"
+    },
+    {
+      "severity": "medium",
+      "type": "unresolved_promoted_ref",
+      "ref": "capability.evidence_source_metadata",
+      "source_path": "skills/bmad-lens-setup/assets/lens/fixtures/top-down/evidence-visible-to-teacher/slice.yaml"
+    },
+    {
+      "severity": "medium",
+      "type": "unresolved_promoted_ref",
+      "ref": "capability.teacher_workspace",
+      "source_path": "skills/bmad-lens-setup/assets/lens/fixtures/top-down/evidence-visible-to-teacher/slice.yaml"
+    },
+    {
+      "severity": "medium",
+      "type": "unresolved_promoted_ref",
+      "ref": "capability.role_based_visibility",
+      "source_path": "skills/bmad-lens-setup/assets/lens/fixtures/top-down/evidence-visible-to-teacher/slice.yaml"
+    }
+  ]
 }

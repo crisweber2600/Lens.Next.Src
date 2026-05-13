@@ -4,7 +4,10 @@ checks:
   - module-help.csv exposes all LENS capabilities with unique menu codes
   - marketplace manifest lists all LENS skill folders
   - schemas include required knowledge states, confidence levels, entities, relationship types, and gates
-  - templates include slice, discovery epoch, BMAD packet, impact map, story guard, Salmon, Doctor, and Auspex shapes
+  - templates include slice, journey, discovery epoch, BMAD packet, impact map, story guard, Salmon, Doctor, and Auspex shapes
+  - validation paths use _bmad-output/lens/validation for current validation and _bmad-output/lens/archive/validation-results for historical records
+  - fixtures exist for top-down evidence-visible-to-teacher and bottom-up download-model-images modes
+  - script tests exist for lens_artifact_ops.py and validate_lens_assets.py
   - examples cover top-down education and bottom-up model images without scaffolding an application
   - evals cover discovery routing, bottom-up slice discipline, promotion pressure, focused BMAD packets, guard-story, Salmon, Doctor, and Auspex
   - Derived Map is documented as generated projection, not source truth

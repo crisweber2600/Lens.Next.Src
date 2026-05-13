@@ -23,6 +23,6 @@ lens:
   lens_gates_folder: '{project-root}/_bmad-output/lens/gates'
   lens_bridge_folder: '{project-root}/_bmad-output/lens/bmad-bridge'
   lens_implementation_folder: '{project-root}/_bmad-output/lens/implementation'
-  lens_validation_folder: '{project-root}/_bmad-output/lens/validation-results'
+  lens_validation_folder: '{project-root}/_bmad-output/lens/validation'
   lens_salmon_folder: '{project-root}/_bmad-output/lens/salmon'
   lens_auspex_folder: '{project-root}/_bmad-output/lens/auspex'

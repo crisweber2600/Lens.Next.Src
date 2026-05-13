@@ -1,0 +1,87 @@
+journey:
+  id: journey.evidence_to_teacher_action
+  kind: journey
+  name: Evidence To Teacher Action
+  status: reviewed
+  confidence: medium
+  created_at: "2026-05-13"
+  updated_at: "2026-05-13"
+  source_refs:
+    - fixture.top_down.learning_improvement
+  relationships:
+    - rel.outcome.teacher_evidence_action.realized_by.journey.evidence_to_teacher_action
+  open_questions:
+    - What counts as student evidence?
+  system: system.learning_improvement_platform
+  role: role.teacher
+  outcome: outcome.teacher_turns_evidence_into_action
+  starts_with:
+    - evidence artifact exists
+    - teacher opens workspace
+  ends_with:
+    - teacher knows whether evidence is present and current
+  steps:
+    - id: journey_step.evidence_to_teacher_action.001
+      kind: journey_step
+      name: Evidence Captured
+      actor: student_or_system
+      surface: evidence source
+      evidence_or_data:
+        - artifact.student_evidence
+      decision: null
+      state_change: evidence artifact exists
+      success_evidence:
+        - source metadata recorded
+    - id: journey_step.evidence_to_teacher_action.002
+      kind: journey_step
+      name: Teacher Views Evidence
+      actor: role.teacher
+      surface: teacher evidence inbox
+      evidence_or_data:
+        - artifact.teacher_visible_evidence
+      decision: decision.teacher_access_policy
+      state_change: teacher has seen source evidence
+      success_evidence:
+        - permitted teacher can open artifact
+        - source and timestamp are visible
+  risks:
+    - risk.student_privacy
+  decisions_needed:
+    - decision.teacher_access_policy
+  slice_candidates:
+    - slice.evidence_visible_to_teacher
+  linked_entities:
+    - id: outcome.teacher_turns_evidence_into_action
+      kind: outcome
+      name: Teacher Turns Evidence Into Action
+      status: reviewed
+      confidence: medium
+      created_at: "2026-05-13"
+      updated_at: "2026-05-13"
+      source_refs:
+        - fixture.top_down.learning_improvement
+      relationships: []
+      open_questions: []
+    - id: decision.teacher_access_policy
+      kind: decision
+      name: Teacher Access Policy
+      status: draft
+      confidence: medium
+      created_at: "2026-05-13"
+      updated_at: "2026-05-13"
+      source_refs:
+        - fixture.top_down.learning_improvement
+      relationships: []
+      open_questions:
+        - Are support staff covered by teacher access?
+    - id: risk.student_privacy
+      kind: risk
+      name: Student Privacy
+      status: reviewed
+      confidence: high
+      created_at: "2026-05-13"
+      updated_at: "2026-05-13"
+      source_refs:
+        - fixture.top_down.learning_improvement
+      relationships: []
+      open_questions: []

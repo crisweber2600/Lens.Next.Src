@@ -1,0 +1,13 @@
+flowchart LR
+  outcome["Outcome"]
+  start["Start state"]
+  step1["Journey step"]
+  decision{"Decision"}
+  end_state["End state"]
+  slice["Selected slice"]
+
+  outcome --> start
+  start --> step1
+  step1 --> decision
+  decision --> end_state
+  step1 --> slice

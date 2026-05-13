@@ -13,6 +13,8 @@ layers:
   graph: _bmad-output/lens/graph
   bmad_bridge: _bmad-output/lens/bmad-bridge
   implementation_guard: _bmad-output/lens/implementation
+  validation: _bmad-output/lens/validation
+  validation_archive: _bmad-output/lens/archive/validation-results
   salmon: _bmad-output/lens/salmon
   auspex: _bmad-output/lens/auspex
 rules:
