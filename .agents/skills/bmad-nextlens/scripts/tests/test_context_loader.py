@@ -143,6 +143,56 @@ def test_evaluate_context_sufficiency_propagates_parser_warnings() -> None:
     assert any("Schema version mismatch" in warning for warning in report.warnings)
 
 
+def test_format_context_sufficiency_report_for_ready_status() -> None:
+    report = CONTEXT_LOADER.evaluate_context_sufficiency(_sufficient_context())
+
+    lines = CONTEXT_LOADER.format_context_sufficiency_report(report)
+
+    assert lines[0] == "[stage:context-sufficiency]"
+    assert "system_thesis: [✓] Improve planning fidelity" in lines
+    assert "role_coverage: [✓] 1 roles" in lines
+    assert "candidate_traceability: [✓] 1 candidates traceable" in lines
+    assert "status: ready" in lines
+    assert "recommendation: continue" in lines
+
+
+def test_format_context_sufficiency_report_for_blocked_status() -> None:
+    payload = _sufficient_context()
+    payload["system"]["thesis"] = ""
+    payload["roles"] = []
+    payload["outcomes"] = []
+    payload["journeys"] = []
+    payload["candidateFeatures"] = [{"id": "feature-context-gate"}]
+    report = CONTEXT_LOADER.evaluate_context_sufficiency(payload)
+
+    lines = CONTEXT_LOADER.format_context_sufficiency_report(report)
+
+    assert "system_thesis: [✗] missing" in lines
+    assert "status: blocked" in lines
+    assert "recommendation: return_to_discovery" in lines
+    assert "missing_required:" in lines
+    assert "- system_thesis" in lines
+    assert "confirmation_required: yes" not in lines
+
+
+def test_format_context_sufficiency_report_for_warnings_status() -> None:
+    payload = _sufficient_context()
+    payload["risks"] = ["risk-1"]
+    payload["openQuestions"] = ["question-1", "question-2"]
+    payload.pop("bmadConsumerContext")
+    report = CONTEXT_LOADER.evaluate_context_sufficiency(payload)
+
+    lines = CONTEXT_LOADER.format_context_sufficiency_report(report)
+
+    assert "risks_captured: [✓] 1 risks" in lines
+    assert "bmad_hints: [✗] missing hints" in lines
+    assert "status: ready_with_warnings" in lines
+    assert "recommendation: ask_for_confirmation" in lines
+    assert "warnings:" in lines
+    assert any("bmad_hints is missing bmadConsumerContext." in line for line in lines)
+    assert "confirmation_required: yes" in lines
+
+
 def _context_yaml(
     *,
     envelope: bool = False,

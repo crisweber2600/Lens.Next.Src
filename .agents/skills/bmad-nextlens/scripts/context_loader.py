@@ -46,6 +46,8 @@ SUFFICIENCY_GATE_ORDER = (
     "risks_captured",
     "bmad_hints",
 )
+CHECKMARK_SYMBOL = "✓"
+CROSS_SYMBOL = "✗"
 
 
 @dataclass(frozen=True)
@@ -150,6 +152,32 @@ def evaluate_context_sufficiency(
         warnings=tuple(warnings),
         gate_results=tuple(gate_results),
     )
+
+
+def format_context_sufficiency_report(report: ContextSufficiencyReport) -> list[str]:
+    gates_by_name = {gate.name: gate for gate in report.gate_results}
+    lines = ["[stage:context-sufficiency]"]
+
+    for gate_name in SUFFICIENCY_GATE_ORDER:
+        gate = gates_by_name[gate_name]
+        symbol = CHECKMARK_SYMBOL if gate.passed else CROSS_SYMBOL
+        lines.append(f"{gate_name}: [{symbol}] {gate.detail}")
+
+    lines.append(f"status: {report.status}")
+    lines.append(f"recommendation: {report.recommendation}")
+
+    if report.missing_required:
+        lines.append("missing_required:")
+        lines.extend(f"- {item}" for item in report.missing_required)
+
+    if report.warnings:
+        lines.append("warnings:")
+        lines.extend(f"- {warning}" for warning in report.warnings)
+
+    if report.status == "ready_with_warnings":
+        lines.append("confirmation_required: yes")
+
+    return lines
 
 
 def _require_yaml_support():
