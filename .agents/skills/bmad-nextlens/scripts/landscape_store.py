@@ -51,6 +51,59 @@ class LandscapePersistenceResult:
     blocks_packet_emission: bool = False
 
 
+@dataclass(frozen=True)
+class LandscapeRelationship:
+    relationship_name: str
+    target_id: str
+    target_entity: "ReconstructedLandscapeEntity | None"
+    metadata: Mapping[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class ReconstructedLandscapeEntity:
+    entity_type: str
+    semantic_id: str
+    opaque_id: str
+    name: str
+    snapshot: dict[str, Any]
+    relationships: dict[str, Any]
+    metadata: dict[str, Any]
+    source_path: Path
+    resolved_relationships: dict[str, tuple[LandscapeRelationship, ...]] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class LandscapeState:
+    entities_by_id: Mapping[str, ReconstructedLandscapeEntity]
+    entities_by_type: Mapping[str, tuple[ReconstructedLandscapeEntity, ...]]
+    warnings: tuple[str, ...] = field(default_factory=tuple)
+    load_sequence: tuple[str, ...] = field(default_factory=tuple)
+
+    def get_by_id(self, semantic_id: str) -> ReconstructedLandscapeEntity | None:
+        return self.entities_by_id.get(semantic_id)
+
+    def get_by_type(self, entity_type: str) -> tuple[ReconstructedLandscapeEntity, ...]:
+        return self.entities_by_type.get(_entity_directory_name(entity_type), ())
+
+    def get_related_entities(
+        self,
+        semantic_id: str,
+        *,
+        relationship_name: str | None = None,
+    ) -> tuple[LandscapeRelationship, ...]:
+        entity = self.entities_by_id.get(semantic_id)
+        if entity is None:
+            return ()
+
+        if relationship_name is not None:
+            return entity.resolved_relationships.get(relationship_name, ())
+
+        flattened: list[LandscapeRelationship] = []
+        for name in sorted(entity.resolved_relationships):
+            flattened.extend(entity.resolved_relationships[name])
+        return tuple(flattened)
+
+
 def initialize_landscape_dirs(docs_path: str | Path) -> dict[str, Path]:
     docs_root = Path(docs_path)
     landscape_root = docs_root / "landscape"
@@ -137,6 +190,54 @@ def persist_landscape_entity(
         )
 
 
+def reconstruct_landscape_state(docs_path: str | Path) -> LandscapeState:
+    yaml_module = _require_yaml_support()
+    directories = initialize_landscape_dirs(docs_path)
+    warnings: list[str] = []
+    entities_by_id: dict[str, ReconstructedLandscapeEntity] = {}
+    entities_by_type: dict[str, list[ReconstructedLandscapeEntity]] = {
+        entity_type: [] for entity_type in LANDSCAPE_ENTITY_DIRECTORIES
+    }
+    load_sequence: list[str] = []
+
+    for entity_type in LANDSCAPE_ENTITY_DIRECTORIES:
+        for file_path in sorted(directories[entity_type].glob("*.yaml")):
+            try:
+                payload = yaml_module.safe_load(file_path.read_text(encoding="utf-8"))
+                entity = _parse_reconstructed_entity(payload, entity_type, file_path)
+            except Exception as exc:
+                warnings.append(str(exc))
+                continue
+
+            if entity.semantic_id in entities_by_id:
+                warnings.append(
+                    f"Duplicate semanticId '{entity.semantic_id}' detected at '{file_path}'."
+                )
+                continue
+
+            entities_by_id[entity.semantic_id] = entity
+            entities_by_type[entity_type].append(entity)
+            load_sequence.append(entity.semantic_id)
+
+    for entity in entities_by_id.values():
+        entity.resolved_relationships = _resolve_relationships(
+            entity.relationships,
+            entities_by_id,
+            warnings,
+            entity.semantic_id,
+        )
+
+    return LandscapeState(
+        entities_by_id=entities_by_id,
+        entities_by_type={
+            entity_type: tuple(sorted(items, key=lambda item: item.semantic_id))
+            for entity_type, items in entities_by_type.items()
+        },
+        warnings=tuple(warnings),
+        load_sequence=tuple(load_sequence),
+    )
+
+
 def _require_yaml_support():
     if yaml is None:
         raise RuntimeError(
@@ -147,6 +248,42 @@ def _require_yaml_support():
 
 def _entity_directory_name(entity_type: str) -> str:
     return str(entity_type).strip().lower().replace("-", "_").replace(" ", "_")
+
+
+def _parse_reconstructed_entity(
+    payload: Any,
+    entity_type: str,
+    file_path: Path,
+) -> ReconstructedLandscapeEntity:
+    if not isinstance(payload, Mapping):
+        raise ValueError(f"Landscape file '{file_path}' must contain a mapping.")
+
+    identity = payload.get("identity")
+    if not isinstance(identity, Mapping):
+        raise ValueError(f"Landscape file '{file_path}' is missing identity data.")
+
+    semantic_id = str(identity.get("semanticId") or "").strip()
+    opaque_id = str(identity.get("opaqueId") or "").strip()
+    name = str(identity.get("name") or "").strip()
+    if not semantic_id or not opaque_id or not name:
+        raise ValueError(f"Landscape file '{file_path}' has incomplete identity data.")
+
+    snapshot = payload.get("snapshot") or {}
+    relationships = payload.get("relationships") or {}
+    metadata = payload.get("metadata") or {}
+    if not isinstance(relationships, Mapping):
+        raise ValueError(f"Landscape file '{file_path}' has invalid relationships data.")
+
+    return ReconstructedLandscapeEntity(
+        entity_type=entity_type,
+        semantic_id=semantic_id,
+        opaque_id=opaque_id,
+        name=name,
+        snapshot=dict(snapshot) if isinstance(snapshot, Mapping) else {"value": snapshot},
+        relationships=dict(relationships),
+        metadata=dict(metadata) if isinstance(metadata, Mapping) else {"value": metadata},
+        source_path=file_path,
+    )
 
 
 def _build_payload(entity: LandscapeEntityRecord, entity_directory: str) -> dict[str, Any]:
@@ -188,3 +325,58 @@ def _set_read_write_permissions(path: Path) -> None:
 
 def _utc_timestamp() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _resolve_relationships(
+    relationships: Mapping[str, Any],
+    entities_by_id: Mapping[str, ReconstructedLandscapeEntity],
+    warnings: list[str],
+    source_id: str,
+) -> dict[str, tuple[LandscapeRelationship, ...]]:
+    resolved: dict[str, tuple[LandscapeRelationship, ...]] = {}
+
+    for relationship_name, raw_value in relationships.items():
+        edges: list[LandscapeRelationship] = []
+        for target_id, metadata in _coerce_relationship_targets(raw_value):
+            target_entity = entities_by_id.get(target_id)
+            if target_entity is None:
+                warnings.append(
+                    f"Broken relationship '{relationship_name}' from '{source_id}' to '{target_id}'."
+                )
+            edges.append(
+                LandscapeRelationship(
+                    relationship_name=relationship_name,
+                    target_id=target_id,
+                    target_entity=target_entity,
+                    metadata=metadata,
+                )
+            )
+
+        if edges:
+            resolved[relationship_name] = tuple(edges)
+
+    return resolved
+
+
+def _coerce_relationship_targets(raw_value: Any) -> list[tuple[str, dict[str, Any]]]:
+    if isinstance(raw_value, str):
+        return [(raw_value, {})]
+
+    if isinstance(raw_value, Mapping):
+        target_id = str(raw_value.get("id") or raw_value.get("semanticId") or "").strip()
+        if target_id:
+            metadata = {
+                key: value
+                for key, value in raw_value.items()
+                if key not in {"id", "semanticId"}
+            }
+            return [(target_id, metadata)]
+        return []
+
+    if isinstance(raw_value, list):
+        edges: list[tuple[str, dict[str, Any]]] = []
+        for item in raw_value:
+            edges.extend(_coerce_relationship_targets(item))
+        return edges
+
+    return []
