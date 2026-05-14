@@ -1,0 +1,195 @@
+"""Normalize the NextLens BMAD module action surface.
+
+The planning stories describe textual commands such as `nextlens new --context ...`.
+NextLens itself is being built as a BMAD module, not a standalone CLI application,
+so this helper keeps the story examples executable in tests while normalizing the
+module's real action surface.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from shlex import split as shlex_split
+from typing import Mapping, Sequence
+
+
+ACTION_DEFINITIONS = {
+    "new": {
+        "required_key": "context_source",
+        "flag": "--context",
+    },
+    "doctor": {
+        "required_key": "packet_source",
+        "flag": "--packet",
+    },
+    "salmon": {
+        "required_key": "findings_source",
+        "flag": "--findings",
+    },
+}
+
+ACTION_OPTION_ALIASES = {
+    "new": {
+        "context": "context_source",
+        "context_source": "context_source",
+        "context-source": "context_source",
+    },
+    "doctor": {
+        "packet": "packet_source",
+        "packet_source": "packet_source",
+        "packet-source": "packet_source",
+    },
+    "salmon": {
+        "findings": "findings_source",
+        "findings_source": "findings_source",
+        "findings-source": "findings_source",
+    },
+}
+
+COMMON_OPTION_ALIASES = {
+    "docs_path": "docs_path",
+    "docs-path": "docs_path",
+}
+
+HELP_ALIASES = {"help", "-h", "--help"}
+
+
+@dataclass(frozen=True)
+class ParsedAction:
+    action: str
+    context_source: str | None = None
+    packet_source: str | None = None
+    findings_source: str | None = None
+    overrides: dict[str, str] = field(default_factory=dict)
+
+    @property
+    def mode(self) -> str:
+        return self.action
+
+
+class CommandSurfaceError(ValueError):
+    def __init__(self, message: str):
+        super().__init__(message)
+        self.help_text = build_help_text()
+
+
+def build_help_text() -> str:
+    lines = [
+        "NextLens BMAD module actions:",
+        "  new --context <path> [--docs-path <path>]",
+        "  doctor --packet <path> [--docs-path <path>]",
+        "  salmon --findings <path> [--docs-path <path>]",
+        "  help | --help",
+        "",
+        "Story-compatible textual examples:",
+        "  nextlens new --context path/to/context.yaml",
+        "  nextlens doctor --packet path/to/packet.json",
+        "  nextlens salmon --findings path/to/findings.jsonl",
+        "  nextlens help",
+    ]
+    return "\n".join(lines)
+
+
+def _normalize_mapping_keys(action: str, options: Mapping[str, object]) -> dict[str, str]:
+    normalized: dict[str, str] = {}
+    action_aliases = ACTION_OPTION_ALIASES.get(action, {})
+
+    for raw_key, raw_value in options.items():
+        key = str(raw_key).strip().replace(" ", "_").lower()
+        value = str(raw_value).strip()
+
+        if not value:
+            raise CommandSurfaceError(f"Argument '{raw_key}' requires a non-empty value.")
+
+        if key in COMMON_OPTION_ALIASES:
+            mapped_key = COMMON_OPTION_ALIASES[key]
+        elif key in action_aliases:
+            mapped_key = action_aliases[key]
+        else:
+            raise CommandSurfaceError(
+                f"Unknown argument '{raw_key}' for action '{action}'.\n{build_help_text()}"
+            )
+
+        if mapped_key in normalized:
+            raise CommandSurfaceError(
+                f"Argument '{raw_key}' was provided more than once for action '{action}'."
+            )
+        normalized[mapped_key] = value
+
+    return normalized
+
+
+def parse_module_action(action: str, options: Mapping[str, object] | None = None) -> ParsedAction:
+    normalized_action = str(action or "").strip().lower()
+    if normalized_action in HELP_ALIASES:
+        return ParsedAction(action="help")
+
+    if normalized_action not in ACTION_DEFINITIONS:
+        raise CommandSurfaceError(
+            f"Unknown NextLens action '{action}'.\n{build_help_text()}"
+        )
+
+    normalized_options = _normalize_mapping_keys(normalized_action, options or {})
+    required_key = ACTION_DEFINITIONS[normalized_action]["required_key"]
+    if required_key not in normalized_options:
+        raise CommandSurfaceError(
+            f"Missing required argument '{required_key}' for action '{normalized_action}'. "
+            f"Use {ACTION_DEFINITIONS[normalized_action]['flag']} to provide it.\n{build_help_text()}"
+        )
+
+    return ParsedAction(
+        action=normalized_action,
+        context_source=normalized_options.get("context_source"),
+        packet_source=normalized_options.get("packet_source"),
+        findings_source=normalized_options.get("findings_source"),
+        overrides={
+            key: value
+            for key, value in normalized_options.items()
+            if key in COMMON_OPTION_ALIASES.values()
+        },
+    )
+
+
+def parse_story_command(command: str | Sequence[str]) -> ParsedAction:
+    if isinstance(command, str):
+        tokens = shlex_split(command)
+    else:
+        tokens = [str(token) for token in command]
+
+    if not tokens:
+        raise CommandSurfaceError(f"No command was provided.\n{build_help_text()}")
+
+    if tokens[0].lower() == "nextlens":
+        tokens = tokens[1:]
+
+    if not tokens:
+        raise CommandSurfaceError(f"No action was provided.\n{build_help_text()}")
+
+    action = tokens[0].lower()
+    if action in HELP_ALIASES:
+        return ParsedAction(action="help")
+
+    if action not in ACTION_DEFINITIONS:
+        raise CommandSurfaceError(
+            f"Unknown NextLens action '{action}'.\n{build_help_text()}"
+        )
+
+    parsed_options: dict[str, str] = {}
+    option_tokens = tokens[1:]
+    index = 0
+    while index < len(option_tokens):
+        token = option_tokens[index]
+        if token in HELP_ALIASES:
+            return ParsedAction(action="help")
+        if not token.startswith("--"):
+            raise CommandSurfaceError(
+                f"Unexpected positional token '{token}' for action '{action}'.\n{build_help_text()}"
+            )
+        if index + 1 >= len(option_tokens):
+            raise CommandSurfaceError(
+                f"Option '{token}' requires a value.\n{build_help_text()}"
+            )
+        parsed_options[token[2:]] = option_tokens[index + 1]
+        index += 2
+
+    return parse_module_action(action, parsed_options)

@@ -1,0 +1,8 @@
+code: nxl
+name: "NextLens Top-Down Bridge"
+description: "Deterministic top-down feature packet bridge with doctor validation and salmon correction routing"
+module_version: 1.0.0
+default_selected: false
+module_greeting: >
+  NextLens is ready. Use the module action surface to create a feature packet,
+  run doctor validation, or route salmon findings.
