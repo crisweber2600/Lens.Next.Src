@@ -25,30 +25,94 @@ else:
 
 
 MODULE_VERSION_PATTERN = re.compile(r"^\d+\.\d+\.\d+$")
-MODULE_SKILL_PATH = ".agents/skills/bmad-nextlens/SKILL.md"
+SETUP_SKILL = "bmad-nextlens-setup"
+SETUP_ASSETS_DIR = Path(".agents") / "skills" / SETUP_SKILL / "assets"
 
 CAPABILITIES = (
     {
+        "command": "nextlens-setup",
+        "action": "configure",
+        "skill": "bmad-nextlens-setup",
+        "skill_path": ".agents/skills/bmad-nextlens-setup/SKILL.md",
+        "display_name": "Setup NextLens",
+        "menu_code": "SN",
+        "name": "NextLens Setup",
+        "description": "Register or refresh the NextLens BMad module in this project.",
+        "args": "{-H: headless mode}|{setup|configure}",
+        "phase": "anytime",
+        "after": "",
+        "before": "bmad-nextlens-new:new",
+        "required": "true",
+        "output_location": "{project-root}/_bmad",
+        "outputs": "config.yaml and module-help.csv",
+    },
+    {
         "command": "nextlens-new",
+        "action": "new",
+        "skill": "bmad-nextlens-new",
+        "skill_path": ".agents/skills/bmad-nextlens-new/SKILL.md",
+        "display_name": "Create Feature Packet",
+        "menu_code": "NF",
         "name": "NextLens New Packet",
-        "description": "Create one Feature packet from top-down discovery context",
-        "entry_point": "commands/new.ts",
-        "keywords": "nextlens new,top-down bridge,feature packet,deterministic selection",
+        "description": "Create one Feature packet from top-down discovery context.",
+        "args": "{context_source: discovery context path}|{docs_path: optional docs root}",
+        "phase": "anytime",
+        "after": "bmad-nextlens-setup:configure",
+        "before": "bmad-nextlens-doctor:doctor",
+        "required": "false",
+        "output_location": "nextlens_docs_path",
+        "outputs": "feature packet JSON",
     },
     {
         "command": "nextlens-doctor",
+        "action": "doctor",
+        "skill": "bmad-nextlens-doctor",
+        "skill_path": ".agents/skills/bmad-nextlens-doctor/SKILL.md",
+        "display_name": "Run Doctor Checks",
+        "menu_code": "ND",
         "name": "NextLens Doctor",
-        "description": "Run non-mutating validation checks on packet or landscape",
-        "entry_point": "commands/doctor.ts",
-        "keywords": "nextlens doctor,validate packet,check landscape,doctor validation",
+        "description": "Run non-mutating validation checks on a Feature packet or landscape.",
+        "args": "{packet_source: packet path}|{docs_path: optional docs root}",
+        "phase": "anytime",
+        "after": "bmad-nextlens-new:new",
+        "before": "bmad-nextlens-salmon:salmon",
+        "required": "false",
+        "output_location": "nextlens_docs_path",
+        "outputs": "doctor validation report",
     },
     {
         "command": "nextlens-salmon",
+        "action": "salmon",
+        "skill": "bmad-nextlens-salmon",
+        "skill_path": ".agents/skills/bmad-nextlens-salmon/SKILL.md",
+        "display_name": "Route Salmon Findings",
+        "menu_code": "NS",
         "name": "NextLens Salmon",
-        "description": "Route correction signals through deduplication and impact classification",
-        "entry_point": "commands/salmon.ts",
-        "keywords": "nextlens salmon,route correction,deduplicate events,correction routing",
+        "description": "Route correction findings through deduplication and impact classification.",
+        "args": "{findings_source: findings path}|{docs_path: optional docs root}",
+        "phase": "anytime",
+        "after": "bmad-nextlens-doctor:doctor",
+        "before": "",
+        "required": "false",
+        "output_location": "nextlens_landscape_store",
+        "outputs": "salmon routing report",
     },
+)
+
+BMAD_HELP_HEADER = (
+    "module",
+    "skill",
+    "display-name",
+    "menu-code",
+    "description",
+    "action",
+    "args",
+    "phase",
+    "after",
+    "before",
+    "required",
+    "output-location",
+    "outputs",
 )
 
 
@@ -84,8 +148,8 @@ def create_module_package(repo_root: str | Path, *, now_factory: Callable[[], da
     root = Path(repo_root)
     generated_at = _utc_timestamp(now_factory)
     files = {
-        root / ".agents" / "skills" / "bmad-nextlens" / "assets" / "module.yaml": _module_yaml_text(),
-        root / ".agents" / "skills" / "bmad-nextlens" / "assets" / "module-help.csv": _module_help_text(),
+        root / SETUP_ASSETS_DIR / "module.yaml": _module_yaml_text(),
+        root / SETUP_ASSETS_DIR / "module-help.csv": _module_help_text(),
         root / ".claude-plugin" / "marketplace.json": _marketplace_json_text(),
     }
     findings = list(_skill_reference_findings(root))
@@ -123,8 +187,8 @@ def create_module_package(repo_root: str | Path, *, now_factory: Callable[[], da
 def validate_module_package(repo_root: str | Path) -> ModuleGateResult:
     root = Path(repo_root)
     findings: list[ModuleGateFinding] = []
-    module_yaml = _load_yaml(root / ".agents" / "skills" / "bmad-nextlens" / "assets" / "module.yaml", findings)
-    module_help = _load_module_help(root / ".agents" / "skills" / "bmad-nextlens" / "assets" / "module-help.csv", findings)
+    module_yaml = _load_yaml(root / SETUP_ASSETS_DIR / "module.yaml", findings)
+    module_help = _load_module_help(root / SETUP_ASSETS_DIR / "module-help.csv", findings)
     marketplace = _load_json(root / ".claude-plugin" / "marketplace.json", findings)
 
     if module_yaml:
@@ -155,62 +219,59 @@ def validate_module_package(repo_root: str | Path) -> ModuleGateResult:
 
 def _module_yaml_text() -> str:
     payload = {
-        "module_id": "nextlens-src",
-        "module_name": "NextLens Top-Down Bridge",
-        "module_version": "1.0.0",
-        "description": "Deterministic top-down feature packet bridge with doctor validation and salmon correction routing.",
-        "author": "NextLens Team",
-        "license": "MIT",
         "code": "nxl",
         "name": "NextLens Top-Down Bridge",
+        "module_version": "1.0.0",
+        "description": "Deterministic top-down feature packet bridge with doctor validation and salmon correction routing.",
         "default_selected": False,
-        "module_greeting": "NextLens is ready. Use the module action surface to create a feature packet, run doctor validation, or route salmon findings.",
+        "module_greeting": "NextLens is ready. Run setup once, then use the New, Doctor, and Salmon skills as separate parts of the top-down bridge.",
         "capabilities": [
             {
                 "command": capability["command"],
+                "action": capability["action"],
+                "skill": capability["skill"],
                 "description": capability["description"],
-                "entry_point": MODULE_SKILL_PATH,
-                "skill_type": "command",
+                "entry_point": capability["skill_path"],
+                "skill_type": "workflow",
             }
             for capability in CAPABILITIES
         ],
-        "configuration": [
-            {
-                "name": "NEXTLENS_DOCS_PATH",
-                "type": "string",
-                "required": True,
-                "source": "feature.yaml",
-                "description": "Feature docs path resolved from feature.yaml.",
-            },
-            {
-                "name": "NEXTLENS_LANDSCAPE_STORE",
-                "type": "string",
-                "required": False,
-                "default": "{docs_path}/landscape",
-                "description": "Landscape state directory for reconstructed top-down context.",
-            },
-            {
-                "name": "NEXTLENS_IDEMPOTENCY_TTL_HOURS",
-                "type": "number",
-                "required": False,
-                "default": 24,
-                "description": "Retention window for active idempotency tokens.",
-            },
-        ],
-        "dependencies": ["feature-yaml-resolver", "bmad-constitution-resolver"],
+        "nextlens_docs_path": {
+            "prompt": "Where should NextLens read and write Feature packet documentation?",
+            "default": "{project-root}/docs",
+        },
+        "nextlens_landscape_store": {
+            "prompt": "Where should NextLens keep reconstructed landscape state?",
+            "default": "{project-root}/docs/landscape",
+        },
+        "nextlens_idempotency_ttl_hours": {
+            "prompt": "How many hours should active idempotency tokens be retained?",
+            "default": 24,
+            "type": "number",
+        },
+        "directories": ["{nextlens_docs_path}", "{nextlens_landscape_store}"],
+        "post-install-notes": "Use NextLens setup, new, doctor, and salmon actions from BMAD help after setup completes.",
     }
     return _yaml_dump(payload)
 
 
 def _module_help_text() -> str:
-    lines = ["command,category,description,entry_point,trigger_keywords"]
+    lines = [_csv_line(BMAD_HELP_HEADER)]
     for capability in CAPABILITIES:
         row = [
-            capability["command"],
-            "command",
+            "NextLens Top-Down Bridge",
+            capability["skill"],
+            capability["display_name"],
+            capability["menu_code"],
             capability["description"],
-            capability["entry_point"],
-            capability["keywords"],
+            capability["action"],
+            capability["args"],
+            capability["phase"],
+            capability["after"],
+            capability["before"],
+            capability["required"],
+            capability["output_location"],
+            capability["outputs"],
         ]
         lines.append(_csv_line(row))
     return "\n".join(lines) + "\n"
@@ -228,7 +289,7 @@ def _marketplace_json_text() -> str:
                 "id": capability["command"],
                 "name": capability["name"],
                 "description": capability["description"],
-                "skills": [MODULE_SKILL_PATH],
+                "skills": [capability["skill_path"]],
             }
             for capability in CAPABILITIES
         ],
@@ -246,23 +307,38 @@ def _marketplace_json_text() -> str:
 
 
 def _validate_module_yaml(payload: Mapping[str, Any], findings: list[ModuleGateFinding]) -> None:
-    required = ("module_id", "module_name", "module_version", "description", "author", "license", "capabilities")
+    required = ("code", "name", "module_version", "description", "capabilities")
     for field_name in required:
         if field_name not in payload:
             findings.append(_finding("module-yaml-missing-field", f"module.yaml missing {field_name}.", "Regenerate module.yaml with create-module."))
     version = str(payload.get("module_version") or "")
     if not MODULE_VERSION_PATTERN.match(version):
         findings.append(_finding("module-yaml-semver", "module_version must use major.minor.patch semantic versioning.", "Set module_version to a value such as 1.0.0."))
+    actions = [str(item.get("action")) for item in _mapping_sequence(payload.get("capabilities"))]
+    expected_actions = [capability["action"] for capability in CAPABILITIES]
+    if actions != expected_actions:
+        findings.append(_finding("module-yaml-action-set", "module.yaml actions do not match current capabilities.", "Regenerate module.yaml with create-module."))
+    skills = [str(item.get("skill")) for item in _mapping_sequence(payload.get("capabilities"))]
+    expected_skills = [capability["skill"] for capability in CAPABILITIES]
+    if skills != expected_skills:
+        findings.append(_finding("module-yaml-skill-set", "module.yaml skills do not match the split NextLens skill set.", "Regenerate module.yaml with create-module."))
+    entry_points = [str(item.get("entry_point")) for item in _mapping_sequence(payload.get("capabilities"))]
+    expected_entry_points = [capability["skill_path"] for capability in CAPABILITIES]
+    if entry_points != expected_entry_points:
+        findings.append(_finding("module-yaml-entry-points", "module.yaml entry points do not match the split NextLens skill files.", "Regenerate module.yaml with create-module."))
+    for variable in ("nextlens_docs_path", "nextlens_landscape_store", "nextlens_idempotency_ttl_hours"):
+        if variable not in payload:
+            findings.append(_finding("module-yaml-missing-config", f"module.yaml missing {variable} configuration.", "Regenerate module.yaml with create-module."))
 
 
 def _validate_module_help(rows: Sequence[Mapping[str, str]], findings: list[ModuleGateFinding]) -> None:
-    commands = [row.get("command", "") for row in rows]
-    expected = [capability["command"] for capability in CAPABILITIES]
-    if commands != expected:
-        findings.append(_finding("module-help-command-set", "module-help.csv commands do not match current capabilities.", "Regenerate module-help.csv with create-module."))
+    actions = [row.get("action", "") for row in rows]
+    expected = [capability["action"] for capability in CAPABILITIES]
+    if actions != expected:
+        findings.append(_finding("module-help-action-set", "module-help.csv actions do not match current capabilities.", "Regenerate module-help.csv with create-module."))
     for row in rows:
-        if set(row) != {"command", "category", "description", "entry_point", "trigger_keywords"}:
-            findings.append(_finding("module-help-header", "module-help.csv has unexpected columns.", "Use the command,category,description,entry_point,trigger_keywords header."))
+        if tuple(row.keys()) != BMAD_HELP_HEADER:
+            findings.append(_finding("module-help-header", "module-help.csv has unexpected columns.", "Use the BMad module-help.csv header."))
 
 
 def _validate_marketplace(root: Path, payload: Mapping[str, Any], findings: list[ModuleGateFinding]) -> None:
@@ -287,16 +363,39 @@ def _validate_cross_manifest_consistency(
     findings: list[ModuleGateFinding],
 ) -> None:
     yaml_commands = {str(item.get("command")) for item in _mapping_sequence(module_yaml.get("capabilities"))}
-    help_commands = {row.get("command", "") for row in module_help}
     marketplace_commands = {str(item.get("id")) for item in _mapping_sequence(marketplace.get("plugins"))}
-    if yaml_commands != help_commands or yaml_commands != marketplace_commands:
-        findings.append(_finding("manifest-command-consistency", "module.yaml, module-help.csv, and marketplace.json command sets differ.", "Regenerate all module surfaces with create-module."))
+    expected_commands = {capability["command"] for capability in CAPABILITIES}
+    yaml_actions = {str(item.get("action")) for item in _mapping_sequence(module_yaml.get("capabilities"))}
+    help_actions = {row.get("action", "") for row in module_help}
+    expected_actions = {capability["action"] for capability in CAPABILITIES}
+    yaml_skills = {str(item.get("skill")) for item in _mapping_sequence(module_yaml.get("capabilities"))}
+    help_skills = {row.get("skill", "") for row in module_help}
+    marketplace_skill_paths = {
+        skill
+        for plugin in _mapping_sequence(marketplace.get("plugins"))
+        for skill in _string_sequence(plugin.get("skills"))
+    }
+    expected_skills = {capability["skill"] for capability in CAPABILITIES}
+    expected_skill_paths = {capability["skill_path"] for capability in CAPABILITIES}
+    if (
+        yaml_commands != expected_commands
+        or marketplace_commands != expected_commands
+        or yaml_actions != expected_actions
+        or help_actions != expected_actions
+        or yaml_skills != expected_skills
+        or help_skills != expected_skills
+        or marketplace_skill_paths != expected_skill_paths
+    ):
+        findings.append(_finding("manifest-command-consistency", "module.yaml, module-help.csv, and marketplace.json capability sets differ.", "Regenerate all module surfaces with create-module."))
 
 
 def _skill_reference_findings(root: Path) -> tuple[ModuleGateFinding, ...]:
-    if (root / MODULE_SKILL_PATH).is_file():
-        return ()
-    return (_finding("skill-reference-missing", f"Required skill file does not exist: {MODULE_SKILL_PATH}.", "Create the skill file before running create-module."),)
+    findings = []
+    for capability in CAPABILITIES:
+        skill_path = capability["skill_path"]
+        if not (root / skill_path).is_file():
+            findings.append(_finding("skill-reference-missing", f"Required skill file does not exist: {skill_path}.", "Create the split skill file before running create-module."))
+    return tuple(findings)
 
 
 def _load_yaml(path: Path, findings: list[ModuleGateFinding]) -> Mapping[str, Any]:

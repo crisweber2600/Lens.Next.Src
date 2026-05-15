@@ -52,6 +52,7 @@ COMMON_OPTION_ALIASES = {
 }
 
 HELP_ALIASES = {"help", "-h", "--help"}
+SETUP_ALIASES = {"setup", "configure"}
 
 
 @dataclass(frozen=True)
@@ -76,12 +77,14 @@ class CommandSurfaceError(ValueError):
 def build_help_text() -> str:
     lines = [
         "NextLens BMAD module actions:",
+        "  setup | configure",
         "  new --context <path> [--docs-path <path>]",
         "  doctor --packet <path> [--docs-path <path>]",
         "  salmon --findings <path> [--docs-path <path>]",
         "  help | --help",
         "",
         "Story-compatible textual examples:",
+        "  nextlens setup",
         "  nextlens new --context path/to/context.yaml",
         "  nextlens doctor --packet path/to/packet.json",
         "  nextlens salmon --findings path/to/findings.jsonl",
@@ -123,6 +126,8 @@ def parse_module_action(action: str, options: Mapping[str, object] | None = None
     normalized_action = str(action or "").strip().lower()
     if normalized_action in HELP_ALIASES:
         return ParsedAction(action="help")
+    if normalized_action in SETUP_ALIASES:
+        return ParsedAction(action="setup")
 
     if normalized_action not in ACTION_DEFINITIONS:
         raise CommandSurfaceError(
@@ -168,6 +173,8 @@ def parse_story_command(command: str | Sequence[str]) -> ParsedAction:
     action = tokens[0].lower()
     if action in HELP_ALIASES:
         return ParsedAction(action="help")
+    if action in SETUP_ALIASES:
+        return ParsedAction(action="setup")
 
     if action not in ACTION_DEFINITIONS:
         raise CommandSurfaceError(

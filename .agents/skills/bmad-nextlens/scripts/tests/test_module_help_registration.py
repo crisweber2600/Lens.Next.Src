@@ -5,54 +5,78 @@ from pathlib import Path
 
 
 MODULE_ROOT = Path(__file__).resolve().parents[2]
-MODULE_HELP_PATH = MODULE_ROOT / "assets" / "module-help.csv"
+SKILLS_ROOT = MODULE_ROOT.parent
+MODULE_HELP_PATH = SKILLS_ROOT / "bmad-nextlens-setup" / "assets" / "module-help.csv"
+EXPECTED_HEADER = [
+    "module",
+    "skill",
+    "display-name",
+    "menu-code",
+    "description",
+    "action",
+    "args",
+    "phase",
+    "after",
+    "before",
+    "required",
+    "output-location",
+    "outputs",
+]
 
 
-def test_module_help_csv_has_required_header_and_commands() -> None:
+def test_module_help_csv_has_required_header_and_actions() -> None:
     rows = _rows()
 
-    assert rows[0].keys() == {"command", "category", "description", "entry_point", "trigger_keywords"}
-    assert [row["command"] for row in rows] == ["nextlens-new", "nextlens-doctor", "nextlens-salmon"]
+    assert list(rows[0].keys()) == EXPECTED_HEADER
+    assert [row["action"] for row in rows] == ["configure", "new", "doctor", "salmon"]
+    assert [row["skill"] for row in rows] == [
+        "bmad-nextlens-setup",
+        "bmad-nextlens-new",
+        "bmad-nextlens-doctor",
+        "bmad-nextlens-salmon",
+    ]
+    assert {row["menu-code"] for row in rows} == {"SN", "NF", "ND", "NS"}
 
 
-def test_module_help_csv_registers_expected_command_metadata() -> None:
-    rows = {row["command"]: row for row in _rows()}
+def test_module_help_csv_registers_expected_action_metadata() -> None:
+    rows = {row["action"]: row for row in _rows()}
 
-    assert rows["nextlens-new"] == {
-        "command": "nextlens-new",
-        "category": "command",
-        "description": "Create one Feature packet from top-down discovery context",
-        "entry_point": "commands/new.ts",
-        "trigger_keywords": "nextlens new,top-down bridge,feature packet,deterministic selection",
+    assert rows["configure"] == {
+        "module": "NextLens Top-Down Bridge",
+        "skill": "bmad-nextlens-setup",
+        "display-name": "Setup NextLens",
+        "menu-code": "SN",
+        "description": "Register or refresh the NextLens BMad module in this project.",
+        "action": "configure",
+        "args": "{-H: headless mode}|{setup|configure}",
+        "phase": "anytime",
+        "after": "",
+        "before": "bmad-nextlens-new:new",
+        "required": "true",
+        "output-location": "{project-root}/_bmad",
+        "outputs": "config.yaml and module-help.csv",
     }
-    assert rows["nextlens-doctor"] == {
-        "command": "nextlens-doctor",
-        "category": "command",
-        "description": "Run non-mutating validation checks on packet or landscape",
-        "entry_point": "commands/doctor.ts",
-        "trigger_keywords": "nextlens doctor,validate packet,check landscape,doctor validation",
-    }
-    assert rows["nextlens-salmon"] == {
-        "command": "nextlens-salmon",
-        "category": "command",
-        "description": "Route correction signals through deduplication and impact classification",
-        "entry_point": "commands/salmon.ts",
-        "trigger_keywords": "nextlens salmon,route correction,deduplicate events,correction routing",
-    }
+    assert rows["new"]["display-name"] == "Create Feature Packet"
+    assert rows["new"]["args"] == "{context_source: discovery context path}|{docs_path: optional docs root}"
+    assert rows["new"]["after"] == "bmad-nextlens-setup:configure"
+    assert rows["new"]["before"] == "bmad-nextlens-doctor:doctor"
+    assert rows["doctor"]["output-location"] == "nextlens_docs_path"
+    assert rows["doctor"]["after"] == "bmad-nextlens-new:new"
+    assert rows["salmon"]["output-location"] == "nextlens_landscape_store"
+    assert rows["salmon"]["after"] == "bmad-nextlens-doctor:doctor"
 
 
-def test_module_help_keywords_cover_command_feature_function_and_domain_terms() -> None:
-    rows = {row["command"]: row for row in _rows()}
+def test_module_help_references_only_existing_capabilities() -> None:
+    rows = _rows()
+    refs = {f"{row['skill']}:{row['action']}" for row in rows}
 
-    assert _keywords(rows["nextlens-new"]) >= {"nextlens new", "top-down bridge", "feature packet", "deterministic selection"}
-    assert _keywords(rows["nextlens-doctor"]) >= {"nextlens doctor", "validate packet", "check landscape", "doctor validation"}
-    assert _keywords(rows["nextlens-salmon"]) >= {"nextlens salmon", "route correction", "deduplicate events", "correction routing"}
+    for row in rows:
+        for field_name in ("after", "before"):
+            value = row[field_name]
+            if value:
+                assert value in refs
 
 
 def _rows() -> list[dict[str, str]]:
     with MODULE_HELP_PATH.open(newline="", encoding="utf-8") as handle:
         return list(csv.DictReader(handle))
-
-
-def _keywords(row: dict[str, str]) -> set[str]:
-    return {item.strip() for item in row["trigger_keywords"].split(",") if item.strip()}

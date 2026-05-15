@@ -1,4 +1,0 @@
-command,category,description,entry_point,trigger_keywords
-nextlens-new,command,Create one Feature packet from top-down discovery context,.agents/skills/bmad-nextlens/scripts/stage_pipeline.py,"nextlens new,top-down bridge,feature packet,deterministic selection"
-nextlens-doctor,command,Run non-mutating validation checks on packet or landscape,.agents/skills/bmad-nextlens/scripts/doctor_checks.py,"nextlens doctor,validate packet,check landscape,doctor validation"
-nextlens-salmon,command,Route correction signals through deduplication and impact classification,.agents/skills/bmad-nextlens/scripts/salmon_routing.py,"nextlens salmon,route correction,deduplicate events,correction routing"

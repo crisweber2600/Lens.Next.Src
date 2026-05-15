@@ -55,7 +55,13 @@ def test_help_action_returns_help_mode() -> None:
     assert parsed.mode == "help"
     help_text = COMMAND_SURFACE.build_help_text()
     assert "NextLens BMAD module actions:" in help_text
+    assert "nextlens setup" in help_text
     assert "nextlens new --context path/to/context.yaml" in help_text
+
+
+def test_setup_action_returns_setup_mode() -> None:
+    assert COMMAND_SURFACE.parse_module_action("configure").mode == "setup"
+    assert COMMAND_SURFACE.parse_story_command("nextlens setup").mode == "setup"
 
 
 def test_invalid_arguments_include_help_text() -> None:
@@ -67,10 +73,11 @@ def test_invalid_arguments_include_help_text() -> None:
 
 
 def test_module_help_registers_nextlens_actions() -> None:
-    module_help = Path(__file__).resolve().parents[2] / "assets" / "module-help.csv"
+    module_help = Path(__file__).resolve().parents[3] / "bmad-nextlens-setup" / "assets" / "module-help.csv"
     text = module_help.read_text(encoding="utf-8")
 
-    assert "command,category,description,entry_point,trigger_keywords" in text
-    assert "nextlens-new,command" in text
-    assert "nextlens-doctor,command" in text
-    assert "nextlens-salmon,command" in text
+    assert "module,skill,display-name,menu-code,description,action,args,phase,after,before,required,output-location,outputs" in text
+    assert "Setup NextLens,SN" in text
+    assert "Create Feature Packet,NF" in text
+    assert "Run Doctor Checks,ND" in text
+    assert "Route Salmon Findings,NS" in text
