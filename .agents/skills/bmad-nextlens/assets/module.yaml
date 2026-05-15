@@ -1,44 +1,44 @@
 module_id: nextlens-src
-module_name: "NextLens Top-Down Bridge"
+module_name: NextLens Top-Down Bridge
 module_version: 1.0.0
-description: "Deterministic top-down feature packet bridge with doctor validation and salmon correction routing."
-author: "NextLens Team"
-license: "MIT"
+description: Deterministic top-down feature packet bridge with doctor validation and
+  salmon correction routing.
+author: NextLens Team
+license: MIT
 code: nxl
-name: "NextLens Top-Down Bridge"
+name: NextLens Top-Down Bridge
 default_selected: false
-module_greeting: >
-  NextLens is ready. Use the module action surface to create a feature packet,
-  run doctor validation, or route salmon findings.
+module_greeting: NextLens is ready. Use the module action surface to create a feature
+  packet, run doctor validation, or route salmon findings.
 capabilities:
-  - command: nextlens-new
-    description: "Create one Feature packet from top-down discovery context"
-    entry_point: ".agents/skills/bmad-nextlens/SKILL.md"
-    skill_type: command
-  - command: nextlens-doctor
-    description: "Run non-mutating validation checks on packet or landscape"
-    entry_point: ".agents/skills/bmad-nextlens/SKILL.md"
-    skill_type: command
-  - command: nextlens-salmon
-    description: "Route correction signals through deduplication and impact classification"
-    entry_point: ".agents/skills/bmad-nextlens/SKILL.md"
-    skill_type: command
+- command: nextlens-new
+  description: Create one Feature packet from top-down discovery context
+  entry_point: .agents/skills/bmad-nextlens/SKILL.md
+  skill_type: command
+- command: nextlens-doctor
+  description: Run non-mutating validation checks on packet or landscape
+  entry_point: .agents/skills/bmad-nextlens/SKILL.md
+  skill_type: command
+- command: nextlens-salmon
+  description: Route correction signals through deduplication and impact classification
+  entry_point: .agents/skills/bmad-nextlens/SKILL.md
+  skill_type: command
 configuration:
-  - name: NEXTLENS_DOCS_PATH
-    type: string
-    required: true
-    source: feature.yaml
-    description: "Feature docs path resolved from feature.yaml."
-  - name: NEXTLENS_LANDSCAPE_STORE
-    type: string
-    required: false
-    default: "{docs_path}/landscape"
-    description: "Landscape state directory for reconstructed top-down context."
-  - name: NEXTLENS_IDEMPOTENCY_TTL_HOURS
-    type: number
-    required: false
-    default: 24
-    description: "Retention window for active idempotency tokens."
+- name: NEXTLENS_DOCS_PATH
+  type: string
+  required: true
+  source: feature.yaml
+  description: Feature docs path resolved from feature.yaml.
+- name: NEXTLENS_LANDSCAPE_STORE
+  type: string
+  required: false
+  default: '{docs_path}/landscape'
+  description: Landscape state directory for reconstructed top-down context.
+- name: NEXTLENS_IDEMPOTENCY_TTL_HOURS
+  type: number
+  required: false
+  default: 24
+  description: Retention window for active idempotency tokens.
 dependencies:
-  - feature-yaml-resolver
-  - bmad-constitution-resolver
+- feature-yaml-resolver
+- bmad-constitution-resolver

@@ -1,4 +1,4 @@
 command,category,description,entry_point,trigger_keywords
-nextlens-new,command,"Create one Feature packet from top-down discovery context",commands/new.ts,"nextlens new,top-down bridge,feature packet,deterministic selection"
-nextlens-doctor,command,"Run non-mutating validation checks on packet or landscape",commands/doctor.ts,"nextlens doctor,validate packet,check landscape,doctor validation"
-nextlens-salmon,command,"Route correction signals through deduplication and impact classification",commands/salmon.ts,"nextlens salmon,route correction,deduplicate events,correction routing"
+nextlens-new,command,Create one Feature packet from top-down discovery context,commands/new.ts,"nextlens new,top-down bridge,feature packet,deterministic selection"
+nextlens-doctor,command,Run non-mutating validation checks on packet or landscape,commands/doctor.ts,"nextlens doctor,validate packet,check landscape,doctor validation"
+nextlens-salmon,command,Route correction signals through deduplication and impact classification,commands/salmon.ts,"nextlens salmon,route correction,deduplicate events,correction routing"
