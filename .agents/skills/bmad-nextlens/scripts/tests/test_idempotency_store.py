@@ -278,3 +278,147 @@ def test_deduplicate_request_lookup_completes_within_100ms(tmp_path: Path) -> No
 
     assert decision.disposition == "replay"
     assert elapsed_ms < 100
+
+
+def test_record_completed_response_stores_canonical_response_envelope(tmp_path: Path) -> None:
+    token = "550e8400-e29b-41d4-a716-446655440006"
+    parameters = {"candidate": "feature-password-recovery"}
+    IDEMPOTENCY_STORE.deduplicate_request(
+        tmp_path,
+        token,
+        "emit-packet",
+        parameters,
+        now=datetime(2026, 5, 14, 23, 0, tzinfo=timezone.utc),
+    )
+
+    IDEMPOTENCY_STORE.record_completed_response(
+        tmp_path,
+        token,
+        operation_result="success",
+        output_summary={"candidate": "feature-password-recovery", "selected": True},
+        packet_reference="packet-123",
+        evidence_bundle_path="evidence/replay-events.jsonl",
+        doctor_status="pass",
+        now=datetime(2026, 5, 14, 23, 5, tzinfo=timezone.utc),
+    )
+
+    stored = IDEMPOTENCY_STORE.load_token_record(tmp_path, token)
+    assert stored.status == "completed"
+    assert isinstance(stored.result, dict)
+    assert tuple(stored.result.keys()) == IDEMPOTENCY_STORE.RESPONSE_ENVELOPE_FIELDS
+    assert stored.result["operation_result"] == "success"
+    assert stored.result["output_summary"] == {"candidate": "feature-password-recovery", "selected": True}
+    assert stored.result["packet_reference"] == "packet-123"
+    assert stored.result["evidence_bundle_path"] == "evidence/replay-events.jsonl"
+    assert stored.result["doctor_status"] == "pass"
+    assert stored.result["timestamp"] == "2026-05-14T23:05:00Z"
+
+
+def test_deduplicate_request_logs_replay_event_without_mutating_response_envelope(tmp_path: Path) -> None:
+    token = "550e8400-e29b-41d4-a716-446655440007"
+    parameters = {"candidate": "feature-password-recovery"}
+    IDEMPOTENCY_STORE.deduplicate_request(
+        tmp_path,
+        token,
+        "emit-packet",
+        parameters,
+        now=datetime(2026, 5, 14, 23, 0, tzinfo=timezone.utc),
+    )
+    IDEMPOTENCY_STORE.record_completed_response(
+        tmp_path,
+        token,
+        operation_result="success",
+        output_summary={"candidate": "feature-password-recovery", "selected": True},
+        packet_reference="packet-456",
+        evidence_bundle_path="evidence/replay-events.jsonl",
+        doctor_status="warning",
+        now=datetime(2026, 5, 14, 23, 5, tzinfo=timezone.utc),
+    )
+    expected = IDEMPOTENCY_STORE.load_token_record(tmp_path, token).result
+
+    replay = IDEMPOTENCY_STORE.deduplicate_request(
+        tmp_path,
+        token,
+        "emit-packet",
+        parameters,
+        now=datetime(2026, 5, 14, 23, 6, tzinfo=timezone.utc),
+        output_configuration={"format": "summary"},
+    )
+
+    assert replay.result == expected
+    replay_log = tmp_path / "evidence" / "replay-events.jsonl"
+    assert replay_log.exists()
+    lines = replay_log.read_text(encoding="utf-8").strip().splitlines()
+    assert len(lines) == 1
+    event = yaml.safe_load(lines[0])
+    assert event["event"] == "response_replayed"
+    assert event["token"] == token
+    assert event["packetReference"] == "packet-456"
+    assert event["doctorStatus"] == "warning"
+    assert event["outputConfigurationIgnored"] == {"format": "summary"}
+
+
+def test_replay_returns_same_envelope_when_output_configuration_changes(tmp_path: Path) -> None:
+    token = "550e8400-e29b-41d4-a716-446655440008"
+    parameters = {"candidate": "feature-password-recovery"}
+    IDEMPOTENCY_STORE.deduplicate_request(
+        tmp_path,
+        token,
+        "emit-packet",
+        parameters,
+        now=datetime(2026, 5, 14, 23, 0, tzinfo=timezone.utc),
+    )
+    IDEMPOTENCY_STORE.record_completed_response(
+        tmp_path,
+        token,
+        operation_result="success",
+        output_summary={"candidate": "feature-password-recovery", "selected": True},
+        packet_reference="packet-789",
+        doctor_status="pass",
+        now=datetime(2026, 5, 14, 23, 5, tzinfo=timezone.utc),
+    )
+
+    first = IDEMPOTENCY_STORE.deduplicate_request(
+        tmp_path,
+        token,
+        "emit-packet",
+        parameters,
+        output_configuration={"format": "summary"},
+    )
+    second = IDEMPOTENCY_STORE.deduplicate_request(
+        tmp_path,
+        token,
+        "emit-packet",
+        {"candidate": "feature-password-recovery", "format": "verbose"},
+        output_configuration={"format": "verbose"},
+    )
+
+    assert first.result == second.result
+
+
+def test_replay_returns_identical_envelope_across_multiple_replays(tmp_path: Path) -> None:
+    token = "550e8400-e29b-41d4-a716-446655440009"
+    parameters = {"candidate": "feature-password-recovery"}
+    IDEMPOTENCY_STORE.deduplicate_request(
+        tmp_path,
+        token,
+        "emit-packet",
+        parameters,
+        now=datetime(2026, 5, 14, 23, 0, tzinfo=timezone.utc),
+    )
+    IDEMPOTENCY_STORE.record_completed_response(
+        tmp_path,
+        token,
+        operation_result="success",
+        output_summary={"candidate": "feature-password-recovery", "selected": True},
+        packet_reference="packet-999",
+        doctor_status="pass",
+        now=datetime(2026, 5, 14, 23, 5, tzinfo=timezone.utc),
+    )
+
+    results = [
+        IDEMPOTENCY_STORE.deduplicate_request(tmp_path, token, "emit-packet", parameters).result
+        for _ in range(3)
+    ]
+
+    assert results[0] == results[1] == results[2]

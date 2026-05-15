@@ -11,7 +11,7 @@ import os
 from pathlib import Path
 import tempfile
 import time
-from typing import Any, Mapping
+from typing import Any, Callable, Mapping
 import uuid
 
 try:
@@ -27,6 +27,15 @@ TOKEN_TTL_HOURS = 24
 TOKEN_STATUS_VALUES = {"pending", "completed", "failed"}
 DEDUPLICATION_DISPOSITIONS = {"new", "replay", "pending", "failed"}
 DEFAULT_PENDING_RETRY_AFTER_SECONDS = 5
+DEFAULT_REPLAY_LOG_DIRECTORY = ".idempotency/replays"
+RESPONSE_ENVELOPE_FIELDS = (
+    "operation_result",
+    "output_summary",
+    "packet_reference",
+    "evidence_bundle_path",
+    "doctor_status",
+    "timestamp",
+)
 
 
 @dataclass(frozen=True)
@@ -91,7 +100,8 @@ def deduplicate_request(
     now: datetime | None = None,
     timeout_seconds: float = 0.0,
     poll_interval_seconds: float = 0.05,
-    sleep_fn: callable | None = None,
+    sleep_fn: Callable[[float], None] | None = None,
+    output_configuration: Mapping[str, Any] | None = None,
 ) -> DeduplicationDecision:
     path = token_record_path(docs_path, token)
     if not path.exists():
@@ -107,10 +117,54 @@ def deduplicate_request(
     return _resolve_existing_request(
         docs_path,
         token,
+        now=now,
         timeout_seconds=timeout_seconds,
         poll_interval_seconds=poll_interval_seconds,
         sleep_fn=sleep_fn,
+        output_configuration=output_configuration,
     )
+
+
+def build_response_envelope(
+    *,
+    operation_result: str,
+    output_summary: Mapping[str, Any],
+    packet_reference: str | None = None,
+    evidence_bundle_path: str | None = None,
+    doctor_status: str | None = None,
+    timestamp: str | None = None,
+) -> dict[str, Any]:
+    return {
+        "operation_result": operation_result,
+        "output_summary": dict(output_summary),
+        "packet_reference": packet_reference,
+        "evidence_bundle_path": evidence_bundle_path,
+        "doctor_status": doctor_status,
+        "timestamp": timestamp or _timestamp(),
+    }
+
+
+def record_completed_response(
+    docs_path: str | Path,
+    token: str,
+    *,
+    operation_result: str,
+    output_summary: Mapping[str, Any],
+    packet_reference: str | None = None,
+    evidence_bundle_path: str | None = None,
+    doctor_status: str | None = None,
+    now: datetime | None = None,
+) -> IdempotencyTokenRecord:
+    timestamp = _timestamp(now)
+    envelope = build_response_envelope(
+        operation_result=operation_result,
+        output_summary=output_summary,
+        packet_reference=packet_reference,
+        evidence_bundle_path=evidence_bundle_path,
+        doctor_status=doctor_status,
+        timestamp=timestamp,
+    )
+    return complete_token_record(docs_path, token, envelope, now=now)
 
 
 def issue_idempotency_token(
@@ -252,9 +306,11 @@ def _resolve_existing_request(
     docs_path: str | Path,
     token: str,
     *,
+    now: datetime | None,
     timeout_seconds: float,
     poll_interval_seconds: float,
-    sleep_fn: callable | None,
+    sleep_fn: Callable[[float], None] | None,
+    output_configuration: Mapping[str, Any] | None,
 ) -> DeduplicationDecision:
     sleeper = sleep_fn or time.sleep
     deadline = time.monotonic() + timeout_seconds if timeout_seconds > 0 else None
@@ -262,6 +318,13 @@ def _resolve_existing_request(
     while True:
         record = load_token_record(docs_path, token)
         if record.status == "completed":
+            _log_replay_event(
+                docs_path,
+                token,
+                record,
+                replayed_at=_timestamp(now),
+                output_configuration=output_configuration,
+            )
             return DeduplicationDecision(
                 disposition="replay",
                 token=token,
@@ -309,6 +372,36 @@ def _pending_decision(
             f"Retry after {retry_after_seconds} seconds or wait for completion before retrying."
         ),
     )
+
+
+def _log_replay_event(
+    docs_path: str | Path,
+    token: str,
+    record: IdempotencyTokenRecord,
+    *,
+    replayed_at: str,
+    output_configuration: Mapping[str, Any] | None,
+) -> Path:
+    result = record.result if isinstance(record.result, Mapping) else {}
+    evidence_bundle_path = result.get("evidence_bundle_path") if isinstance(result, Mapping) else None
+    if evidence_bundle_path:
+        replay_log_path = Path(docs_path) / str(evidence_bundle_path)
+    else:
+        replay_log_path = Path(docs_path) / DEFAULT_REPLAY_LOG_DIRECTORY / f"{token}.jsonl"
+    replay_log_path.parent.mkdir(parents=True, exist_ok=True)
+
+    event = {
+        "event": "response_replayed",
+        "token": token,
+        "replayedAt": replayed_at,
+        "originalTimestamp": result.get("timestamp") if isinstance(result, Mapping) else None,
+        "packetReference": result.get("packet_reference") if isinstance(result, Mapping) else None,
+        "doctorStatus": result.get("doctor_status") if isinstance(result, Mapping) else None,
+        "outputConfigurationIgnored": _json_safe(output_configuration or {}),
+    }
+    with replay_log_path.open("a", encoding="utf-8", newline="\n") as handle:
+        handle.write(json.dumps(event, sort_keys=True) + "\n")
+    return replay_log_path
 
 
 def _timestamp(now: datetime | None = None) -> str:
