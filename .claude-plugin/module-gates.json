@@ -1,0 +1,22 @@
+{
+  "gate": "create-module",
+  "generated_at": "2026-05-15T03:10:27Z",
+  "generated_files": [
+    {
+      "checksum": "15b7789c553114188f9c5a29f2c44a52fe6083aca4456739c7c7455dfa0f51be",
+      "generated_at": "2026-05-15T03:10:27Z",
+      "path": ".agents/skills/bmad-nextlens-setup/assets/module.yaml"
+    },
+    {
+      "checksum": "db2f01144d1244229ec38e5859a4d64d945629d79667413d8188569aa2fc92d9",
+      "generated_at": "2026-05-15T03:10:27Z",
+      "path": ".agents/skills/bmad-nextlens-setup/assets/module-help.csv"
+    },
+    {
+      "checksum": "1f49fc0458dbc22842a4a5f9a2694869b04abae6b1197678d4a303a8788e37ef",
+      "generated_at": "2026-05-15T03:10:27Z",
+      "path": ".claude-plugin/marketplace.json"
+    }
+  ],
+  "status": "pass"
+}
