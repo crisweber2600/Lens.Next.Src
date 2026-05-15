@@ -6,9 +6,11 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
 import tempfile
+import time
 from typing import Any, Mapping
 import uuid
 
@@ -23,6 +25,8 @@ else:
 
 TOKEN_TTL_HOURS = 24
 TOKEN_STATUS_VALUES = {"pending", "completed", "failed"}
+DEDUPLICATION_DISPOSITIONS = {"new", "replay", "pending", "failed"}
+DEFAULT_PENDING_RETRY_AFTER_SECONDS = 5
 
 
 @dataclass(frozen=True)
@@ -51,6 +55,20 @@ class IdempotencyTokenRecord:
         }
 
 
+@dataclass(frozen=True)
+class DeduplicationDecision:
+    disposition: str
+    token: str
+    record: IdempotencyTokenRecord | None = None
+    result: Any = None
+    retry_after_seconds: int | None = None
+    message: str | None = None
+
+    def __post_init__(self) -> None:
+        if self.disposition not in DEDUPLICATION_DISPOSITIONS:
+            raise ValueError(f"Unsupported deduplication disposition '{self.disposition}'.")
+
+
 def generate_idempotency_token() -> str:
     return str(uuid.uuid4())
 
@@ -64,6 +82,37 @@ def build_request_digest(operation_type: str, parameters: Mapping[str, Any]) -> 
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
+def deduplicate_request(
+    docs_path: str | Path,
+    token: str,
+    operation_type: str,
+    parameters: Mapping[str, Any],
+    *,
+    now: datetime | None = None,
+    timeout_seconds: float = 0.0,
+    poll_interval_seconds: float = 0.05,
+    sleep_fn: callable | None = None,
+) -> DeduplicationDecision:
+    path = token_record_path(docs_path, token)
+    if not path.exists():
+        record = _build_token_record(token, operation_type, parameters, now=now)
+        persist_token_record(docs_path, record)
+        return DeduplicationDecision(
+            disposition="new",
+            token=token,
+            record=record,
+            message="No existing idempotency record was found. Operation may proceed.",
+        )
+
+    return _resolve_existing_request(
+        docs_path,
+        token,
+        timeout_seconds=timeout_seconds,
+        poll_interval_seconds=poll_interval_seconds,
+        sleep_fn=sleep_fn,
+    )
+
+
 def issue_idempotency_token(
     docs_path: str | Path,
     operation_type: str,
@@ -71,17 +120,8 @@ def issue_idempotency_token(
     *,
     now: datetime | None = None,
 ) -> IdempotencyTokenRecord:
-    created_at = _timestamp(now)
     token = generate_idempotency_token()
-    record = IdempotencyTokenRecord(
-        token=token,
-        operation_type=operation_type,
-        created_at=created_at,
-        request_digest=build_request_digest(operation_type, parameters),
-        status="pending",
-        ttl_hours=TOKEN_TTL_HOURS,
-        expires_at=_timestamp_after(created_at, hours=TOKEN_TTL_HOURS),
-    )
+    record = _build_token_record(token, operation_type, parameters, now=now)
     persist_token_record(docs_path, record)
     return record
 
@@ -108,7 +148,7 @@ def persist_token_record(docs_path: str | Path, record: IdempotencyTokenRecord) 
 
 def load_token_record(docs_path: str | Path, token: str) -> IdempotencyTokenRecord:
     yaml_module = _require_yaml_support()
-    path = _tokens_dir(docs_path) / f"{token}.yaml"
+    path = token_record_path(docs_path, token)
     payload = yaml_module.safe_load(path.read_text(encoding="utf-8"))
     if not isinstance(payload, Mapping):
         raise ValueError(f"Token record '{path}' must contain a mapping.")
@@ -152,6 +192,10 @@ def complete_token_record(
     return updated
 
 
+def token_record_path(docs_path: str | Path, token: str) -> Path:
+    return _tokens_dir(docs_path) / f"{token}.yaml"
+
+
 def archive_expired_tokens(docs_path: str | Path, *, now: datetime | None = None) -> list[Path]:
     current = now or datetime.now(timezone.utc)
     archive_dir = _archive_dir(docs_path)
@@ -183,6 +227,88 @@ def _tokens_dir(docs_path: str | Path) -> Path:
 
 def _archive_dir(docs_path: str | Path) -> Path:
     return Path(docs_path) / ".idempotency" / "archive"
+
+
+def _build_token_record(
+    token: str,
+    operation_type: str,
+    parameters: Mapping[str, Any],
+    *,
+    now: datetime | None = None,
+) -> IdempotencyTokenRecord:
+    created_at = _timestamp(now)
+    return IdempotencyTokenRecord(
+        token=token,
+        operation_type=operation_type,
+        created_at=created_at,
+        request_digest=build_request_digest(operation_type, parameters),
+        status="pending",
+        ttl_hours=TOKEN_TTL_HOURS,
+        expires_at=_timestamp_after(created_at, hours=TOKEN_TTL_HOURS),
+    )
+
+
+def _resolve_existing_request(
+    docs_path: str | Path,
+    token: str,
+    *,
+    timeout_seconds: float,
+    poll_interval_seconds: float,
+    sleep_fn: callable | None,
+) -> DeduplicationDecision:
+    sleeper = sleep_fn or time.sleep
+    deadline = time.monotonic() + timeout_seconds if timeout_seconds > 0 else None
+
+    while True:
+        record = load_token_record(docs_path, token)
+        if record.status == "completed":
+            return DeduplicationDecision(
+                disposition="replay",
+                token=token,
+                record=record,
+                result=record.result,
+                message="Existing completed request found. Returning the original result without re-running side effects.",
+            )
+        if record.status == "failed":
+            return DeduplicationDecision(
+                disposition="failed",
+                token=token,
+                record=record,
+                result=record.result,
+                message="Existing request already failed. Contact support or perform manual recovery before retrying.",
+            )
+        if record.status != "pending":
+            raise ValueError(f"Unsupported token status '{record.status}'.")
+
+        if deadline is None:
+            return _pending_decision(token, record, timeout_seconds)
+
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            return _pending_decision(token, record, timeout_seconds)
+
+        sleeper(min(poll_interval_seconds, remaining))
+
+
+def _pending_decision(
+    token: str,
+    record: IdempotencyTokenRecord,
+    timeout_seconds: float,
+) -> DeduplicationDecision:
+    retry_after_seconds = max(
+        1,
+        DEFAULT_PENDING_RETRY_AFTER_SECONDS if timeout_seconds <= 0 else math.ceil(timeout_seconds),
+    )
+    return DeduplicationDecision(
+        disposition="pending",
+        token=token,
+        record=record,
+        retry_after_seconds=retry_after_seconds,
+        message=(
+            "Existing request is still pending. "
+            f"Retry after {retry_after_seconds} seconds or wait for completion before retrying."
+        ),
+    )
 
 
 def _timestamp(now: datetime | None = None) -> str:
