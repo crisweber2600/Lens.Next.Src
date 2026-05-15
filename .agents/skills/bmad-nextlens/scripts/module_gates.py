@@ -314,7 +314,7 @@ def _marketplace_json_text() -> str:
 def _marketplace_plugin_skills(capability: Mapping[str, Any]) -> list[str]:
     setup_skill_dir = ".agents/skills/bmad-nextlens-setup"
     skills = [setup_skill_dir]
-    skill_dir = str(capability.get("skill_dir") or "").strip()
+    skill_dir = str(capability.get("skill_dir", "")).strip()
     if skill_dir and skill_dir not in skills:
         skills.append(skill_dir)
     return skills
