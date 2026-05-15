@@ -3,7 +3,7 @@ name: bmad-nextlens-new
 description: Creates one NextLens Feature packet from top-down discovery context. Use when the user asks to create or emit a NextLens feature packet.
 ---
 
-# NextLens New Packet
+# Create Feature Packet
 
 ## Purpose
 

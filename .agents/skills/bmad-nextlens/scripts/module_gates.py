@@ -56,7 +56,7 @@ CAPABILITIES = (
         "skill_path": ".agents/skills/bmad-nextlens-new/SKILL.md",
         "display_name": "Create Feature Packet",
         "menu_code": "NF",
-        "name": "NextLens New Packet",
+        "name": "Create Feature Packet",
         "description": "Create one Feature packet from top-down discovery context.",
         "args": "{context_source: discovery context path}|{docs_path: optional docs root}",
         "phase": "anytime",

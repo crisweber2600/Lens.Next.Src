@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import yaml
+
 
 REPO_ROOT = Path(__file__).resolve().parents[5]
 MANIFEST_PATH = REPO_ROOT / ".claude-plugin" / "marketplace.json"
@@ -46,6 +48,17 @@ def test_marketplace_manifest_skill_paths_are_repo_relative_and_exist() -> None:
         assert ".." not in Path(skill_path).parts
         assert (REPO_ROOT / skill_path).is_dir()
         assert (REPO_ROOT / skill_path / "SKILL.md").is_file()
+
+
+def test_marketplace_manifest_resolves_to_single_nextlens_module() -> None:
+    plugin = _manifest()["plugins"][0]
+    setup_skill = REPO_ROOT / ".agents" / "skills" / "bmad-nextlens-setup"
+    module_yaml = yaml.safe_load((setup_skill / "assets" / "module.yaml").read_text(encoding="utf-8"))
+
+    assert plugin["name"] == module_yaml["code"] == "nxl"
+    assert plugin["skills"][0] == ".agents/skills/bmad-nextlens-setup"
+    assert (setup_skill / "assets" / "module-help.csv").is_file()
+    assert "NextLens New Packet" not in json.dumps(plugin)
 
 
 def _manifest() -> dict[str, object]:
