@@ -311,7 +311,13 @@ def _marketplace_json_text() -> str:
 
 
 def _marketplace_plugin_skills() -> list[str]:
-    return [capability["skill_dir"] for capability in CAPABILITIES]
+    setup_skill_dir = ".agents/skills/bmad-nextlens-setup"
+    skills = [setup_skill_dir]
+    for capability in CAPABILITIES:
+        skill_dir = capability["skill_dir"]
+        if skill_dir not in skills:
+            skills.append(skill_dir)
+    return skills
 
 
 def _validate_module_yaml(payload: Mapping[str, Any], findings: list[ModuleGateFinding]) -> None:
