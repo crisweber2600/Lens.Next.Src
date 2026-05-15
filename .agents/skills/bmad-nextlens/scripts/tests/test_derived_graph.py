@@ -101,3 +101,89 @@ def test_make_graph_edge_rejects_unknown_edge_type() -> None:
         assert "Unsupported derived graph edge type" in str(exc)
     else:  # pragma: no cover - defensive check in direct module test
         raise AssertionError("expected ValueError for unsupported edge type")
+
+
+def test_rebuild_derived_graph_resolves_edges_and_reports_quality() -> None:
+    state = _landscape_state(
+        _entity("system", "system-nextlens", "NextLens"),
+        _entity("role", "role-architect", "Architect", {"systemId": "system-nextlens", "outcomeIds": ["outcome-clarity"]}),
+        _entity("outcome", "outcome-clarity", "Clarity", {"journeyIds": ["journey-intake", "journey-missing"]}),
+        _entity("journey", "journey-intake", "Intake"),
+        _entity("risk", "risk-unused", "Unused Risk"),
+    )
+
+    result = DERIVED_GRAPH.rebuild_derived_graph(state)
+    edge_ids = {(edge.source, edge.target, edge.type) for edge in result.edges}
+
+    assert ("system-nextlens", "role-architect", "system_role") in edge_ids
+    assert ("role-architect", "outcome-clarity", "role_outcome") in edge_ids
+    assert ("outcome-clarity", "journey-intake", "outcome_journey") in edge_ids
+    assert "risk-unused" in result.orphaned_node_ids
+    assert any("journey-missing" in warning for warning in result.warnings)
+    assert result.checksum == DERIVED_GRAPH.generate_consistency_checksum(result.nodes, result.edges)
+
+
+def test_write_derived_graph_persists_required_graph_shape(tmp_path: Path) -> None:
+    state = _landscape_state(
+        _entity("system", "system-nextlens", "NextLens"),
+        _entity("role", "role-architect", "Architect", {"systemId": "system-nextlens"}),
+    )
+
+    output_path = DERIVED_GRAPH.write_derived_graph(tmp_path, state, source_state_ref="state-1")
+
+    import json
+
+    payload = json.loads(output_path.read_text(encoding="utf-8"))
+    assert output_path == tmp_path / "derived" / "graph.json"
+    assert [node["id"] for node in payload["nodes"]] == ["role-architect", "system-nextlens"]
+    assert payload["edges"][0]["type"] == "system_role"
+    assert payload["metadata"]["sourceStateRef"] == "state-1"
+    assert payload["metadata"]["consistencyChecksum"]
+
+
+class _Relationship:
+    def __init__(self, relationship_name: str, target_id: str, target_entity: object | None) -> None:
+        self.relationship_name = relationship_name
+        self.target_id = target_id
+        self.target_entity = target_entity
+        self.metadata = {}
+
+
+class _Entity:
+    def __init__(self, entity_type: str, semantic_id: str, name: str, relationships: dict[str, object] | None = None) -> None:
+        self.entity_type = entity_type
+        self.semantic_id = semantic_id
+        self.opaque_id = f"opaque-{semantic_id}"
+        self.name = name
+        self.metadata = {}
+        self.source_path = Path(f"{semantic_id}.yaml")
+        self.raw_relationships = relationships or {}
+        self.resolved_relationships: dict[str, tuple[_Relationship, ...]] = {}
+
+
+class _State:
+    def __init__(self, entities: list[_Entity], warnings: tuple[str, ...]) -> None:
+        self.entities_by_id = {entity.semantic_id: entity for entity in entities}
+        self.load_sequence = tuple(entity.semantic_id for entity in entities)
+        self.warnings = warnings
+
+
+def _entity(entity_type: str, semantic_id: str, name: str, relationships: dict[str, object] | None = None) -> _Entity:
+    return _Entity(entity_type, semantic_id, name, relationships)
+
+
+def _landscape_state(*entities: _Entity) -> _State:
+    state = _State(list(entities), ())
+    warnings: list[str] = []
+    for entity in entities:
+        resolved: dict[str, list[_Relationship]] = {}
+        for name, raw_value in entity.raw_relationships.items():
+            values = raw_value if isinstance(raw_value, list) else [raw_value]
+            for target_id in values:
+                target = state.entities_by_id.get(str(target_id))
+                if target is None:
+                    warnings.append(f"Broken relationship '{name}' from '{entity.semantic_id}' to '{target_id}'.")
+                resolved.setdefault(name, []).append(_Relationship(name, str(target_id), target))
+        entity.resolved_relationships = {name: tuple(items) for name, items in resolved.items()}
+    state.warnings = tuple(warnings)
+    return state

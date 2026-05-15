@@ -39,6 +39,7 @@ def test_persist_landscape_entity_writes_parseable_entity_file(tmp_path: Path) -
     assert payload["relationships"]["systemId"] == "system-nextlens"
     assert os.access(result.path, os.R_OK)
     assert os.access(result.path, os.W_OK)
+    assert (tmp_path / "derived" / "graph.json").exists()
 
 
 def test_persist_landscape_entity_uses_atomic_replace(tmp_path: Path, monkeypatch) -> None:

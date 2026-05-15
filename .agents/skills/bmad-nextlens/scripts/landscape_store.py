@@ -160,6 +160,8 @@ def persist_landscape_entity(
             if backup_path.exists():
                 backup_path.unlink()
 
+            _rebuild_derived_graph(docs_path)
+
             return LandscapePersistenceResult(status="pass", path=final_path)
         except Exception as exc:  # pragma: no cover - exercised via tests through failure simulation
             if temp_path is not None and temp_path.exists():
@@ -325,6 +327,22 @@ def _set_read_write_permissions(path: Path) -> None:
 
 def _utc_timestamp() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _rebuild_derived_graph(docs_path: str | Path) -> None:
+    import importlib.util
+    import sys
+
+    module_path = Path(__file__).resolve().parent / "derived_graph.py"
+    spec = importlib.util.spec_from_file_location("nextlens_derived_graph_runtime", module_path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError("Unable to load derived graph runtime.")
+
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    state = reconstruct_landscape_state(docs_path)
+    module.write_derived_graph(docs_path, state)
 
 
 def _resolve_relationships(
