@@ -33,6 +33,7 @@ CAPABILITIES = (
         "command": "nextlens-setup",
         "action": "configure",
         "skill": "bmad-nextlens-setup",
+        "skill_dir": ".agents/skills/bmad-nextlens-setup",
         "skill_path": ".agents/skills/bmad-nextlens-setup/SKILL.md",
         "display_name": "Setup NextLens",
         "menu_code": "SN",
@@ -50,6 +51,7 @@ CAPABILITIES = (
         "command": "nextlens-new",
         "action": "new",
         "skill": "bmad-nextlens-new",
+        "skill_dir": ".agents/skills/bmad-nextlens-new",
         "skill_path": ".agents/skills/bmad-nextlens-new/SKILL.md",
         "display_name": "Create Feature Packet",
         "menu_code": "NF",
@@ -67,6 +69,7 @@ CAPABILITIES = (
         "command": "nextlens-doctor",
         "action": "doctor",
         "skill": "bmad-nextlens-doctor",
+        "skill_dir": ".agents/skills/bmad-nextlens-doctor",
         "skill_path": ".agents/skills/bmad-nextlens-doctor/SKILL.md",
         "display_name": "Run Doctor Checks",
         "menu_code": "ND",
@@ -84,6 +87,7 @@ CAPABILITIES = (
         "command": "nextlens-salmon",
         "action": "salmon",
         "skill": "bmad-nextlens-salmon",
+        "skill_dir": ".agents/skills/bmad-nextlens-salmon",
         "skill_path": ".agents/skills/bmad-nextlens-salmon/SKILL.md",
         "display_name": "Route Salmon Findings",
         "menu_code": "NS",
@@ -289,7 +293,7 @@ def _marketplace_json_text() -> str:
                 "id": capability["command"],
                 "name": capability["name"],
                 "description": capability["description"],
-                "skills": [capability["skill_path"]],
+                "skills": [capability["skill_dir"]],
             }
             for capability in CAPABILITIES
         ],
@@ -350,10 +354,14 @@ def _validate_marketplace(root: Path, payload: Mapping[str, Any], findings: list
         findings.append(_finding("marketplace-semver", "marketplace version must use major.minor.patch semantic versioning.", "Set marketplace version to a value such as 1.0.0."))
     for plugin in _mapping_sequence(payload.get("plugins")):
         for skill in _string_sequence(plugin.get("skills")):
-            if Path(skill).is_absolute() or ".." in Path(skill).parts:
+            skill_path = Path(skill)
+            resolved_skill_dir = root / skill_path
+            if skill_path.is_absolute() or ".." in skill_path.parts:
                 findings.append(_finding("marketplace-skill-path", f"Skill path {skill} must be repository-relative.", "Use a relative path inside the repository."))
-            elif not (root / skill).is_file():
-                findings.append(_finding("marketplace-skill-missing", f"Referenced skill file does not exist: {skill}.", "Create the skill file or update marketplace.json to point at an existing skill."))
+            elif not resolved_skill_dir.is_dir():
+                findings.append(_finding("marketplace-skill-missing", f"Referenced skill directory does not exist: {skill}.", "Create the skill directory or update marketplace.json to point at an existing skill directory."))
+            elif not (resolved_skill_dir / "SKILL.md").is_file():
+                findings.append(_finding("marketplace-skill-missing", f"Referenced skill directory does not contain SKILL.md: {skill}.", "Create the skill file or update marketplace.json to point at an existing skill directory."))
 
 
 def _validate_cross_manifest_consistency(
@@ -370,13 +378,13 @@ def _validate_cross_manifest_consistency(
     expected_actions = {capability["action"] for capability in CAPABILITIES}
     yaml_skills = {str(item.get("skill")) for item in _mapping_sequence(module_yaml.get("capabilities"))}
     help_skills = {row.get("skill", "") for row in module_help}
-    marketplace_skill_paths = {
+    marketplace_skill_dirs = {
         skill
         for plugin in _mapping_sequence(marketplace.get("plugins"))
         for skill in _string_sequence(plugin.get("skills"))
     }
     expected_skills = {capability["skill"] for capability in CAPABILITIES}
-    expected_skill_paths = {capability["skill_path"] for capability in CAPABILITIES}
+    expected_skill_dirs = {capability["skill_dir"] for capability in CAPABILITIES}
     if (
         yaml_commands != expected_commands
         or marketplace_commands != expected_commands
@@ -384,7 +392,7 @@ def _validate_cross_manifest_consistency(
         or help_actions != expected_actions
         or yaml_skills != expected_skills
         or help_skills != expected_skills
-        or marketplace_skill_paths != expected_skill_paths
+        or marketplace_skill_dirs != expected_skill_dirs
     ):
         findings.append(_finding("manifest-command-consistency", "module.yaml, module-help.csv, and marketplace.json capability sets differ.", "Regenerate all module surfaces with create-module."))
 

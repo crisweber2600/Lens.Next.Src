@@ -36,10 +36,10 @@ def test_marketplace_manifest_declares_expected_plugins() -> None:
 
 def test_marketplace_manifest_skill_paths_are_repo_relative_and_exist() -> None:
     expected_skill_paths = {
-        "nextlens-setup": ".agents/skills/bmad-nextlens-setup/SKILL.md",
-        "nextlens-new": ".agents/skills/bmad-nextlens-new/SKILL.md",
-        "nextlens-doctor": ".agents/skills/bmad-nextlens-doctor/SKILL.md",
-        "nextlens-salmon": ".agents/skills/bmad-nextlens-salmon/SKILL.md",
+        "nextlens-setup": ".agents/skills/bmad-nextlens-setup",
+        "nextlens-new": ".agents/skills/bmad-nextlens-new",
+        "nextlens-doctor": ".agents/skills/bmad-nextlens-doctor",
+        "nextlens-salmon": ".agents/skills/bmad-nextlens-salmon",
     }
 
     for plugin in _manifest()["plugins"]:
@@ -47,7 +47,8 @@ def test_marketplace_manifest_skill_paths_are_repo_relative_and_exist() -> None:
         for skill_path in plugin["skills"]:
             assert not Path(skill_path).is_absolute()
             assert ".." not in Path(skill_path).parts
-            assert (REPO_ROOT / skill_path).is_file()
+            assert (REPO_ROOT / skill_path).is_dir()
+            assert (REPO_ROOT / skill_path / "SKILL.md").is_file()
 
 
 def _manifest() -> dict[str, object]:
