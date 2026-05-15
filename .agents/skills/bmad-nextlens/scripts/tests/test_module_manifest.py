@@ -37,7 +37,7 @@ def test_module_manifest_declares_expected_capabilities() -> None:
     assert set(capabilities) == EXPECTED_COMMANDS
     assert {item["action"] for item in capabilities.values()} == EXPECTED_ACTIONS
     assert capabilities["nextlens-setup"]["description"] == "Register or refresh the NextLens BMad module in this project."
-    assert capabilities["nextlens-new"]["description"] == "Create one Feature packet from top-down discovery context."
+    assert capabilities["nextlens-new"]["description"] == "Break discovery context into candidate Feature slices before creating one packet."
     assert capabilities["nextlens-doctor"]["description"] == "Run non-mutating validation checks on a Feature packet or landscape."
     assert capabilities["nextlens-salmon"]["description"] == "Route correction findings through deduplication and impact classification."
     assert {command: item["skill"] for command, item in capabilities.items()} == EXPECTED_SKILLS

@@ -27,10 +27,12 @@ def test_render_candidate_selection_displays_selected_and_two_alternatives() -> 
     lines = CANDIDATE_SELECTION.render_candidate_selection(ranked, candidates_by_id)
 
     assert lines[0] == "[stage:candidate-selection]"
-    assert "Selected Candidate (Rank 1):" in lines
-    assert "Alternative (Rank 2):" in lines
-    assert "Alternative (Rank 3):" in lines
-    assert lines[-1] == "Confirm selection? [Y/n]"
+    assert "1. Selected Candidate (Rank 1):" in lines
+    assert "2. Alternative (Rank 2):" in lines
+    assert "3. Alternative (Rank 3):" in lines
+    assert "Reply with a rank number or candidate id to inspect another candidate." in lines
+    assert "Confirm highlighted selection? [y/N]" in lines
+    assert lines[-1] == "No Feature packet is emitted from candidate selection."
 
 
 def test_render_candidate_selection_includes_selected_details_and_alternative_reason() -> None:
@@ -60,6 +62,42 @@ def test_handle_candidate_selection_response_confirms_selected_candidate() -> No
     assert result.status == "confirmed"
     assert result.locked_selection == "feature-password-recovery"
     assert result.next_action == "confirmation_gate"
+
+
+def test_handle_candidate_selection_response_does_not_confirm_blank_response() -> None:
+    ranked = _ranked_candidates()
+    state = CANDIDATE_SELECTION.initialize_candidate_selection(ranked)
+
+    result = CANDIDATE_SELECTION.handle_candidate_selection_response(
+        state,
+        "",
+        ranked,
+        _candidates_by_id(),
+    )
+
+    assert result.status == "invalid_response"
+    assert result.locked_selection is None
+    assert result.next_action is None
+    assert "No Feature packet is emitted from candidate selection." in result.output_lines
+
+
+def test_handle_candidate_selection_response_accepts_rank_for_deeper_candidate_inspection() -> None:
+    ranked = _ranked_candidates()
+    candidates_by_id = _candidates_by_id()
+    state = CANDIDATE_SELECTION.initialize_candidate_selection(ranked)
+
+    result = CANDIDATE_SELECTION.handle_candidate_selection_response(
+        state,
+        "2",
+        ranked,
+        candidates_by_id,
+    )
+
+    assert result.status == "candidate_selected"
+    assert result.locked_selection is None
+    assert result.state.selected_candidate_id == "feature-journey-health"
+    assert "2. Selected Candidate (Rank 2):" in result.output_lines
+    assert result.output_lines[-1] == "No Feature packet is emitted from candidate selection."
 
 
 def test_handle_candidate_selection_response_decline_offers_next_actions() -> None:
@@ -110,8 +148,8 @@ def test_handle_candidate_selection_response_allows_alternative_selection() -> N
     assert "Select alternative candidate:" in choose_other.output_lines
     assert alternative.status == "alternative_selected"
     assert alternative.state.selected_candidate_id == "feature-journey-health"
-    assert "Selected Candidate (Rank 2):" in alternative.output_lines
-    assert alternative.output_lines[-1] == "Confirm selection? [Y/n]"
+    assert "2. Selected Candidate (Rank 2):" in alternative.output_lines
+    assert alternative.output_lines[-1] == "No Feature packet is emitted from candidate selection."
 
 
 def _ranked_candidates() -> tuple[FEATURE_SCORING.ScoredCandidate, ...]:

@@ -58,7 +58,7 @@ CAPABILITIES = (
         "display_name": "Create Feature Packet",
         "menu_code": "NF",
         "name": "Create Feature Packet",
-        "description": "Create one Feature packet from top-down discovery context.",
+        "description": "Break discovery context into candidate Feature slices before creating one packet.",
         "args": "{context_source: discovery context path}|{docs_path: optional docs root}",
         "phase": "anytime",
         "after": "bmad-nextlens-setup:configure",

@@ -16,7 +16,7 @@ capabilities:
 - command: nextlens-new
   action: new
   skill: bmad-nextlens-new
-  description: Create one Feature packet from top-down discovery context.
+  description: Break discovery context into candidate Feature slices before creating one packet.
   entry_point: .agents/skills/bmad-nextlens-new/SKILL.md
   skill_type: workflow
 - command: nextlens-doctor
