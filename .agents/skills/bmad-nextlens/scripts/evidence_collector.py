@@ -18,6 +18,7 @@ EVIDENCE_COLLECTION_POINTS = (
     "feature_ranking_and_tie_break",
     "operator_confirmations",
     "doctor_validation_results",
+    "graph_consistency_check",
     "packet_emission_result",
     "salmon_routing_results",
     "errors_and_exceptions",
