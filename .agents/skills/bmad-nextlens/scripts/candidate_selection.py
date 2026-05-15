@@ -177,7 +177,9 @@ def handle_candidate_selection_response(
             return CandidateSelectionResult(
                 status="invalid_response",
                 state=state,
-                output_lines=("Invalid candidate choice. Select a displayed rank or a candidate id.",),
+                output_lines=(
+                    "Invalid candidate choice. Select a displayed alternative rank (not the highlighted selection) or a candidate id.",
+                ),
             )
         next_state = CandidateSelectionState(
             ranked_candidate_ids=state.ranked_candidate_ids,

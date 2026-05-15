@@ -190,6 +190,41 @@ def test_handle_candidate_selection_response_allows_displayed_rank_after_declini
     assert "1. Selected Candidate (Rank 1):" in alternative.output_lines
 
 
+def test_handle_candidate_selection_response_rejects_highlighted_rank_in_alternative_mode() -> None:
+    ranked = _ranked_candidates()
+    candidates_by_id = _candidates_by_id()
+    state = CANDIDATE_SELECTION.initialize_candidate_selection(ranked)
+    rank_two = CANDIDATE_SELECTION.handle_candidate_selection_response(
+        state,
+        "2",
+        ranked,
+        candidates_by_id,
+    )
+    declined = CANDIDATE_SELECTION.handle_candidate_selection_response(
+        rank_two.state,
+        "n",
+        ranked,
+        candidates_by_id,
+    )
+    choose_other = CANDIDATE_SELECTION.handle_candidate_selection_response(
+        declined.state,
+        "1",
+        ranked,
+        candidates_by_id,
+    )
+    invalid = CANDIDATE_SELECTION.handle_candidate_selection_response(
+        choose_other.state,
+        "2",
+        ranked,
+        candidates_by_id,
+    )
+
+    assert invalid.status == "invalid_response"
+    assert invalid.output_lines == (
+        "Invalid candidate choice. Select a displayed alternative rank (not the highlighted selection) or a candidate id.",
+    )
+
+
 def _ranked_candidates() -> tuple[FEATURE_SCORING.ScoredCandidate, ...]:
     return (
         _scored_candidate(
