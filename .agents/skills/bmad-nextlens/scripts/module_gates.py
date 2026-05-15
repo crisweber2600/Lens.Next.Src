@@ -359,10 +359,11 @@ def _validate_marketplace(root: Path, payload: Mapping[str, Any], findings: list
     plugins = _mapping_sequence(payload.get("plugins"))
     if len(plugins) != 1:
         findings.append(_finding("marketplace-plugin-count", "marketplace.json must expose one installable plugin for the multi-skill NextLens module.", "Regenerate marketplace.json with create-module."))
-    for plugin in _mapping_sequence(payload.get("plugins")):
+        return
+    for plugin in plugins:
         for field_name in ("name", "source", "description", "version", "author", "skills"):
             if field_name not in plugin:
-                findings.append(_finding("marketplace-plugin-missing-field", f"marketplace plugin missing {field_name}.", "Regenerate marketplace.json with create-module."))
+                findings.append(_finding(f"marketplace-plugin-missing-{field_name}", f"marketplace plugin missing {field_name}.", "Regenerate marketplace.json with create-module."))
         version = str(plugin.get("version") or "")
         if not MODULE_VERSION_PATTERN.match(version):
             findings.append(_finding("marketplace-semver", "marketplace plugin version must use major.minor.patch semantic versioning.", "Set plugin version to a value such as 1.0.0."))
