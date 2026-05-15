@@ -83,6 +83,34 @@ def test_validate_module_package_blocks_inconsistent_capability_sets(tmp_path: P
     assert any(finding.check_id == "manifest-command-consistency" for finding in result.findings)
 
 
+def test_validate_module_package_requires_marketplace_owner_name(tmp_path: Path) -> None:
+    repo_root = _repo_fixture(tmp_path)
+    MODULE_GATES.create_module_package(repo_root)
+    marketplace_path = repo_root / ".claude-plugin" / "marketplace.json"
+    marketplace = json.loads(marketplace_path.read_text(encoding="utf-8"))
+    marketplace["owner"] = {}
+    marketplace_path.write_text(json.dumps(marketplace), encoding="utf-8")
+
+    result = MODULE_GATES.validate_module_package(repo_root)
+
+    assert result.status == "fail"
+    assert any(finding.check_id == "marketplace-owner" for finding in result.findings)
+
+
+def test_validate_module_package_requires_marketplace_plugin_author_name(tmp_path: Path) -> None:
+    repo_root = _repo_fixture(tmp_path)
+    MODULE_GATES.create_module_package(repo_root)
+    marketplace_path = repo_root / ".claude-plugin" / "marketplace.json"
+    marketplace = json.loads(marketplace_path.read_text(encoding="utf-8"))
+    marketplace["plugins"][0]["author"] = {}
+    marketplace_path.write_text(json.dumps(marketplace), encoding="utf-8")
+
+    result = MODULE_GATES.validate_module_package(repo_root)
+
+    assert result.status == "fail"
+    assert any(finding.check_id == "marketplace-author" for finding in result.findings)
+
+
 def test_validate_current_repository_package_passes() -> None:
     repo_root = Path(__file__).resolve().parents[5]
 

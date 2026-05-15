@@ -1,50 +1,11 @@
 {
   "name": "NextLens Top-Down Bridge",
-  "version": "1.0.0",
-  "description": "Deterministic v1 top-down Feature packet bridge with validation and correction routing",
-  "author": "NextLens Team",
+  "owner": {
+    "name": "NextLens Team"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/crisweber2600/NextLens",
   "repository": "https://github.com/crisweber2600/NextLens",
-  "plugins": [
-    {
-      "id": "nextlens-setup",
-      "name": "NextLens Setup",
-      "module": "nxl",
-      "description": "Register or refresh the NextLens BMad module in this project.",
-      "skills": [
-        ".agents/skills/bmad-nextlens-setup"
-      ]
-    },
-    {
-      "id": "nextlens-new",
-      "name": "NextLens New Packet",
-      "module": "nxl",
-      "description": "Create one Feature packet from top-down discovery context.",
-      "skills": [
-        ".agents/skills/bmad-nextlens-setup",
-        ".agents/skills/bmad-nextlens-new"
-      ]
-    },
-    {
-      "id": "nextlens-doctor",
-      "name": "NextLens Doctor",
-      "module": "nxl",
-      "description": "Run non-mutating validation checks on a Feature packet or landscape.",
-      "skills": [
-        ".agents/skills/bmad-nextlens-setup",
-        ".agents/skills/bmad-nextlens-doctor"
-      ]
-    },
-    {
-      "id": "nextlens-salmon",
-      "name": "NextLens Salmon",
-      "module": "nxl",
-      "description": "Route correction findings through deduplication and impact classification.",
-      "skills": [
-        ".agents/skills/bmad-nextlens-setup",
-        ".agents/skills/bmad-nextlens-salmon"
-      ]
-    }
-  ],
   "keywords": [
     "nextlens",
     "top-down",
@@ -53,5 +14,21 @@
     "doctor-validation",
     "salmon-routing"
   ],
-  "license": "MIT"
+  "plugins": [
+    {
+      "name": "nxl",
+      "source": "./",
+      "description": "Deterministic top-down feature packet bridge with doctor validation and salmon correction routing.",
+      "version": "1.0.0",
+      "author": {
+        "name": "NextLens Team"
+      },
+      "skills": [
+        ".agents/skills/bmad-nextlens-setup",
+        ".agents/skills/bmad-nextlens-new",
+        ".agents/skills/bmad-nextlens-doctor",
+        ".agents/skills/bmad-nextlens-salmon"
+      ]
+    }
+  ]
 }

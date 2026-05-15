@@ -27,6 +27,7 @@ else:
 MODULE_VERSION_PATTERN = re.compile(r"^\d+\.\d+\.\d+$")
 SETUP_SKILL = "bmad-nextlens-setup"
 SETUP_ASSETS_DIR = Path(".agents") / "skills" / SETUP_SKILL / "assets"
+EXPECTED_MARKETPLACE_PLUGIN_COUNT = 1
 
 CAPABILITIES = (
     {
@@ -284,20 +285,10 @@ def _module_help_text() -> str:
 def _marketplace_json_text() -> str:
     payload = {
         "name": "NextLens Top-Down Bridge",
-        "version": "1.0.0",
-        "description": "Deterministic v1 top-down Feature packet bridge with validation and correction routing",
-        "author": "NextLens Team",
+        "owner": {"name": "NextLens Team"},
+        "license": "MIT",
+        "homepage": "https://github.com/crisweber2600/NextLens",
         "repository": "https://github.com/crisweber2600/NextLens",
-        "plugins": [
-            {
-                "id": capability["command"],
-                "name": capability["name"],
-                "module": "nxl",
-                "description": capability["description"],
-                "skills": _marketplace_plugin_skills(capability),
-            }
-            for capability in CAPABILITIES
-        ],
         "keywords": [
             "nextlens",
             "top-down",
@@ -306,17 +297,27 @@ def _marketplace_json_text() -> str:
             "doctor-validation",
             "salmon-routing",
         ],
-        "license": "MIT",
+        "plugins": [
+            {
+                "name": "nxl",
+                "source": "./",
+                "description": "Deterministic top-down feature packet bridge with doctor validation and salmon correction routing.",
+                "version": "1.0.0",
+                "author": {"name": "NextLens Team"},
+                "skills": _marketplace_plugin_skills(),
+            }
+        ],
     }
     return json.dumps(payload, indent=2) + "\n"
 
 
-def _marketplace_plugin_skills(capability: Mapping[str, Any]) -> list[str]:
+def _marketplace_plugin_skills() -> list[str]:
     setup_skill_dir = ".agents/skills/bmad-nextlens-setup"
     skills = [setup_skill_dir]
-    skill_dir = str(capability.get("skill_dir", "")).strip()
-    if skill_dir and skill_dir not in skills:
-        skills.append(skill_dir)
+    for capability in CAPABILITIES:
+        skill_dir = str(capability.get("skill_dir", "")).strip()
+        if skill_dir and skill_dir not in skills:
+            skills.append(skill_dir)
     return skills
 
 
@@ -356,13 +357,28 @@ def _validate_module_help(rows: Sequence[Mapping[str, str]], findings: list[Modu
 
 
 def _validate_marketplace(root: Path, payload: Mapping[str, Any], findings: list[ModuleGateFinding]) -> None:
-    for field_name in ("name", "version", "description", "author", "repository", "plugins", "keywords", "license"):
+    for field_name in ("name", "owner", "license", "homepage", "repository", "keywords", "plugins"):
         if field_name not in payload:
             findings.append(_finding("marketplace-missing-field", f"marketplace.json missing {field_name}.", "Regenerate marketplace.json with create-module."))
-    version = str(payload.get("version") or "")
-    if not MODULE_VERSION_PATTERN.match(version):
-        findings.append(_finding("marketplace-semver", "marketplace version must use major.minor.patch semantic versioning.", "Set marketplace version to a value such as 1.0.0."))
-    for plugin in _mapping_sequence(payload.get("plugins")):
+    owner = payload.get("owner")
+    if not isinstance(owner, Mapping) or not str(owner.get("name") or "").strip():
+        findings.append(_finding("marketplace-owner", "marketplace.json owner must include a non-empty name.", "Set owner.name in marketplace.json."))
+    plugins = _mapping_sequence(payload.get("plugins"))
+    if len(plugins) != EXPECTED_MARKETPLACE_PLUGIN_COUNT:
+        findings.append(_finding("marketplace-plugin-count", "marketplace.json must expose one installable plugin for the multi-skill NextLens module.", "Regenerate marketplace.json with create-module."))
+    for plugin in plugins:
+        for field_name in ("name", "source", "description", "version", "author", "skills"):
+            if field_name not in plugin:
+                findings.append(_finding(f"marketplace-plugin-missing-{field_name}", f"marketplace plugin missing {field_name}.", "Regenerate marketplace.json with create-module."))
+        version = str(plugin.get("version") or "")
+        if not MODULE_VERSION_PATTERN.match(version):
+            findings.append(_finding("marketplace-semver", "marketplace plugin version must use major.minor.patch semantic versioning.", "Set plugin version to a value such as 1.0.0."))
+        author = plugin.get("author")
+        if not isinstance(author, Mapping) or not str(author.get("name") or "").strip():
+            findings.append(_finding("marketplace-author", "marketplace plugin author must include a non-empty name.", "Set plugin author.name in marketplace.json."))
+        source = str(plugin.get("source") or "")
+        if source != "./":
+            findings.append(_finding("marketplace-source", "marketplace plugin source must point at the repository root.", "Set plugin source to './'."))
         for skill in _string_sequence(plugin.get("skills")):
             skill_path = Path(skill)
             resolved_skill_dir = root / skill_path
@@ -381,28 +397,29 @@ def _validate_cross_manifest_consistency(
     findings: list[ModuleGateFinding],
 ) -> None:
     yaml_commands = {str(item.get("command")) for item in _mapping_sequence(module_yaml.get("capabilities"))}
-    marketplace_commands = {str(item.get("id")) for item in _mapping_sequence(marketplace.get("plugins"))}
     expected_commands = {capability["command"] for capability in CAPABILITIES}
     yaml_actions = {str(item.get("action")) for item in _mapping_sequence(module_yaml.get("capabilities"))}
     help_actions = {row.get("action", "") for row in module_help}
     expected_actions = {capability["action"] for capability in CAPABILITIES}
     yaml_skills = {str(item.get("skill")) for item in _mapping_sequence(module_yaml.get("capabilities"))}
     help_skills = {row.get("skill", "") for row in module_help}
+    marketplace_plugins = _mapping_sequence(marketplace.get("plugins"))
     marketplace_skill_dirs = {
         skill
-        for plugin in _mapping_sequence(marketplace.get("plugins"))
+        for plugin in marketplace_plugins
         for skill in _string_sequence(plugin.get("skills"))
     }
     expected_skills = {capability["skill"] for capability in CAPABILITIES}
     expected_skill_dirs = {capability["skill_dir"] for capability in CAPABILITIES}
+    marketplace_plugin_names = {str(plugin.get("name")) for plugin in marketplace_plugins}
     if (
         yaml_commands != expected_commands
-        or marketplace_commands != expected_commands
         or yaml_actions != expected_actions
         or help_actions != expected_actions
         or yaml_skills != expected_skills
         or help_skills != expected_skills
         or marketplace_skill_dirs != expected_skill_dirs
+        or marketplace_plugin_names != {"nxl"}
     ):
         findings.append(_finding("manifest-command-consistency", "module.yaml, module-help.csv, and marketplace.json capability sets differ.", "Regenerate all module surfaces with create-module."))
 

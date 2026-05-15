@@ -12,44 +12,40 @@ def test_marketplace_manifest_has_required_distribution_metadata() -> None:
     manifest = _manifest()
 
     assert manifest["name"] == "NextLens Top-Down Bridge"
-    assert manifest["version"] == "1.0.0"
-    assert manifest["description"] == "Deterministic v1 top-down Feature packet bridge with validation and correction routing"
-    assert manifest["author"] == "NextLens Team"
-    assert manifest["repository"].startswith("https://github.com/")
     assert manifest["license"] == "MIT"
+    assert manifest["owner"]["name"] == "NextLens Team"
+    assert manifest["homepage"].startswith("https://github.com/")
+    assert manifest["repository"].startswith("https://github.com/")
     assert set(manifest["keywords"]) >= {"nextlens", "top-down", "feature-packet", "bmad-module"}
 
 
-def test_marketplace_manifest_declares_expected_plugins() -> None:
-    plugins = {plugin["id"]: plugin for plugin in _manifest()["plugins"]}
+def test_marketplace_manifest_declares_one_installable_plugin() -> None:
+    plugins = _manifest()["plugins"]
 
-    assert set(plugins) == {"nextlens-setup", "nextlens-new", "nextlens-doctor", "nextlens-salmon"}
-    assert plugins["nextlens-setup"]["name"] == "NextLens Setup"
-    assert plugins["nextlens-new"]["name"] == "NextLens New Packet"
-    assert plugins["nextlens-doctor"]["name"] == "NextLens Doctor"
-    assert plugins["nextlens-salmon"]["name"] == "NextLens Salmon"
-    assert plugins["nextlens-setup"]["description"] == "Register or refresh the NextLens BMad module in this project."
-    assert plugins["nextlens-new"]["description"] == "Create one Feature packet from top-down discovery context."
-    assert plugins["nextlens-doctor"]["description"] == "Run non-mutating validation checks on a Feature packet or landscape."
-    assert plugins["nextlens-salmon"]["description"] == "Route correction findings through deduplication and impact classification."
+    assert len(plugins) == 1
+    plugin = plugins[0]
+    assert plugin["name"] == "nxl"
+    assert plugin["source"] == "./"
+    assert plugin["description"] == "Deterministic top-down feature packet bridge with doctor validation and salmon correction routing."
+    assert plugin["version"] == "1.0.0"
+    assert plugin["author"]["name"] == "NextLens Team"
 
 
 def test_marketplace_manifest_skill_paths_are_repo_relative_and_exist() -> None:
-    expected_skill_paths = {
-        "nextlens-setup": [".agents/skills/bmad-nextlens-setup"],
-        "nextlens-new": [".agents/skills/bmad-nextlens-setup", ".agents/skills/bmad-nextlens-new"],
-        "nextlens-doctor": [".agents/skills/bmad-nextlens-setup", ".agents/skills/bmad-nextlens-doctor"],
-        "nextlens-salmon": [".agents/skills/bmad-nextlens-setup", ".agents/skills/bmad-nextlens-salmon"],
-    }
+    expected_skill_paths = [
+        ".agents/skills/bmad-nextlens-setup",
+        ".agents/skills/bmad-nextlens-new",
+        ".agents/skills/bmad-nextlens-doctor",
+        ".agents/skills/bmad-nextlens-salmon",
+    ]
 
-    for plugin in _manifest()["plugins"]:
-        assert plugin["skills"] == expected_skill_paths[plugin["id"]]
-        assert plugin["module"] == "nxl"
-        for skill_path in plugin["skills"]:
-            assert not Path(skill_path).is_absolute()
-            assert ".." not in Path(skill_path).parts
-            assert (REPO_ROOT / skill_path).is_dir()
-            assert (REPO_ROOT / skill_path / "SKILL.md").is_file()
+    plugin = _manifest()["plugins"][0]
+    assert plugin["skills"] == expected_skill_paths
+    for skill_path in plugin["skills"]:
+        assert not Path(skill_path).is_absolute()
+        assert ".." not in Path(skill_path).parts
+        assert (REPO_ROOT / skill_path).is_dir()
+        assert (REPO_ROOT / skill_path / "SKILL.md").is_file()
 
 
 def _manifest() -> dict[str, object]:
