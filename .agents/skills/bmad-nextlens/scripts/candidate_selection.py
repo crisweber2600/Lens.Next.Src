@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Mapping, Sequence
 
+MAX_CANDIDATE_SELECTION_RANK = 3
+
 
 @dataclass(frozen=True)
 class CandidateSelectionState:
@@ -53,11 +55,10 @@ def render_candidate_selection(
     selected_rank = ordered_ids.index(active_selected_id) + 1
     lines.extend(_render_selected_candidate(selected_candidate, selected_payload, selected_rank))
 
-    alternative_rank = 2
-    for candidate_id in ordered_ids:
+    for alternative_rank, candidate_id in enumerate(ordered_ids, start=1):
         if candidate_id == active_selected_id:
             continue
-        if alternative_rank > 3:
+        if alternative_rank > MAX_CANDIDATE_SELECTION_RANK:
             break
         alternative_candidate = ranked_lookup[candidate_id]
         alternative_payload = candidates_by_id.get(candidate_id, {})
@@ -71,7 +72,9 @@ def render_candidate_selection(
         )
         alternative_rank += 1
 
-    lines.append("Confirm selection? [Y/n]")
+    lines.append("Reply with a rank number or candidate id to inspect another candidate.")
+    lines.append("Confirm highlighted selection? [y/N]")
+    lines.append("No Feature packet is emitted from candidate selection.")
     return lines
 
 
@@ -85,7 +88,25 @@ def handle_candidate_selection_response(
     normalized = (response or "").strip().lower()
 
     if state.mode == "awaiting_confirmation":
-        if normalized in {"", "y", "yes"}:
+        selected_candidate_id = _resolve_candidate_choice(state, normalized, ranked_lookup)
+        if selected_candidate_id is not None:
+            next_state = CandidateSelectionState(
+                ranked_candidate_ids=state.ranked_candidate_ids,
+                selected_candidate_id=selected_candidate_id,
+                mode="awaiting_confirmation",
+            )
+            return CandidateSelectionResult(
+                status="candidate_selected",
+                state=next_state,
+                output_lines=tuple(
+                    render_candidate_selection(
+                        ranked_candidates,
+                        candidates_by_id,
+                        selected_candidate_id=selected_candidate_id,
+                    )
+                ),
+            )
+        if normalized in {"y", "yes"}:
             return CandidateSelectionResult(
                 status="confirmed",
                 state=state,
@@ -112,7 +133,10 @@ def handle_candidate_selection_response(
         return CandidateSelectionResult(
             status="invalid_response",
             state=state,
-            output_lines=("Invalid response. Confirm selection? [Y/n]",),
+            output_lines=(
+                "Invalid response. Enter a candidate rank/id, or Y to confirm the highlighted selection.",
+                "No Feature packet is emitted from candidate selection.",
+            ),
         )
 
     if state.mode == "awaiting_decline_action":
@@ -153,7 +177,9 @@ def handle_candidate_selection_response(
             return CandidateSelectionResult(
                 status="invalid_response",
                 state=state,
-                output_lines=("Invalid candidate choice. Select rank 2, rank 3, or a candidate id.",),
+                output_lines=(
+                    "Invalid candidate choice. Select a displayed alternative rank (not the highlighted selection) or a candidate id.",
+                ),
             )
         next_state = CandidateSelectionState(
             ranked_candidate_ids=state.ranked_candidate_ids,
@@ -177,7 +203,8 @@ def handle_candidate_selection_response(
 
 def _render_selected_candidate(candidate: Any, payload: Mapping[str, Any], rank: int) -> list[str]:
     factors = candidate.factor_map()
-    lines = [f"Selected Candidate (Rank {rank}):"]
+    lines = [f"{rank}. Selected Candidate (Rank {rank}):"]
+    lines.append(f"id: {candidate.candidate_id}")
     lines.append(f"name: {_candidate_name(candidate, payload)}")
     lines.append(f"goal: {_candidate_goal(payload)}")
     lines.append(f"score: {candidate.composite_score:.2f}")
@@ -202,7 +229,8 @@ def _render_alternative_candidate(
     payload: Mapping[str, Any],
     rank: int,
 ) -> list[str]:
-    lines = [f"Alternative (Rank {rank}):"]
+    lines = [f"{rank}. Alternative (Rank {rank}):"]
+    lines.append(f"id: {candidate.candidate_id}")
     lines.append(f"name: {_candidate_name(candidate, payload)}")
     lines.append(f"score: {candidate.composite_score:.2f}")
     lines.append(f"reason_not_selected: {_alternative_reason(selected_candidate, candidate)}")
@@ -216,7 +244,7 @@ def _render_alternative_choice_menu(
 ) -> list[str]:
     lines = ["Select alternative candidate:"]
     for rank, candidate_id in enumerate(state.ranked_candidate_ids, start=1):
-        if candidate_id == state.selected_candidate_id or rank > 3:
+        if candidate_id == state.selected_candidate_id or rank > MAX_CANDIDATE_SELECTION_RANK:
             continue
         candidate = ranked_lookup[candidate_id]
         payload = candidates_by_id.get(candidate_id, {})
@@ -231,9 +259,9 @@ def _resolve_alternative_choice(
     response: str,
     ranked_lookup: Mapping[str, Any],
 ) -> str | None:
-    if response in {"2", "3"}:
+    if response.isdigit():
         rank = int(response)
-        if rank <= len(state.ranked_candidate_ids):
+        if 1 <= rank <= min(MAX_CANDIDATE_SELECTION_RANK, len(state.ranked_candidate_ids)):
             candidate_id = state.ranked_candidate_ids[rank - 1]
             if candidate_id != state.selected_candidate_id:
                 return candidate_id
@@ -243,6 +271,25 @@ def _resolve_alternative_choice(
             return candidate_id
         candidate = ranked_lookup[candidate_id]
         if response == getattr(candidate, "candidate_name", "").lower() and candidate_id != state.selected_candidate_id:
+            return candidate_id
+    return None
+
+
+def _resolve_candidate_choice(
+    state: CandidateSelectionState,
+    response: str,
+    ranked_lookup: Mapping[str, Any],
+) -> str | None:
+    if response.isdigit():
+        rank = int(response)
+        if 1 <= rank <= len(state.ranked_candidate_ids):
+            return state.ranked_candidate_ids[rank - 1]
+
+    for candidate_id in state.ranked_candidate_ids:
+        if response == candidate_id.lower():
+            return candidate_id
+        candidate = ranked_lookup[candidate_id]
+        if response == getattr(candidate, "candidate_name", "").lower():
             return candidate_id
     return None
 
