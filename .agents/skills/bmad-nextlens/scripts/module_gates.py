@@ -292,8 +292,9 @@ def _marketplace_json_text() -> str:
             {
                 "id": capability["command"],
                 "name": capability["name"],
+                "module": "nxl",
                 "description": capability["description"],
-                "skills": [capability["skill_dir"]],
+                "skills": _marketplace_plugin_skills(capability),
             }
             for capability in CAPABILITIES
         ],
@@ -308,6 +309,15 @@ def _marketplace_json_text() -> str:
         "license": "MIT",
     }
     return json.dumps(payload, indent=2) + "\n"
+
+
+def _marketplace_plugin_skills(capability: Mapping[str, Any]) -> list[str]:
+    setup_skill_dir = ".agents/skills/bmad-nextlens-setup"
+    skills = [setup_skill_dir]
+    skill_dir = str(capability.get("skill_dir", "")).strip()
+    if skill_dir and skill_dir not in skills:
+        skills.append(skill_dir)
+    return skills
 
 
 def _validate_module_yaml(payload: Mapping[str, Any], findings: list[ModuleGateFinding]) -> None:

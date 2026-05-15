@@ -36,14 +36,15 @@ def test_marketplace_manifest_declares_expected_plugins() -> None:
 
 def test_marketplace_manifest_skill_paths_are_repo_relative_and_exist() -> None:
     expected_skill_paths = {
-        "nextlens-setup": ".agents/skills/bmad-nextlens-setup",
-        "nextlens-new": ".agents/skills/bmad-nextlens-new",
-        "nextlens-doctor": ".agents/skills/bmad-nextlens-doctor",
-        "nextlens-salmon": ".agents/skills/bmad-nextlens-salmon",
+        "nextlens-setup": [".agents/skills/bmad-nextlens-setup"],
+        "nextlens-new": [".agents/skills/bmad-nextlens-setup", ".agents/skills/bmad-nextlens-new"],
+        "nextlens-doctor": [".agents/skills/bmad-nextlens-setup", ".agents/skills/bmad-nextlens-doctor"],
+        "nextlens-salmon": [".agents/skills/bmad-nextlens-setup", ".agents/skills/bmad-nextlens-salmon"],
     }
 
     for plugin in _manifest()["plugins"]:
-        assert plugin["skills"] == [expected_skill_paths[plugin["id"]]]
+        assert plugin["skills"] == expected_skill_paths[plugin["id"]]
+        assert plugin["module"] == "nxl"
         for skill_path in plugin["skills"]:
             assert not Path(skill_path).is_absolute()
             assert ".." not in Path(skill_path).parts

@@ -1,20 +1,20 @@
 {
   "gate": "create-module",
-  "generated_at": "2026-05-15T13:50:08Z",
+  "generated_at": "2026-05-15T14:01:43Z",
   "generated_files": [
     {
       "checksum": "15b7789c553114188f9c5a29f2c44a52fe6083aca4456739c7c7455dfa0f51be",
-      "generated_at": "2026-05-15T13:50:08Z",
+      "generated_at": "2026-05-15T14:01:43Z",
       "path": ".agents/skills/bmad-nextlens-setup/assets/module.yaml"
     },
     {
       "checksum": "db2f01144d1244229ec38e5859a4d64d945629d79667413d8188569aa2fc92d9",
-      "generated_at": "2026-05-15T13:50:08Z",
+      "generated_at": "2026-05-15T14:01:43Z",
       "path": ".agents/skills/bmad-nextlens-setup/assets/module-help.csv"
     },
     {
-      "checksum": "f3b60e7160bda10cf39e34aba14f84c81946ec45224b0b3c41de9c685ecc083c",
-      "generated_at": "2026-05-15T13:50:08Z",
+      "checksum": "fb045e03e5b37515d196be36550991bcc70d65171c237290776b0a1f25bfbbbd",
+      "generated_at": "2026-05-15T14:01:43Z",
       "path": ".claude-plugin/marketplace.json"
     }
   ],

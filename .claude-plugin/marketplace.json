@@ -8,6 +8,7 @@
     {
       "id": "nextlens-setup",
       "name": "NextLens Setup",
+      "module": "nxl",
       "description": "Register or refresh the NextLens BMad module in this project.",
       "skills": [
         ".agents/skills/bmad-nextlens-setup"
@@ -16,24 +17,30 @@
     {
       "id": "nextlens-new",
       "name": "NextLens New Packet",
+      "module": "nxl",
       "description": "Create one Feature packet from top-down discovery context.",
       "skills": [
+        ".agents/skills/bmad-nextlens-setup",
         ".agents/skills/bmad-nextlens-new"
       ]
     },
     {
       "id": "nextlens-doctor",
       "name": "NextLens Doctor",
+      "module": "nxl",
       "description": "Run non-mutating validation checks on a Feature packet or landscape.",
       "skills": [
+        ".agents/skills/bmad-nextlens-setup",
         ".agents/skills/bmad-nextlens-doctor"
       ]
     },
     {
       "id": "nextlens-salmon",
       "name": "NextLens Salmon",
+      "module": "nxl",
       "description": "Route correction findings through deduplication and impact classification.",
       "skills": [
+        ".agents/skills/bmad-nextlens-setup",
         ".agents/skills/bmad-nextlens-salmon"
       ]
     }
