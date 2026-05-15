@@ -27,6 +27,7 @@ else:
 MODULE_VERSION_PATTERN = re.compile(r"^\d+\.\d+\.\d+$")
 SETUP_SKILL = "bmad-nextlens-setup"
 SETUP_ASSETS_DIR = Path(".agents") / "skills" / SETUP_SKILL / "assets"
+EXPECTED_MARKETPLACE_PLUGIN_COUNT = 1
 
 CAPABILITIES = (
     {
@@ -363,7 +364,7 @@ def _validate_marketplace(root: Path, payload: Mapping[str, Any], findings: list
     if not isinstance(owner, Mapping) or not str(owner.get("name") or "").strip():
         findings.append(_finding("marketplace-owner", "marketplace.json owner must include a non-empty name.", "Set owner.name in marketplace.json."))
     plugins = _mapping_sequence(payload.get("plugins"))
-    if len(plugins) != 1:
+    if len(plugins) != EXPECTED_MARKETPLACE_PLUGIN_COUNT:
         findings.append(_finding("marketplace-plugin-count", "marketplace.json must expose one installable plugin for the multi-skill NextLens module.", "Regenerate marketplace.json with create-module."))
     for plugin in plugins:
         for field_name in ("name", "source", "description", "version", "author", "skills"):
