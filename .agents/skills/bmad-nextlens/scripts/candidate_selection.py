@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Mapping, Sequence
 
+MAX_CANDIDATE_SELECTION_RANK = 3
+
 
 @dataclass(frozen=True)
 class CandidateSelectionState:
@@ -54,10 +56,10 @@ def render_candidate_selection(
     lines.extend(_render_selected_candidate(selected_candidate, selected_payload, selected_rank))
 
     for alternative_rank, candidate_id in enumerate(ordered_ids, start=1):
-        if alternative_rank > 3:
-            break
         if candidate_id == active_selected_id:
             continue
+        if alternative_rank > MAX_CANDIDATE_SELECTION_RANK:
+            break
         alternative_candidate = ranked_lookup[candidate_id]
         alternative_payload = candidates_by_id.get(candidate_id, {})
         lines.extend(
@@ -240,7 +242,7 @@ def _render_alternative_choice_menu(
 ) -> list[str]:
     lines = ["Select alternative candidate:"]
     for rank, candidate_id in enumerate(state.ranked_candidate_ids, start=1):
-        if candidate_id == state.selected_candidate_id or rank > 3:
+        if candidate_id == state.selected_candidate_id or rank > MAX_CANDIDATE_SELECTION_RANK:
             continue
         candidate = ranked_lookup[candidate_id]
         payload = candidates_by_id.get(candidate_id, {})
@@ -257,7 +259,7 @@ def _resolve_alternative_choice(
 ) -> str | None:
     if response.isdigit():
         rank = int(response)
-        if 1 <= rank <= min(3, len(state.ranked_candidate_ids)):
+        if 1 <= rank <= min(MAX_CANDIDATE_SELECTION_RANK, len(state.ranked_candidate_ids)):
             candidate_id = state.ranked_candidate_ids[rank - 1]
             if candidate_id != state.selected_candidate_id:
                 return candidate_id
