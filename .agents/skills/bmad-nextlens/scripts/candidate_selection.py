@@ -5,8 +5,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Mapping, Sequence
 
-MAX_CANDIDATE_SELECTION_RANK = 3
-
 
 @dataclass(frozen=True)
 class CandidateSelectionState:
@@ -49,30 +47,35 @@ def render_candidate_selection(
     if active_selected_id not in ranked_lookup:
         raise ValueError(f"Selected candidate '{active_selected_id}' is not present in the ranked candidates.")
 
-    lines = ["[stage:candidate-selection]"]
+    ranked_candidate_count = len(ordered_ids)
+    lines = [
+        "[stage:candidate-selection]",
+        f"ranked_candidate_count: {ranked_candidate_count}",
+        f"selected_candidate_id: {active_selected_id}",
+    ]
     selected_candidate = ranked_lookup[active_selected_id]
     selected_payload = candidates_by_id.get(active_selected_id, {})
     selected_rank = ordered_ids.index(active_selected_id) + 1
+    lines.append("Recommended candidate:")
     lines.extend(_render_selected_candidate(selected_candidate, selected_payload, selected_rank))
 
-    for alternative_rank, candidate_id in enumerate(ordered_ids, start=1):
-        if candidate_id == active_selected_id:
-            continue
-        if alternative_rank > MAX_CANDIDATE_SELECTION_RANK:
-            break
-        alternative_candidate = ranked_lookup[candidate_id]
-        alternative_payload = candidates_by_id.get(candidate_id, {})
+    lines.append("Full ranked candidate list:")
+    for rank, candidate_id in enumerate(ordered_ids, start=1):
+        candidate = ranked_lookup[candidate_id]
+        payload = candidates_by_id.get(candidate_id, {})
         lines.extend(
-            _render_alternative_candidate(
+            _render_ranked_candidate(
                 selected_candidate,
-                alternative_candidate,
-                alternative_payload,
-                alternative_rank,
+                candidate,
+                payload,
+                rank,
+                active_selected_id,
             )
         )
-        alternative_rank += 1
 
-    lines.append("Reply with a rank number or candidate id to inspect another candidate.")
+    lines.append(
+        f"Reply with any rank number from 1-{ranked_candidate_count} or any candidate id to inspect/select another candidate."
+    )
     lines.append("Confirm highlighted selection? [y/N]")
     lines.append("No Feature packet is emitted from candidate selection.")
     return lines
@@ -223,17 +226,37 @@ def _render_selected_candidate(candidate: Any, payload: Mapping[str, Any], rank:
     return lines
 
 
-def _render_alternative_candidate(
+def _render_ranked_candidate(
     selected_candidate: Any,
     candidate: Any,
     payload: Mapping[str, Any],
     rank: int,
+    selected_candidate_id: str,
 ) -> list[str]:
-    lines = [f"{rank}. Alternative (Rank {rank}):"]
+    label = "recommended" if rank <= 3 else "ranked"
+    if candidate.candidate_id == selected_candidate_id:
+        label = "highlighted"
+    lines = [f"{rank}. Candidate (Rank {rank}, {label}):"]
     lines.append(f"id: {candidate.candidate_id}")
     lines.append(f"name: {_candidate_name(candidate, payload)}")
     lines.append(f"score: {candidate.composite_score:.2f}")
-    lines.append(f"reason_not_selected: {_alternative_reason(selected_candidate, candidate)}")
+    lines.append(f"goal: {_candidate_goal(payload)}")
+    if candidate.candidate_id == selected_candidate_id:
+        factors = candidate.factor_map()
+        lines.append(
+            "rationale: "
+            + ", ".join(
+                [
+                    f"outcome alignment {factors['outcome_alignment'].score:.2f}",
+                    f"journey criticality {factors['journey_criticality'].score:.2f}",
+                    f"role value {factors['role_value'].score:.2f}",
+                    f"risk reduction {factors['risk_reduction'].score:.2f}",
+                    f"evidence {factors['evidence_clarity'].score:.2f}",
+                ]
+            )
+        )
+    else:
+        lines.append(f"rationale: {_alternative_reason(selected_candidate, candidate)}")
     return lines
 
 
@@ -242,9 +265,12 @@ def _render_alternative_choice_menu(
     ranked_lookup: Mapping[str, Any],
     candidates_by_id: Mapping[str, Mapping[str, Any]],
 ) -> list[str]:
-    lines = ["Select alternative candidate:"]
+    lines = [
+        "Select alternative candidate:",
+        f"ranked_candidate_count: {len(state.ranked_candidate_ids)}",
+    ]
     for rank, candidate_id in enumerate(state.ranked_candidate_ids, start=1):
-        if candidate_id == state.selected_candidate_id or rank > MAX_CANDIDATE_SELECTION_RANK:
+        if candidate_id == state.selected_candidate_id:
             continue
         candidate = ranked_lookup[candidate_id]
         payload = candidates_by_id.get(candidate_id, {})
@@ -261,7 +287,7 @@ def _resolve_alternative_choice(
 ) -> str | None:
     if response.isdigit():
         rank = int(response)
-        if 1 <= rank <= min(MAX_CANDIDATE_SELECTION_RANK, len(state.ranked_candidate_ids)):
+        if 1 <= rank <= len(state.ranked_candidate_ids):
             candidate_id = state.ranked_candidate_ids[rank - 1]
             if candidate_id != state.selected_candidate_id:
                 return candidate_id
@@ -270,7 +296,10 @@ def _resolve_alternative_choice(
         if response == candidate_id.lower() and candidate_id != state.selected_candidate_id:
             return candidate_id
         candidate = ranked_lookup[candidate_id]
-        if response == getattr(candidate, "candidate_name", "").lower() and candidate_id != state.selected_candidate_id:
+        if (
+            response == getattr(candidate, "candidate_name", "").lower()
+            and candidate_id != state.selected_candidate_id
+        ):
             return candidate_id
     return None
 
@@ -295,7 +324,10 @@ def _resolve_candidate_choice(
 
 
 def _candidate_name(candidate: Any, payload: Mapping[str, Any]) -> str:
-    return str(payload.get("name") or getattr(candidate, "candidate_name", getattr(candidate, "candidate_id", "candidate")))
+    return str(
+        payload.get("name")
+        or getattr(candidate, "candidate_name", getattr(candidate, "candidate_id", "candidate"))
+    )
 
 
 def _candidate_goal(payload: Mapping[str, Any]) -> str:
