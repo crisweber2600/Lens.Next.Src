@@ -137,6 +137,7 @@ def build_nextlens_evidence_bundle(
             "topDownContextRef": str(refs.get("topDownContextRef") or "artifacts/top-down-context.yaml"),
             "contextSufficiencyRef": str(refs.get("contextSufficiencyRef") or "artifacts/context-sufficiency.json"),
             "rankingTraceRef": str(refs.get("rankingTraceRef") or "artifacts/ranking-trace.json"),
+            "extractionCoverageRef": str(refs.get("extractionCoverageRef") or "artifacts/extraction-coverage.json"),
             "doctorReportRef": str(refs.get("doctorReportRef") or "artifacts/doctor-report.jsonl"),
             "salmonRoutingRef": str(refs.get("salmonRoutingRef") or "artifacts/salmon-routing.json"),
             "idempotencyDecisionRef": str(refs.get("idempotencyDecisionRef") or "artifacts/idempotency.json"),

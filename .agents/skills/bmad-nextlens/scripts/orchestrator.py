@@ -12,6 +12,7 @@ from __future__ import annotations
 import copy
 from dataclasses import dataclass
 import importlib.util
+import json
 from datetime import datetime, timezone
 from pathlib import Path
 import sys
@@ -55,6 +56,7 @@ DERIVED_GRAPH = _load_runtime_module("derived_graph", "derived_graph.py")
 DOCTOR_CHECKS = _load_runtime_module("doctor_checks", "doctor_checks.py")
 EVIDENCE_BUNDLE = _load_runtime_module("evidence_bundle", "evidence_bundle.py")
 EXTRACTED_CONCEPTS = _load_runtime_module("extracted_concepts", "extracted_concepts.py")
+CANDIDATE_SELECTION = _load_runtime_module("candidate_selection", "candidate_selection.py")
 FEATURE_PACKET_COMPOSER = _load_runtime_module("feature_packet_composer", "feature_packet_composer.py")
 FEATURE_PACKET_EMITTER = _load_runtime_module("feature_packet_emitter", "feature_packet_emitter.py")
 FEATURE_SCORING = _load_runtime_module("feature_scoring", "feature_scoring.py")
@@ -164,6 +166,7 @@ def _handle_extract(context: dict[str, Any]) -> StageResult:
         stage_status = "pass"
 
     artifact_path = EXTRACTED_CONCEPTS.write_extracted_concepts_artifact(docs_path, concepts)
+    coverage_path = EXTRACTED_CONCEPTS.write_extraction_coverage_artifact(docs_path, concepts)
     return StageResult(
         status=stage_status,
         detail=detail,
@@ -171,6 +174,7 @@ def _handle_extract(context: dict[str, Any]) -> StageResult:
             "extracted_concepts_decision": concepts.get("decision"),
             "extracted_concepts": concepts,
             "extracted_concepts_path": str(artifact_path),
+            "extraction_coverage_path": str(coverage_path) if coverage_path else None,
         },
         remediation_hints=(str(concepts.get("rationale") or ""),),
     )
@@ -178,25 +182,53 @@ def _handle_extract(context: dict[str, Any]) -> StageResult:
 
 def _handle_sufficiency(context: dict[str, Any]) -> StageResult:
     """Validate that context has sufficient information for candidacy analysis."""
+    state_patch: dict[str, Any] = {}
     if not context.get("context_loaded"):
-        return StageResult(
-            status="fail",
-            detail="top_down_context is required before context sufficiency and candidate ranking",
-            next_action="curate_top_down_context",
-            remediation_hints=(
-                "Use the extracted_concepts artifact as candidate input, then provide authoritative top_down_context.",
-                "Raw prose or extracted_concepts must not be emitted directly as a Feature packet.",
-            ),
-            diagnostic_context={
-                "extracted_concepts_path": str(context.get("extracted_concepts_path") or ""),
-            },
+        extracted_concepts = context.get("extracted_concepts")
+        if not isinstance(extracted_concepts, Mapping) or not extracted_concepts:
+            return StageResult(
+                status="fail",
+                detail="top_down_context is required before context sufficiency and candidate ranking",
+                next_action="curate_top_down_context",
+                remediation_hints=(
+                    "Use the extracted_concepts artifact as candidate input, then provide authoritative top_down_context.",
+                    "Raw prose or extracted_concepts must not be emitted directly as a Feature packet.",
+                ),
+                diagnostic_context={
+                    "extracted_concepts_path": str(context.get("extracted_concepts_path") or ""),
+                },
+            )
+
+        docs_path = context.get("docs_path", ".nextlens")
+        curated_context = EXTRACTED_CONCEPTS.derive_curated_top_down_context(
+            extracted_concepts,
+            source_ref=context.get("source"),
+        )
+        curated_context_path = EXTRACTED_CONCEPTS.write_curated_top_down_context_artifact(
+            docs_path,
+            curated_context,
+        )
+        loaded = _load_top_down_context(str(curated_context_path))
+        state_patch.update(
+            {
+                "context_loaded": True,
+                "loaded_context": loaded.payload,
+                "context_warnings": list(loaded.warnings),
+                "context_source_path": str(curated_context_path),
+                "top_down_context_curated": True,
+                "top_down_context_curated_path": str(curated_context_path),
+                "top_down_context_curated_from": str(context.get("extracted_concepts_path") or ""),
+            }
         )
 
     report = CONTEXT_LOADER.evaluate_context_sufficiency(
         CONTEXT_LOADER.LoadedContext(
-            payload=copy.deepcopy(dict(context.get("loaded_context") or {})),
-            warnings=tuple(str(item) for item in context.get("context_warnings", ())),
-            version_mismatch=bool(context.get("context_warnings")),
+            payload=copy.deepcopy(dict((state_patch.get("loaded_context") or context.get("loaded_context")) or {})),
+            warnings=tuple(
+                str(item)
+                for item in (state_patch.get("context_warnings") or context.get("context_warnings", ()))
+            ),
+            version_mismatch=bool(state_patch.get("context_warnings") or context.get("context_warnings")),
         )
     )
     if report.status == "blocked":
@@ -215,8 +247,13 @@ def _handle_sufficiency(context: dict[str, Any]) -> StageResult:
     stage_status = "warning" if report.status == "ready_with_warnings" else "pass"
     return StageResult(
         status=stage_status,
-        detail="Context meets sufficiency requirements" if stage_status == "pass" else "Context is ready with warnings",
+        detail=(
+            "Context meets sufficiency requirements"
+            if stage_status == "pass"
+            else "Context is ready with warnings"
+        ),
         state_patch={
+            **state_patch,
             "sufficiency_validated": True,
             "sufficiency_status": report.status,
             "sufficiency_warnings": list(report.warnings),
@@ -255,14 +292,23 @@ def _handle_rank(context: dict[str, Any]) -> StageResult:
             remediation_hints=tuple(ranked_ids),
         )
 
+    ranking_trace_path = _write_ranking_trace_artifact(
+        context.get("docs_path", ".nextlens"),
+        ranked_candidates,
+        context.get("loaded_context") or {},
+        selected_candidate_id=selected_candidate_id,
+    )
+
     return StageResult(
         status="pass",
         detail=f"Candidates identified and ranked; selected candidate is {selected_candidate_id}",
         state_patch={
             "candidates_ranked": True,
             "candidate_count": len(ranked_candidates),
+            "ranked_candidate_count": len(ranked_candidates),
             "ranked_candidate_ids": ranked_ids,
             "selected_candidate_id": selected_candidate_id,
+            "ranking_trace_path": str(ranking_trace_path),
         },
     )
 
@@ -281,15 +327,27 @@ def _handle_confirm(context: dict[str, Any]) -> StageResult:
 
     confirmation_response = str(context.get("confirmation_response") or "").strip().lower()
     if confirmation_response not in {"y", "yes", "confirm", "confirmed", "true"}:
+        ranked_candidates = FEATURE_SCORING.rank_candidate_features(context.get("loaded_context") or {})
+        candidate_menu = CANDIDATE_SELECTION.render_candidate_selection(
+            ranked_candidates,
+            _candidate_payloads_by_id(context.get("loaded_context") or {}),
+            selected_candidate_id=str(context.get("selected_candidate_id") or ranked_candidates[0].candidate_id),
+        )
         return StageResult(
             status="fail",
             detail="Explicit confirmation is required before packet emission",
             next_action="confirm_ranked_candidate",
             remediation_hints=(
                 f"selected_candidate_id={context.get('selected_candidate_id')}",
+                f"ranked_candidate_count={context.get('ranked_candidate_count') or context.get('candidate_count')}",
                 "Provide confirmation_response=yes after reviewing the ranked candidate.",
             ),
+            diagnostic_context={
+                "ranked_candidate_count": context.get("ranked_candidate_count") or context.get("candidate_count"),
+                "ranking_trace_path": str(context.get("ranking_trace_path") or ""),
+            },
             rollback_action="No packet was composed or emitted.",
+            output_lines=tuple(candidate_menu),
         )
 
     return StageResult(
@@ -491,6 +549,11 @@ def _handle_emit(context: dict[str, Any]) -> StageResult:
             "topDownContextRef": _top_down_context_ref(context),
             "contextSufficiencyRef": "artifacts/context-sufficiency.json",
             "rankingTraceRef": "artifacts/ranking-trace.json",
+            "extractionCoverageRef": _relative_artifact_ref(
+                docs_path,
+                context.get("extraction_coverage_path"),
+                fallback="artifacts/extraction-coverage.json",
+            ),
             "doctorReportRef": _relative_artifact_ref(
                 docs_path,
                 final_doctor_report_path,
@@ -662,6 +725,50 @@ def _top_down_context_ref(context: Mapping[str, Any]) -> str:
 
 def _stage_outcome_for_extracted_concepts(context: Mapping[str, Any]) -> str:
     return "skipped" if context.get("extracted_concepts_decision") == "already_curated" else "pass"
+
+
+def _candidate_payloads_by_id(context: Mapping[str, Any]) -> dict[str, Mapping[str, Any]]:
+    payloads: dict[str, Mapping[str, Any]] = {}
+    for candidate in context.get("candidateFeatures") or []:
+        if not isinstance(candidate, Mapping):
+            continue
+        candidate_id = str(candidate.get("semanticId") or candidate.get("id") or candidate.get("featureId") or "").strip()
+        if candidate_id:
+            payloads[candidate_id] = candidate
+    return payloads
+
+
+def _write_ranking_trace_artifact(
+    docs_path: str | Path,
+    ranked_candidates: Sequence[Any],
+    loaded_context: Mapping[str, Any],
+    *,
+    selected_candidate_id: str,
+) -> Path:
+    output_path = Path(docs_path) / ".nextlens" / "artifacts" / "ranking-trace.json"
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    candidates_by_id = _candidate_payloads_by_id(loaded_context)
+    payload = {
+        "schemaVersion": "nextlens.ranking-trace.v1",
+        "rankedCandidateCount": len(ranked_candidates),
+        "selectedDefaultId": selected_candidate_id,
+        "rankedCandidates": [
+            {
+                "rank": index,
+                "id": candidate.candidate_id,
+                "name": str(candidates_by_id.get(candidate.candidate_id, {}).get("name") or candidate.candidate_name),
+                "score": candidate.composite_score,
+                "factorScores": [
+                    {"name": factor.name, "score": factor.score, "detail": factor.detail}
+                    for factor in candidate.factor_scores
+                ],
+                "unresolvedBlockers": candidate.unresolved_blockers,
+            }
+            for index, candidate in enumerate(ranked_candidates, start=1)
+        ],
+    }
+    output_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return output_path
 
 
 def _run_packet_doctor_checks(

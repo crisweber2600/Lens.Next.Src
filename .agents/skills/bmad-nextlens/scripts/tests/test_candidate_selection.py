@@ -20,17 +20,26 @@ sys.modules[SPEC.name] = CANDIDATE_SELECTION
 SPEC.loader.exec_module(CANDIDATE_SELECTION)
 
 
-def test_render_candidate_selection_displays_selected_and_two_alternatives() -> None:
+def test_render_candidate_selection_displays_full_ranked_inventory() -> None:
     ranked = _ranked_candidates()
     candidates_by_id = _candidates_by_id()
 
     lines = CANDIDATE_SELECTION.render_candidate_selection(ranked, candidates_by_id)
 
     assert lines[0] == "[stage:candidate-selection]"
+    assert "ranked_candidate_count: 5" in lines
+    assert "selected_candidate_id: feature-password-recovery" in lines
+    assert "Recommended candidate:" in lines
     assert "1. Selected Candidate (Rank 1):" in lines
-    assert "2. Alternative (Rank 2):" in lines
-    assert "3. Alternative (Rank 3):" in lines
-    assert "Reply with a rank number or candidate id to inspect another candidate." in lines
+    assert "Full ranked candidate list:" in lines
+    assert "1. Candidate (Rank 1, highlighted):" in lines
+    assert "2. Candidate (Rank 2, recommended):" in lines
+    assert "3. Candidate (Rank 3, recommended):" in lines
+    assert "4. Candidate (Rank 4, ranked):" in lines
+    assert "5. Candidate (Rank 5, ranked):" in lines
+    assert "id: feature-teacher-dashboard" in lines
+    assert "id: feature-micro-credentialing" in lines
+    assert "Reply with any rank number from 1-5 or any candidate id to inspect/select another candidate." in lines
     assert "Confirm highlighted selection? [y/N]" in lines
     assert lines[-1] == "No Feature packet is emitted from candidate selection."
 
@@ -47,7 +56,7 @@ def test_render_candidate_selection_includes_selected_details_and_alternative_re
     assert "goal: Restore account access without widening scope" in lines
     assert any(line.startswith("score: 88.50") for line in lines)
     assert any("rationale: outcome alignment 94.00" in line for line in lines)
-    assert any("reason_not_selected: score delta 6.50; weaker outcome alignment" in line for line in lines)
+    assert any("rationale: score delta 6.50; weaker outcome alignment" in line for line in lines)
 
 
 def test_handle_candidate_selection_response_confirms_selected_candidate() -> None:
@@ -102,6 +111,46 @@ def test_handle_candidate_selection_response_accepts_rank_for_deeper_candidate_i
     assert result.output_lines[-1] == "No Feature packet is emitted from candidate selection."
 
 
+def test_handle_candidate_selection_response_accepts_rank_outside_top_three() -> None:
+    ranked = _ranked_candidates()
+    candidates_by_id = _candidates_by_id()
+    state = CANDIDATE_SELECTION.initialize_candidate_selection(ranked)
+
+    result = CANDIDATE_SELECTION.handle_candidate_selection_response(
+        state,
+        "5",
+        ranked,
+        candidates_by_id,
+    )
+
+    assert result.status == "candidate_selected"
+    assert result.locked_selection is None
+    assert result.next_action is None
+    assert result.state.selected_candidate_id == "feature-micro-credentialing"
+    assert "5. Selected Candidate (Rank 5):" in result.output_lines
+    assert "selected_candidate_id: feature-micro-credentialing" in result.output_lines
+    assert "No Feature packet is emitted from candidate selection." in result.output_lines
+
+
+def test_handle_candidate_selection_response_accepts_candidate_id_outside_top_three() -> None:
+    ranked = _ranked_candidates()
+    candidates_by_id = _candidates_by_id()
+    state = CANDIDATE_SELECTION.initialize_candidate_selection(ranked)
+
+    result = CANDIDATE_SELECTION.handle_candidate_selection_response(
+        state,
+        "feature-teacher-dashboard",
+        ranked,
+        candidates_by_id,
+    )
+
+    assert result.status == "candidate_selected"
+    assert result.locked_selection is None
+    assert result.next_action is None
+    assert result.state.selected_candidate_id == "feature-teacher-dashboard"
+    assert "4. Selected Candidate (Rank 4):" in result.output_lines
+
+
 def test_handle_candidate_selection_response_decline_offers_next_actions() -> None:
     ranked = _ranked_candidates()
     state = CANDIDATE_SELECTION.initialize_candidate_selection(ranked)
@@ -152,6 +201,66 @@ def test_handle_candidate_selection_response_allows_alternative_selection() -> N
     assert alternative.state.selected_candidate_id == "feature-journey-health"
     assert "2. Selected Candidate (Rank 2):" in alternative.output_lines
     assert alternative.output_lines[-1] == "No Feature packet is emitted from candidate selection."
+
+
+def test_handle_candidate_selection_response_allows_alternative_outside_top_three() -> None:
+    ranked = _ranked_candidates()
+    candidates_by_id = _candidates_by_id()
+    state = CANDIDATE_SELECTION.initialize_candidate_selection(ranked)
+    declined = CANDIDATE_SELECTION.handle_candidate_selection_response(
+        state,
+        "n",
+        ranked,
+        candidates_by_id,
+    )
+    choose_other = CANDIDATE_SELECTION.handle_candidate_selection_response(
+        declined.state,
+        "1",
+        ranked,
+        candidates_by_id,
+    )
+    alternative = CANDIDATE_SELECTION.handle_candidate_selection_response(
+        choose_other.state,
+        "5",
+        ranked,
+        candidates_by_id,
+    )
+
+    assert choose_other.status == "select_alternative"
+    assert "ranked_candidate_count: 5" in choose_other.output_lines
+    assert "5. Micro Credentialing (feature-micro-credentialing)" in choose_other.output_lines
+    assert alternative.status == "alternative_selected"
+    assert alternative.state.selected_candidate_id == "feature-micro-credentialing"
+    assert "5. Selected Candidate (Rank 5):" in alternative.output_lines
+    assert alternative.output_lines[-1] == "No Feature packet is emitted from candidate selection."
+
+
+def test_handle_candidate_selection_response_allows_alternative_id_outside_top_three() -> None:
+    ranked = _ranked_candidates()
+    candidates_by_id = _candidates_by_id()
+    state = CANDIDATE_SELECTION.initialize_candidate_selection(ranked)
+    declined = CANDIDATE_SELECTION.handle_candidate_selection_response(
+        state,
+        "n",
+        ranked,
+        candidates_by_id,
+    )
+    choose_other = CANDIDATE_SELECTION.handle_candidate_selection_response(
+        declined.state,
+        "1",
+        ranked,
+        candidates_by_id,
+    )
+    alternative = CANDIDATE_SELECTION.handle_candidate_selection_response(
+        choose_other.state,
+        "feature-teacher-dashboard",
+        ranked,
+        candidates_by_id,
+    )
+
+    assert alternative.status == "alternative_selected"
+    assert alternative.state.selected_candidate_id == "feature-teacher-dashboard"
+    assert "4. Selected Candidate (Rank 4):" in alternative.output_lines
 
 
 def test_handle_candidate_selection_response_allows_displayed_rank_after_declining_rank_two() -> None:
@@ -254,6 +363,24 @@ def _ranked_candidates() -> tuple[FEATURE_SCORING.ScoredCandidate, ...]:
             risk_reduction=76.0,
             evidence_clarity=80.0,
         ),
+        _scored_candidate(
+            "feature-teacher-dashboard",
+            composite_score=76.75,
+            outcome_alignment=76.0,
+            journey_criticality=78.0,
+            role_value=77.0,
+            risk_reduction=74.0,
+            evidence_clarity=79.0,
+        ),
+        _scored_candidate(
+            "feature-micro-credentialing",
+            composite_score=74.0,
+            outcome_alignment=75.0,
+            journey_criticality=76.0,
+            role_value=78.0,
+            risk_reduction=70.0,
+            evidence_clarity=77.0,
+        ),
     )
 
 
@@ -270,6 +397,14 @@ def _candidates_by_id() -> dict[str, dict[str, str]]:
         "feature-admin-triage": {
             "name": "Admin Triage Queue",
             "goal": "Reduce handoff delays for unresolved failures",
+        },
+        "feature-teacher-dashboard": {
+            "name": "Teacher Dashboard",
+            "goal": "Expose classroom progress and intervention signals",
+        },
+        "feature-micro-credentialing": {
+            "name": "Micro Credentialing",
+            "goal": "Track teacher skill growth through credential milestones",
         },
     }
 

@@ -17,22 +17,91 @@ sys.modules[SPEC.name] = ORCHESTRATOR
 SPEC.loader.exec_module(ORCHESTRATOR)
 
 
-def test_run_new_action_pipeline_blocks_on_raw_prose_without_top_down_context(tmp_path: Path) -> None:
+def test_run_new_action_pipeline_curates_top_down_context_from_raw_prose(tmp_path: Path) -> None:
     result = ORCHESTRATOR.run_new_action_pipeline(
         "Start with one useful Feature. Do not assume a system exists.",
         docs_path=tmp_path,
     )
 
     assert result["status"] == "blocked"
-    assert result["current_stage"] == "sufficiency"
-    assert result["completed_stages"] == ["intake", "extract"]
-    assert "top_down_context" in result["output"]
+    assert result["current_stage"] == "confirm"
+    assert result["completed_stages"] == ["intake", "extract", "sufficiency", "rank"]
+    assert "confirm_ranked_candidate" in result["output"]
     concepts = json.loads((tmp_path / ".nextlens" / "artifacts" / "extracted-concepts.json").read_text(encoding="utf-8"))
     assert concepts["decision"] == "captured"
     assert concepts["possibleOpenQuestions"]
+    assert concepts["extractionCoverage"]["extractionConfidence"] == "low"
+    curated_path = tmp_path / ".nextlens" / "artifacts" / "top-down-context.yaml"
+    assert curated_path.exists()
 
 
-def test_run_new_action_pipeline_consumes_extracted_concepts_before_requiring_context(tmp_path: Path) -> None:
+def test_raw_northstar_fixture_extracts_broad_candidate_inventory() -> None:
+    concepts = ORCHESTRATOR.EXTRACTED_CONCEPTS.build_from_raw_material(_northstar_raw_fixture())
+    candidates = concepts["possibleCandidateFeatures"]
+    names = " | ".join(candidate["name"].lower() for candidate in candidates)
+
+    assert len(candidates) > 3
+    assert len(candidates) >= 10
+    for expected in (
+        "joey",
+        "assessment battery",
+        "hfw",
+        "writing vocabulary",
+        "spelling inventory",
+        "teacher dashboard",
+        "micro-credentialing",
+        "systems coach",
+        "workshop",
+        "reporting",
+        "rti",
+    ):
+        assert expected in names
+    assert concepts["extractionCoverage"]["extractedCandidateCount"] == len(candidates)
+    assert concepts["extractionCoverage"]["sourceIdeaCount"] >= len(candidates)
+    assert all(candidate["sourceRefs"] for candidate in candidates)
+
+
+def test_run_new_action_pipeline_displays_full_candidate_menu_for_rich_raw_input(tmp_path: Path) -> None:
+    result = ORCHESTRATOR.run_new_action_pipeline(
+        _northstar_raw_fixture(),
+        docs_path=tmp_path,
+    )
+
+    assert result["status"] == "blocked"
+    assert result["current_stage"] == "confirm"
+    assert "Full ranked candidate list:" in result["output"]
+    assert "No Feature packet is emitted from candidate selection." in result["output"]
+
+    concepts = json.loads((tmp_path / ".nextlens" / "artifacts" / "extracted-concepts.json").read_text(encoding="utf-8"))
+    ranking_trace = json.loads((tmp_path / ".nextlens" / "artifacts" / "ranking-trace.json").read_text(encoding="utf-8"))
+    coverage = json.loads((tmp_path / ".nextlens" / "artifacts" / "extraction-coverage.json").read_text(encoding="utf-8"))
+    ranked_ids = [candidate["id"] for candidate in ranking_trace["rankedCandidates"]]
+
+    assert f"ranked_candidate_count: {ranking_trace['rankedCandidateCount']}" in result["output"]
+    assert f"Reply with any rank number from 1-{ranking_trace['rankedCandidateCount']} or any candidate id" in result["output"]
+    assert ranking_trace["rankedCandidateCount"] == len(ranked_ids)
+    assert ranking_trace["rankedCandidateCount"] == len(concepts["possibleCandidateFeatures"])
+    assert coverage["extractedCandidateCount"] == len(concepts["possibleCandidateFeatures"])
+    for candidate_id in ranked_ids:
+        assert f"id: {candidate_id}" in result["output"]
+    assert ranked_ids[4] in result["output"]
+
+
+def test_run_new_action_pipeline_allows_candidate_id_outside_top_three_at_confirm_gate(tmp_path: Path) -> None:
+    selected_candidate_id = "feature.system-97"
+    result = ORCHESTRATOR.run_new_action_pipeline(
+        _northstar_raw_fixture(),
+        docs_path=tmp_path,
+        resume_state={"context": {"selected_candidate_id": selected_candidate_id}},
+    )
+
+    assert result["status"] == "blocked"
+    assert f"selected_candidate_id: {selected_candidate_id}" in result["output"]
+    assert f"id: {selected_candidate_id}" in result["output"]
+    assert "Selected Candidate" in result["output"]
+
+
+def test_run_new_action_pipeline_consumes_extracted_concepts_and_curates_context(tmp_path: Path) -> None:
     concepts_path = tmp_path / "extracted-concepts.yaml"
     concepts_path.write_text(_extracted_concepts_yaml(), encoding="utf-8")
 
@@ -42,10 +111,13 @@ def test_run_new_action_pipeline_consumes_extracted_concepts_before_requiring_co
     )
 
     assert result["status"] == "blocked"
-    assert result["completed_stages"] == ["intake", "extract"]
+    assert result["current_stage"] == "confirm"
+    assert result["completed_stages"] == ["intake", "extract", "sufficiency", "rank"]
     artifact = json.loads((tmp_path / ".nextlens" / "artifacts" / "extracted-concepts.json").read_text(encoding="utf-8"))
     assert artifact["decision"] == "consumed"
     assert artifact["possibleCandidateFeatures"][0]["id"] == "feature-context-gate"
+    curated_path = tmp_path / ".nextlens" / "artifacts" / "top-down-context.yaml"
+    assert curated_path.exists()
 
 
 def test_run_new_action_pipeline_blocks_when_context_sufficiency_fails(tmp_path: Path) -> None:
@@ -342,6 +414,60 @@ extracted_concepts:
     - What top-down context is authoritative?
   possibleRelationshipRefs:
     - nextlens->role-operator
+"""
+    ).strip()
+
+
+def _northstar_raw_fixture() -> str:
+    return dedent(
+        """
+# NorthStar discovery packet
+
+Source: live website HTML/JS
+- Student, teacher, parent, administrator, and RtI platform sections.
+- Teacher dashboard and teacher AI coach expose progress, conference notes, and next actions.
+
+Source: rawNotes.md
+## Student Joey coaching
+[Joey #1] Joey morning greeting and mood triage
+Concept: Joey greets students, checks mood, and routes emotional readiness before literacy work.
+Novelty: Emotional connection becomes the entry point to learning evidence.
+
+[Joey #2] Student-facing Joey coaching loop
+Concept: Joey coaches independent reading, writing, and reflection choices during the day.
+
+## Assessment and benchmark battery
+[Assessment #34] Daily running record and MSV assessment pipeline
+Concept: Generate running records, MSV notes, and teacher-ready evidence from daily reading.
+
+[Benchmark #46] Assessment battery automation
+Concept: Coordinate benchmark tasks, scoring, and standards evidence across the assessment battery.
+
+[Benchmark #63] HFW read/write mastery and word wall
+Concept: Track high-frequency-word read/write mastery and update the class word wall.
+
+[Benchmark #74] Writing vocabulary diagnostic
+Concept: Diagnose writing vocabulary growth and surface next instructional moves.
+
+[Benchmark #83] Spelling inventory and written-code continuum
+Concept: Track spelling inventory signals against the written-code continuum.
+
+## Teacher systems and units
+[System #92] Teacher micro-credentialing
+Concept: Give teachers micro-credentials as they demonstrate workshop, assessment, and coaching practices.
+
+[System #97] NorthStar systems coach
+Concept: Coach school teams on system health, implementation drift, and evidence loops.
+
+[Unit #118] Workshop model and Managed Independent Learning process lessons
+Concept: Sequence workshop model lessons and Managed Independent Learning routines.
+
+## Family and intervention reporting
+[Assessment #125] Parent reporting and standards-linked portfolio
+Concept: Produce parent letters and standards-linked portfolio evidence from student work.
+
+[Assessment #127] RtI push-in and shared conference logs
+Concept: Coordinate RtI push-in notes, shared conference logs, and response evidence.
 """
     ).strip()
 

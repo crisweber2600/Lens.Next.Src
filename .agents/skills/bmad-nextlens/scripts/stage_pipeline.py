@@ -78,6 +78,7 @@ class StageResult:
     remediation_hints: tuple[str, ...] = ()
     diagnostic_context: dict[str, Any] = field(default_factory=dict)
     rollback_action: str | None = None
+    output_lines: tuple[str, ...] = ()
 
     def normalized_status(self) -> str:
         status = self.status.strip().lower()
@@ -182,6 +183,7 @@ class NextLensStagePipeline:
                     rollback_action=rollback_action,
                 )
             )
+            output_lines.extend(str(line) for line in result.output_lines)
 
             if status == "fail":
                 persisted_state = self._build_resume_state(
