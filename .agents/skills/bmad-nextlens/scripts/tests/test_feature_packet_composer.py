@@ -174,6 +174,40 @@ def test_compose_feature_packet_adds_bmad_scope_containment_metadata() -> None:
     )
 
 
+def test_compose_feature_packet_preserves_bottom_up_source_mode_and_structured_fields() -> None:
+    ranked = _ranked_candidates()
+    context = _context()
+    context["sourceMode"] = "bottom_up"
+    context["openQuestions"] = [
+        {
+            "id": "question-readiness",
+            "text": "Which proof points confirm candidate readiness?",
+            "severity": "medium",
+        }
+    ]
+
+    result = FEATURE_PACKET_COMPOSER.compose_feature_packet(
+        ranked[0],
+        ranked,
+        context,
+        docs_path="docs/nextlens/src/feature-a",
+        packet_id_factory=lambda: "550e8400-e29b-41d4-a716-446655440000",
+    )
+
+    assert result.status == "pass"
+    assert result.validation.is_valid
+    assert result.packet["sourceMode"] == "bottom_up"
+    assert result.packet["openQuestions"] == [
+        {
+            "id": "question-readiness",
+            "text": "Which proof points confirm candidate readiness?",
+            "severity": "medium",
+        }
+    ]
+    assert result.packet["risks"] == [{"id": "risk-missing-trace", "name": "Missing traceability"}]
+    assert result.packet["decisions"] == [{"id": "decision-top-down", "name": "Require top-down context"}]
+
+
 def _ranked_candidates() -> tuple[FEATURE_SCORING.ScoredCandidate, ...]:
     return (
         _scored_candidate("feature-password-recovery", "Password Recovery", 88.5),

@@ -601,9 +601,9 @@ def _relative_artifact_ref(docs_path: str | Path, value: Any, *, fallback: str) 
     if not value:
         return fallback
     try:
-        return str(Path(value).resolve().relative_to((Path(docs_path) / ".nextlens").resolve()))
+        return Path(value).resolve().relative_to((Path(docs_path) / ".nextlens").resolve()).as_posix()
     except (OSError, ValueError):
-        return str(value)
+        return str(value).replace("\\", "/")
 
 
 def _top_down_context_ref(context: Mapping[str, Any]) -> str:

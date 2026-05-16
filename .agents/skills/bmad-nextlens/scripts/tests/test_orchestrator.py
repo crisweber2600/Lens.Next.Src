@@ -97,6 +97,34 @@ def test_run_new_action_pipeline_emits_packet_after_explicit_confirmation(tmp_pa
     assert any((tmp_path / ".nextlens").glob("doctor-*.jsonl"))
 
 
+def test_run_new_action_pipeline_preserves_bottom_up_source_mode_and_structured_open_questions(tmp_path: Path) -> None:
+    context_path = tmp_path / "bottom-up-context.yaml"
+    context_path.write_text(_bottom_up_ready_context_yaml(), encoding="utf-8")
+
+    result = ORCHESTRATOR.run_new_action_pipeline(
+        str(context_path),
+        docs_path=tmp_path,
+        resume_state={
+            "context": {
+                "selected_candidate_id": "feature-context-gate",
+                "confirmation_response": "yes",
+            }
+        },
+    )
+
+    assert result["status"] == "complete"
+    packet_path = next((tmp_path / ".nextlens").glob("packet-*.json"))
+    packet = json.loads(packet_path.read_text(encoding="utf-8"))
+    assert packet["sourceMode"] == "bottom_up"
+    assert packet["openQuestions"] == [
+        {
+            "id": "question-bottom-up-proof",
+            "text": "What evidence proves this bottom-up slice is ready?",
+            "severity": "medium",
+        }
+    ]
+
+
 def _blocked_context_yaml() -> str:
     return dedent(
         """
@@ -232,6 +260,80 @@ top_down_context:
     - Which contexts may remain advisory?
     - How should warning confirmations be surfaced?
     - What evidence proves ranking integrity?
+  risks:
+    - id: risk-fallback-doctor
+      name: Fallback doctor pass
+      severity: high
+  decisions:
+    - id: decision-require-top-down-context
+      name: Require top-down context before emission
+  relationshipRefs:
+    - nextlens->role-operator
+  bmadConsumerContext:
+    planningMode: feature-packet
+    consumer: bmad
+"""
+    ).strip()
+
+
+def _bottom_up_ready_context_yaml() -> str:
+    return dedent(
+        """
+top_down_context:
+  schemaVersion: lens.topdown-context.v1
+  sourceMode: bottom_up
+  system:
+    id: nextlens
+    name: NextLens
+    thesis: Improve planning fidelity
+    status: active
+    confidence: high
+  discoveryEpoch:
+    id: epoch-2026-05-14
+    status: synthesized
+    sourceRefs:
+      - docs/discovery.md
+  roles:
+    - id: role-operator
+      name: Operator
+  stakeholders: []
+  outcomes:
+    - id: outcome-reduce-ambiguity
+      name: Reduce ambiguity
+  operatingLoops:
+    - id: loop-planning
+      name: Planning loop
+  journeys:
+    - id: journey-intake
+      name: Intake
+  candidateFeatures:
+    - id: feature-context-gate
+      name: Context sufficiency gate
+      goal: Block packet emission until top-down context is complete.
+      outOfScope:
+        - adjacent journeys
+      roleIds:
+        - role-operator
+      outcomeIds:
+        - outcome-reduce-ambiguity
+      journeyIds:
+        - journey-intake
+      operatingLoopIds:
+        - loop-planning
+      relationshipRefs:
+        - nextlens->role-operator
+      selectionRationale: Highest outcome alignment and bounded implementation scope.
+      whyNow: Prevents invalid packet emission from raw prose.
+      bmadConsumerHints:
+        prdInput: PRD guardrail input.
+        uxInput: UX implications for the sufficiency gate.
+        architectureInput: Architecture impact of requiring top-down context.
+        epicStoryInput: Epic and story outline.
+        readinessInput: Ready for implementation.
+  openQuestions:
+    - id: question-bottom-up-proof
+      text: What evidence proves this bottom-up slice is ready?
+      severity: medium
   risks:
     - id: risk-fallback-doctor
       name: Fallback doctor pass

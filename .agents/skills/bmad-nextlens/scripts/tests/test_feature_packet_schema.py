@@ -65,6 +65,7 @@ def test_schema_version_source_mode_uuid_timestamp_and_selected_candidate_are_en
     result = FEATURE_PACKET_SCHEMA.validate_feature_packet_schema(
         packet,
         selected_candidate_id="feature-password-recovery",
+        expected_source_mode="top_down",
     )
 
     assert _error_by_field(result, "schemaVersion").expected_type == "string 'nextlens.feature-packet.v1'"
@@ -72,6 +73,20 @@ def test_schema_version_source_mode_uuid_timestamp_and_selected_candidate_are_en
     assert _error_by_field(result, "packetId").expected_type == "UUID string"
     assert _error_by_field(result, "createdAt").expected_type == "ISO 8601 timestamp string"
     assert _error_by_field(result, "featureId").expected_type == "selected candidate id 'feature-password-recovery'"
+
+
+def test_schema_accepts_bottom_up_when_expected_source_mode_matches() -> None:
+    packet = _valid_packet()
+    packet["sourceMode"] = "bottom_up"
+
+    result = FEATURE_PACKET_SCHEMA.validate_feature_packet_schema(
+        packet,
+        selected_candidate_id="feature-password-recovery",
+        expected_source_mode="bottom_up",
+    )
+
+    assert result.is_valid
+    assert result.status == "pass"
 
 
 def test_nested_required_trace_rationale_and_bmad_hint_fields_are_validated() -> None:

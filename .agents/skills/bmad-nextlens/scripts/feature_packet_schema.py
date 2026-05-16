@@ -10,6 +10,7 @@ import uuid
 
 FEATURE_PACKET_SCHEMA_VERSION = "nextlens.feature-packet.v1"
 FEATURE_PACKET_SOURCE_MODE = "top_down"
+FEATURE_PACKET_SOURCE_MODES = ("top_down", "bottom_up")
 
 
 @dataclass(frozen=True)
@@ -50,6 +51,7 @@ def validate_feature_packet_schema(
     packet: Mapping[str, Any],
     *,
     selected_candidate_id: str | None = None,
+    expected_source_mode: str | None = None,
 ) -> FeaturePacketValidationResult:
     errors: list[FeaturePacketValidationError] = []
     if not isinstance(packet, Mapping):
@@ -68,7 +70,7 @@ def validate_feature_packet_schema(
     _require_string(packet, "schemaVersion", errors, expected_value=FEATURE_PACKET_SCHEMA_VERSION)
     _require_uuid(packet, "packetId", errors)
     _require_string(packet, "featureId", errors)
-    _require_string(packet, "sourceMode", errors, expected_value=FEATURE_PACKET_SOURCE_MODE)
+    _require_source_mode(packet, "sourceMode", errors, expected_value=expected_source_mode)
     _require_object(packet, "selectedFeature", errors)
     _require_object(packet, "trace", errors)
     _require_object(packet, "selectionRationale", errors)
@@ -141,6 +143,38 @@ def _require_string(
     value = payload.get(_leaf_name(field_name))
     if not isinstance(value, str) or not value.strip():
         _append_error(payload, field_name, "string", errors)
+        return
+    if expected_value is not None and value != expected_value:
+        errors.append(
+            FeaturePacketValidationError(
+                field=field_name,
+                expected_type=f"string '{expected_value}'",
+                actual_value=value,
+                message=f"{field_name} must equal '{expected_value}'.",
+            )
+        )
+
+
+def _require_source_mode(
+    payload: Mapping[str, Any],
+    field_name: str,
+    errors: list[FeaturePacketValidationError],
+    *,
+    expected_value: str | None = None,
+) -> None:
+    value = payload.get(_leaf_name(field_name))
+    if not isinstance(value, str) or not value.strip():
+        _append_error(payload, field_name, "string", errors)
+        return
+    if value not in FEATURE_PACKET_SOURCE_MODES:
+        errors.append(
+            FeaturePacketValidationError(
+                field=field_name,
+                expected_type="one of 'top_down', 'bottom_up'",
+                actual_value=value,
+                message=f"{field_name} must be one of {FEATURE_PACKET_SOURCE_MODES}.",
+            )
+        )
         return
     if expected_value is not None and value != expected_value:
         errors.append(
