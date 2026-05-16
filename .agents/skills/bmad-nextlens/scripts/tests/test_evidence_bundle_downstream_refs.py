@@ -41,6 +41,20 @@ def test_evidence_bundle_downstream_refs_stay_consistent(tmp_path: Path) -> None
     handoff = BMAD_HANDOFF.generate_bmad_handoff_artifacts(tmp_path, packet, update_packet=True)
     assert handoff.status == "pass"
     packet = handoff.packet
+    initial_bundle = EVIDENCE_BUNDLE.generate_nextlens_evidence_bundle(
+        tmp_path,
+        packet=packet,
+        artifact_refs={
+            "runId": "run.900",
+            "bmadHandoffRefs": handoff.artifact_paths,
+            "inputAnalysisRef": "artifacts/input-analysis-900.json",
+            "rankingTraceRef": "artifacts/ranking-trace-900.json",
+            "doctorReportRef": "artifacts/doctor-report-900.jsonl",
+        },
+        stage_outcomes={"bmad_handoff": "pass"},
+        now_factory=lambda: datetime(2026, 5, 14, 9, 59, 0, tzinfo=timezone.utc),
+    )
+    assert initial_bundle.status == "pass"
 
     bundle = DOWNSTREAM.build_bmad_artifact_bundle(
         packet_id="packet-900",
@@ -51,7 +65,7 @@ def test_evidence_bundle_downstream_refs_stay_consistent(tmp_path: Path) -> None
                 "id": "story-900",
                 "title": "Story 900",
                 "status": "ready",
-                "tracesTo": ["artifact-900"],
+                "tracesTo": ["artifact-900", "feature-900"],
                 "createdAt": "2026-05-14T10:00:00Z",
             }
         ],
@@ -100,32 +114,20 @@ def test_evidence_bundle_downstream_refs_stay_consistent(tmp_path: Path) -> None
 
     assert post_result.status == "pass"
 
-    result = EVIDENCE_BUNDLE.generate_nextlens_evidence_bundle(
-        tmp_path,
-        packet=packet,
-        artifact_refs={
-            "runId": "run.900",
-            "bmadHandoffRefs": handoff.artifact_paths,
-            **post_result.refs,
-        },
-        stage_outcomes={
-            "bmad_handoff": "pass",
-            **post_result.stage_outcomes,
-        },
-        now_factory=lambda: datetime(2026, 5, 14, 10, 7, 0, tzinfo=timezone.utc),
-    )
-
-    assert result.status == "pass"
-    bundle_payload = yaml.safe_load(result.path.read_text(encoding="utf-8"))["evidence_bundle"]
+    bundle_payload = yaml.safe_load(Path(post_result.evidence_bundle_ref).read_text(encoding="utf-8"))["evidence_bundle"]
     assert bundle_payload["bmadHandoffRefs"] == handoff.artifact_paths
+    assert bundle_payload["inputAnalysisRef"] == "artifacts/input-analysis-900.json"
+    assert bundle_payload["rankingTraceRef"] == "artifacts/ranking-trace-900.json"
+    assert bundle_payload["doctorReportRef"] == "artifacts/doctor-report-900.jsonl"
     assert bundle_payload["bmadArtifactBundleRef"] == str(bundle_path)
     assert bundle_payload["implementationEvidenceRef"] == str(evidence_path)
     assert bundle_payload["validationResultRef"] == post_result.refs["validationResultRef"]
     assert bundle_payload["salmonSignalRefs"] == post_result.refs["salmonSignalRefs"]
     assert bundle_payload["landscapeUpdateRef"] == post_result.refs["landscapeUpdateRef"]
     assert bundle_payload["derivedGraphRef"] == packet["derivedGraphRef"]
-    assert bundle_payload["stageOutcomes"]["validation"] == "salmon_required"
-    assert bundle_payload["stageOutcomes"]["landscape_update"] == "proposed"
+    assert bundle_payload["stageOutcomes"]["bmad_handoff"] == "pass"
+    assert bundle_payload["stageOutcomes"]["validation"] == "warn"
+    assert bundle_payload["stageOutcomes"]["landscape_update"] == "pass"
 
 
 def _write_json(path: Path, payload: dict[str, object]) -> None:

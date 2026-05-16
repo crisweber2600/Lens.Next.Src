@@ -35,6 +35,89 @@ def test_validate_implementation_evidence_passes_required_story() -> None:
     assert result.status == "pass"
 
 
+def test_validate_implementation_evidence_accepts_completed_story_lineage() -> None:
+    evidence = _valid_evidence()
+
+    result = DOWNSTREAM.validate_implementation_evidence(
+        evidence,
+        expected_packet_id="packet-1",
+        expected_feature_id="feature-1",
+        packet_trace={"outcomeIds": ["outcome-1"], "journeyIds": ["journey-1"]},
+    )
+
+    assert result.is_valid
+
+
+def test_validate_implementation_evidence_requires_completed_story_outcome() -> None:
+    evidence = _valid_evidence()
+    evidence["stories"][0]["tracesTo"]["outcomeIds"] = []
+
+    result = DOWNSTREAM.validate_implementation_evidence(
+        evidence,
+        expected_packet_id="packet-1",
+        expected_feature_id="feature-1",
+        packet_trace={"outcomeIds": ["outcome-1"], "journeyIds": ["journey-1"]},
+    )
+
+    assert _error_by_field(result, "stories[0].tracesTo.outcomeIds").expected_type == "at least one outcome id"
+
+
+def test_validate_implementation_evidence_requires_completed_story_journey() -> None:
+    evidence = _valid_evidence()
+    evidence["stories"][0]["tracesTo"]["journeyIds"] = []
+
+    result = DOWNSTREAM.validate_implementation_evidence(
+        evidence,
+        expected_packet_id="packet-1",
+        expected_feature_id="feature-1",
+        packet_trace={"outcomeIds": ["outcome-1"], "journeyIds": ["journey-1"]},
+    )
+
+    assert _error_by_field(result, "stories[0].tracesTo.journeyIds").expected_type == "at least one journey id"
+
+
+def test_validate_implementation_evidence_rejects_unresolved_outcome() -> None:
+    evidence = _valid_evidence()
+    evidence["stories"][0]["tracesTo"]["outcomeIds"] = ["outcome-missing"]
+
+    result = DOWNSTREAM.validate_implementation_evidence(
+        evidence,
+        expected_packet_id="packet-1",
+        expected_feature_id="feature-1",
+        packet_trace={"outcomeIds": ["outcome-1"], "journeyIds": ["journey-1"]},
+    )
+
+    assert _error_by_field(result, "stories[0].tracesTo.outcomeIds").expected_type == "known packet trace outcome ids"
+
+
+def test_validate_implementation_evidence_rejects_unresolved_journey() -> None:
+    evidence = _valid_evidence()
+    evidence["stories"][0]["tracesTo"]["journeyIds"] = ["journey-missing"]
+
+    result = DOWNSTREAM.validate_implementation_evidence(
+        evidence,
+        expected_packet_id="packet-1",
+        expected_feature_id="feature-1",
+        packet_trace={"outcomeIds": ["outcome-1"], "journeyIds": ["journey-1"]},
+    )
+
+    assert _error_by_field(result, "stories[0].tracesTo.journeyIds").expected_type == "known packet trace journey ids"
+
+
+def test_validate_implementation_evidence_keeps_legacy_list_trace_compatible() -> None:
+    evidence = _valid_evidence()
+    evidence["stories"][0]["tracesTo"] = ["feature-1"]
+
+    result = DOWNSTREAM.validate_implementation_evidence(
+        evidence,
+        expected_packet_id="packet-1",
+        expected_feature_id="feature-1",
+        packet_trace={"outcomeIds": ["outcome-1"], "journeyIds": ["journey-1"]},
+    )
+
+    assert result.is_valid
+
+
 def test_validate_implementation_evidence_reports_missing_and_optional_stories() -> None:
     evidence = _valid_evidence()
 
@@ -76,7 +159,12 @@ def _valid_evidence() -> dict[str, object]:
             {
                 "id": "story-1",
                 "status": "done",
-                "tracesTo": ["feature-1"],
+                "tracesTo": {
+                    "packetId": "packet-1",
+                    "featureId": "feature-1",
+                    "outcomeIds": ["outcome-1"],
+                    "journeyIds": ["journey-1"],
+                },
                 "evidenceRefs": ["commit-123"],
             }
         ],

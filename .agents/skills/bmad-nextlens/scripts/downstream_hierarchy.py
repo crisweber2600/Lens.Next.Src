@@ -118,7 +118,7 @@ def build_bmad_artifact_bundle(
                 "id": str(story.get("id") or ""),
                 "title": str(story.get("title") or ""),
                 "status": str(story.get("status") or ""),
-                "tracesTo": list(_sequence(story.get("tracesTo"))),
+                "tracesTo": _normalize_traces_to(story.get("tracesTo")),
                 "createdAt": str(story.get("createdAt") or created_at),
             }
             for story in stories
@@ -130,7 +130,11 @@ def build_bmad_artifact_bundle(
     return bundle
 
 
-def validate_bmad_artifact_bundle(bundle: Mapping[str, Any]) -> ValidationResult:
+def validate_bmad_artifact_bundle(
+    bundle: Mapping[str, Any],
+    *,
+    packet_trace: Mapping[str, Any] | None = None,
+) -> ValidationResult:
     errors: list[ValidationIssue] = []
     warnings: list[ValidationIssue] = []
     if not isinstance(bundle, Mapping):
@@ -170,7 +174,9 @@ def validate_bmad_artifact_bundle(bundle: Mapping[str, Any]) -> ValidationResult
         if isinstance(artifact_id, str) and artifact_id.strip():
             artifact_ids.add(artifact_id)
 
-    allowed_traces = artifact_ids | {str(bundle.get("featureId") or ""), str(bundle.get("packetId") or "")}
+    packet_id = str(bundle.get("packetId") or "")
+    feature_id = str(bundle.get("featureId") or "")
+    trace_scope = _trace_scope(packet_trace or _mapping(bundle.get("trace")))
     for idx, story in enumerate(stories):
         prefix = f"stories[{idx}]"
         if not isinstance(story, Mapping):
@@ -179,23 +185,28 @@ def validate_bmad_artifact_bundle(bundle: Mapping[str, Any]) -> ValidationResult
         _require_string(story, f"{prefix}.id", errors)
         _require_string(story, f"{prefix}.title", errors)
         _require_string(story, f"{prefix}.status", errors)
-        _require_array(story, f"{prefix}.tracesTo", errors)
         _require_timestamp(story, f"{prefix}.createdAt", errors)
 
-        traces = _sequence(story.get("tracesTo"))
-        if traces:
-            for trace in traces:
-                if not isinstance(trace, str) or not trace.strip():
-                    _append_issue(errors, f"{prefix}.tracesTo", "non-empty string", trace)
-                elif trace not in allowed_traces:
-                    errors.append(
-                        ValidationIssue(
-                            field=f"{prefix}.tracesTo",
-                            expected_type="known artifact or feature reference",
-                            actual_value=trace,
-                            message=f"{prefix}.tracesTo must reference a known artifact or feature.",
-                        )
-                    )
+        trace_info = _validate_story_traces(
+            story.get("tracesTo"),
+            field_name=f"{prefix}.tracesTo",
+            errors=errors,
+            allowed_artifact_ids=artifact_ids,
+            packet_id=packet_id,
+            feature_id=feature_id,
+            trace_scope=trace_scope,
+            require_lineage=not _is_optional_or_deferred_story(story),
+            enforce_lineage_for_legacy=False,
+        )
+        if feature_id and not trace_info["has_feature"] and not trace_info["feature_present"]:
+            errors.append(
+                ValidationIssue(
+                    field=f"{prefix}.tracesTo",
+                    expected_type=f"include feature '{feature_id}'",
+                    actual_value=story.get("tracesTo"),
+                    message=f"{prefix}.tracesTo must include the selected feature id.",
+                )
+            )
 
     status = _status_from_issues(errors, warnings)
     return ValidationResult(status=status, errors=tuple(errors), warnings=tuple(warnings))
@@ -227,7 +238,7 @@ def build_implementation_evidence(
             {
                 "id": str(story.get("id") or ""),
                 "status": str(story.get("status") or ""),
-                "tracesTo": list(_sequence(story.get("tracesTo"))),
+                "tracesTo": _normalize_traces_to(story.get("tracesTo")),
                 "evidenceRefs": list(_sequence(story.get("evidenceRefs"))),
             }
             for story in stories
@@ -247,6 +258,7 @@ def validate_implementation_evidence(
     expected_feature_id: str | None = None,
     required_story_ids: Sequence[str] | None = None,
     optional_story_ids: Sequence[str] | None = None,
+    packet_trace: Mapping[str, Any] | None = None,
 ) -> ImplementationEvidenceValidationResult:
     errors: list[ValidationIssue] = []
     warnings: list[ValidationIssue] = []
@@ -297,7 +309,12 @@ def validate_implementation_evidence(
             )
         )
 
-    feature_id = expected_feature_id or evidence.get("featureId")
+    packet_id = str(expected_packet_id or evidence.get("packetId") or "")
+    feature_id = str(expected_feature_id or evidence.get("featureId") or "")
+    trace_scope = _trace_scope(packet_trace or _mapping(evidence.get("trace")))
+    top_level_outcomes = _sequence(evidence.get("outcomeEvidence"))
+    top_level_journeys = _sequence(evidence.get("journeyEvidence"))
+    optional_set = {str(item) for item in (optional_story_ids or []) if str(item).strip()}
     story_ids: set[str] = set()
     for idx, story in enumerate(_sequence(evidence.get("stories"))):
         prefix = f"stories[{idx}]"
@@ -306,23 +323,37 @@ def validate_implementation_evidence(
             continue
         _require_string(story, f"{prefix}.id", errors)
         _require_string(story, f"{prefix}.status", errors)
-        _require_array(story, f"{prefix}.tracesTo", errors)
         story_id = story.get("id")
         if isinstance(story_id, str) and story_id.strip():
             story_ids.add(story_id)
-        traces = _sequence(story.get("tracesTo"))
-        if feature_id and feature_id not in traces:
+        require_lineage = (
+            _is_completed_story(story)
+            and str(story_id or "") not in optional_set
+            and not _is_optional_or_deferred_story(story)
+        )
+        trace_info = _validate_story_traces(
+            story.get("tracesTo"),
+            field_name=f"{prefix}.tracesTo",
+            errors=errors,
+            allowed_artifact_ids=set(),
+            packet_id=packet_id,
+            feature_id=feature_id,
+            trace_scope=trace_scope,
+            require_lineage=require_lineage,
+            enforce_lineage_for_legacy=require_lineage
+            and (not top_level_outcomes or not top_level_journeys),
+        )
+        if feature_id and not trace_info["has_feature"] and not trace_info["feature_present"]:
             errors.append(
                 ValidationIssue(
                     field=f"{prefix}.tracesTo",
                     expected_type=f"include feature '{feature_id}'",
-                    actual_value=traces,
+                    actual_value=story.get("tracesTo"),
                     message=f"{prefix}.tracesTo must include the selected feature id.",
                 )
             )
 
     required_set = {str(item) for item in (required_story_ids or []) if str(item).strip()}
-    optional_set = {str(item) for item in (optional_story_ids or []) if str(item).strip()}
     missing_required = sorted(required_set - story_ids)
     if missing_required:
         errors.append(
@@ -371,6 +402,7 @@ def build_validation_result(
     optional_outcome_ids: Sequence[str] | None = None,
     required_journey_ids: Sequence[str] | None = None,
     optional_journey_ids: Sequence[str] | None = None,
+    packet_trace: Mapping[str, Any] | None = None,
     now_factory: Callable[[], datetime] | None = None,
 ) -> dict[str, Any]:
     created_at = _utc_timestamp(now_factory)
@@ -403,6 +435,7 @@ def build_validation_result(
         expected_feature_id=expected_feature_id,
         required_story_ids=required_story_ids,
         optional_story_ids=optional_story_ids,
+        packet_trace=packet_trace,
     )
 
     findings: list[dict[str, Any]] = []
@@ -758,6 +791,253 @@ def _append_issue(
             level=level,
         )
     )
+
+
+def _normalize_traces_to(value: Any) -> Any:
+    if isinstance(value, Mapping):
+        normalized: dict[str, Any] = {}
+        for scalar_key in ("packetId", "featureId"):
+            if scalar_key in value:
+                normalized[scalar_key] = str(value.get(scalar_key) or "")
+        for list_key in ("artifactIds", "outcomeIds", "journeyIds"):
+            if list_key in value:
+                normalized[list_key] = list(_sequence(value.get(list_key)))
+        return normalized
+    return list(_sequence(value))
+
+
+def _validate_story_traces(
+    value: Any,
+    *,
+    field_name: str,
+    errors: list[ValidationIssue],
+    allowed_artifact_ids: set[str],
+    packet_id: str,
+    feature_id: str,
+    trace_scope: Mapping[str, set[str]],
+    require_lineage: bool,
+    enforce_lineage_for_legacy: bool,
+) -> dict[str, bool]:
+    if isinstance(value, Mapping):
+        return _validate_object_traces(
+            value,
+            field_name=field_name,
+            errors=errors,
+            allowed_artifact_ids=allowed_artifact_ids,
+            packet_id=packet_id,
+            feature_id=feature_id,
+            trace_scope=trace_scope,
+            require_lineage=require_lineage,
+        )
+
+    _require_array({"tracesTo": value}, field_name, errors)
+    has_feature = False
+    if isinstance(value, list):
+        allowed_traces = allowed_artifact_ids | {feature_id, packet_id}
+        for trace in value:
+            if not isinstance(trace, str) or not trace.strip():
+                _append_issue(errors, field_name, "non-empty string", trace)
+            elif allowed_artifact_ids and trace not in allowed_traces:
+                errors.append(
+                    ValidationIssue(
+                        field=field_name,
+                        expected_type="known artifact or feature reference",
+                        actual_value=trace,
+                        message=f"{field_name} must reference a known artifact or feature.",
+                    )
+                )
+            if trace == feature_id:
+                has_feature = True
+    if enforce_lineage_for_legacy:
+        errors.append(
+            ValidationIssue(
+                field=field_name,
+                expected_type="outcome and journey proof",
+                actual_value=value,
+                message=f"{field_name} must preserve outcome and journey proof for completed stories.",
+            )
+        )
+    return {
+        "has_feature": has_feature,
+        "feature_present": has_feature,
+        "has_outcome": False,
+        "has_journey": False,
+    }
+
+
+def _validate_object_traces(
+    traces: Mapping[str, Any],
+    *,
+    field_name: str,
+    errors: list[ValidationIssue],
+    allowed_artifact_ids: set[str],
+    packet_id: str,
+    feature_id: str,
+    trace_scope: Mapping[str, set[str]],
+    require_lineage: bool,
+) -> dict[str, bool]:
+    packet_value = traces.get("packetId")
+    if packet_value is not None:
+        _require_string(traces, f"{field_name}.packetId", errors)
+        if packet_id and packet_value != packet_id:
+            errors.append(
+                ValidationIssue(
+                    field=f"{field_name}.packetId",
+                    expected_type=f"string '{packet_id}'",
+                    actual_value=packet_value,
+                    message=f"{field_name}.packetId must match the Feature packet id.",
+                )
+            )
+
+    feature_value = traces.get("featureId")
+    if feature_value is not None:
+        _require_string(traces, f"{field_name}.featureId", errors)
+        if feature_id and feature_value != feature_id:
+            errors.append(
+                ValidationIssue(
+                    field=f"{field_name}.featureId",
+                    expected_type=f"string '{feature_id}'",
+                    actual_value=feature_value,
+                    message=f"{field_name}.featureId must match the selected Feature.",
+                )
+            )
+
+    artifact_ids = _validate_trace_id_list(
+        traces,
+        field_name=f"{field_name}.artifactIds",
+        key="artifactIds",
+        errors=errors,
+    )
+    if allowed_artifact_ids:
+        unresolved_artifacts = sorted(set(artifact_ids) - allowed_artifact_ids)
+        if unresolved_artifacts:
+            errors.append(
+                ValidationIssue(
+                    field=f"{field_name}.artifactIds",
+                    expected_type="known artifact ids",
+                    actual_value=unresolved_artifacts,
+                    message=f"{field_name}.artifactIds contains unresolved artifact ids.",
+                )
+            )
+
+    outcome_ids = _validate_trace_id_list(
+        traces,
+        field_name=f"{field_name}.outcomeIds",
+        key="outcomeIds",
+        errors=errors,
+    )
+    journey_ids = _validate_trace_id_list(
+        traces,
+        field_name=f"{field_name}.journeyIds",
+        key="journeyIds",
+        errors=errors,
+    )
+
+    _append_unresolved_trace_ids(
+        errors,
+        field_name=f"{field_name}.outcomeIds",
+        trace_ids=outcome_ids,
+        allowed_ids=trace_scope.get("outcomeIds", set()),
+        label="outcome",
+    )
+    _append_unresolved_trace_ids(
+        errors,
+        field_name=f"{field_name}.journeyIds",
+        trace_ids=journey_ids,
+        allowed_ids=trace_scope.get("journeyIds", set()),
+        label="journey",
+    )
+
+    if require_lineage and not outcome_ids:
+        errors.append(
+            ValidationIssue(
+                field=f"{field_name}.outcomeIds",
+                expected_type="at least one outcome id",
+                actual_value=outcome_ids,
+                message=f"{field_name}.outcomeIds must include at least one outcome for non-deferred stories.",
+            )
+        )
+    if require_lineage and not journey_ids:
+        errors.append(
+            ValidationIssue(
+                field=f"{field_name}.journeyIds",
+                expected_type="at least one journey id",
+                actual_value=journey_ids,
+                message=f"{field_name}.journeyIds must include at least one journey for non-deferred stories.",
+            )
+        )
+
+    return {
+        "has_feature": feature_value == feature_id,
+        "feature_present": feature_value is not None,
+        "has_outcome": bool(outcome_ids),
+        "has_journey": bool(journey_ids),
+    }
+
+
+def _validate_trace_id_list(
+    payload: Mapping[str, Any],
+    *,
+    field_name: str,
+    key: str,
+    errors: list[ValidationIssue],
+) -> list[str]:
+    if key not in payload:
+        return []
+    _require_array(payload, field_name, errors)
+    values: list[str] = []
+    for item in _sequence(payload.get(key)):
+        if not isinstance(item, str) or not item.strip():
+            _append_issue(errors, field_name, "non-empty string", item)
+            continue
+        values.append(item)
+    return values
+
+
+def _append_unresolved_trace_ids(
+    errors: list[ValidationIssue],
+    *,
+    field_name: str,
+    trace_ids: Sequence[str],
+    allowed_ids: set[str],
+    label: str,
+) -> None:
+    if not allowed_ids:
+        return
+    unresolved = sorted(set(trace_ids) - allowed_ids)
+    if unresolved:
+        errors.append(
+            ValidationIssue(
+                field=field_name,
+                expected_type=f"known packet trace {label} ids",
+                actual_value=unresolved,
+                message=f"{field_name} contains unresolved {label} ids.",
+            )
+        )
+
+
+def _trace_scope(trace: Mapping[str, Any]) -> dict[str, set[str]]:
+    return {
+        "outcomeIds": {str(item) for item in _sequence(trace.get("outcomeIds")) if str(item).strip()},
+        "journeyIds": {str(item) for item in _sequence(trace.get("journeyIds")) if str(item).strip()},
+    }
+
+
+def _mapping(value: Any) -> Mapping[str, Any]:
+    return value if isinstance(value, Mapping) else {}
+
+
+def _is_optional_or_deferred_story(story: Mapping[str, Any]) -> bool:
+    status = str(story.get("status") or "").strip().lower()
+    return (
+        status in {"optional", "deferred"}
+        or _truthy(story.get("optional"))
+        or _truthy(story.get("deferred"))
+    )
+
+
+def _is_completed_story(story: Mapping[str, Any]) -> bool:
+    return str(story.get("status") or "").strip().lower() in {"done", "completed", "complete"}
 
 
 def _status_from_issues(errors: Sequence[ValidationIssue], warnings: Sequence[ValidationIssue]) -> str:

@@ -85,16 +85,136 @@ def test_run_new_action_pipeline_emits_packet_after_explicit_confirmation(tmp_pa
     assert packet["featureId"] == "feature-context-gate"
     assert packet["system"]["thesis"] == "Improve planning fidelity"
     assert packet["doctorSummary"]["status"] == "pass"
+    final_doctor_report = Path(packet["doctorSummary"]["reportPath"])
+    assert final_doctor_report.exists()
     assert Path(packet["evidenceBundleRef"]).exists()
     bundle = yaml.safe_load(Path(packet["evidenceBundleRef"]).read_text(encoding="utf-8"))["evidence_bundle"]
     assert bundle["schemaVersion"] == "nextlens.evidence-bundle.v1"
     assert bundle["packetId"] == packet["packetId"]
     assert bundle["featureId"] == "feature-context-gate"
+    assert bundle["doctorReportRef"] == final_doctor_report.relative_to(tmp_path / ".nextlens").as_posix()
     assert bundle["extractedConceptsRef"] == "artifacts/extracted-concepts.json"
     assert bundle["stageOutcomes"]["extracted_concepts"] == "skipped"
+    assert bundle["stageOutcomes"]["doctor"] == "pass"
+    assert set(bundle["bmadHandoffRefs"]) == {
+        "prdInput",
+        "uxInput",
+        "architectureInput",
+        "epicStoryInput",
+        "readinessInput",
+    }
     skipped = json.loads((tmp_path / ".nextlens" / "artifacts" / "extracted-concepts.json").read_text(encoding="utf-8"))
     assert skipped["decision"] == "already_curated"
-    assert any((tmp_path / ".nextlens").glob("doctor-*.jsonl"))
+    doctor_reports = sorted((tmp_path / ".nextlens").glob("doctor-*.jsonl"))
+    assert len(doctor_reports) == 2
+    assert final_doctor_report in doctor_reports
+    final_lines = [
+        json.loads(line)
+        for line in final_doctor_report.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    assert any(
+        line.get("check_id") == "handoff-artifacts-required" and line.get("status") == "pass"
+        for line in final_lines
+    )
+    assert any(
+        line.get("check_id") == "handoff-scope" and line.get("status") == "pass"
+        for line in final_lines
+    )
+
+
+def test_run_new_action_pipeline_blocks_when_final_handoff_artifact_is_missing(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    context_path = tmp_path / "ready-context.yaml"
+    context_path.write_text(_ready_context_yaml(), encoding="utf-8")
+    original_generate = ORCHESTRATOR.BMAD_HANDOFF.generate_bmad_handoff_artifacts
+
+    def generate_then_remove_required_artifact(*args, **kwargs):
+        result = original_generate(*args, **kwargs)
+        Path(result.artifact_paths["prdInput"]).unlink()
+        return result
+
+    monkeypatch.setattr(
+        ORCHESTRATOR.BMAD_HANDOFF,
+        "generate_bmad_handoff_artifacts",
+        generate_then_remove_required_artifact,
+    )
+
+    result = ORCHESTRATOR.run_new_action_pipeline(
+        str(context_path),
+        docs_path=tmp_path,
+        resume_state={
+            "context": {
+                "selected_candidate_id": "feature-context-gate",
+                "confirmation_response": "yes",
+            }
+        },
+    )
+
+    assert result["status"] == "blocked"
+    assert result["current_stage"] == "emit"
+    assert "doctor_status=blocked" in result["output"]
+    assert not list((tmp_path / ".nextlens").glob("packet-*.json"))
+    assert _any_doctor_line(
+        tmp_path,
+        check_id="handoff-artifacts-required",
+        status="fail",
+    )
+
+
+def test_run_new_action_pipeline_blocks_when_final_handoff_boundary_is_missing(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    context_path = tmp_path / "ready-context.yaml"
+    context_path.write_text(_ready_context_yaml(), encoding="utf-8")
+    original_generate = ORCHESTRATOR.BMAD_HANDOFF.generate_bmad_handoff_artifacts
+
+    def generate_then_remove_scope_boundary(*args, **kwargs):
+        result = original_generate(*args, **kwargs)
+        prd_path = Path(result.artifact_paths["prdInput"])
+        content = prd_path.read_text(encoding="utf-8")
+        content = content.replace("## Scope Containment Warning\n", "")
+        content = content.replace(
+            "This packet represents one selected Feature from top-down discovery. "
+            "Do not expand into adjacent journeys, future Features, platform architecture, "
+            "or unrelated outcomes unless Salmon or correct-course signals scope change.",
+            "",
+        )
+        content = content.replace("## BMAD Expansion Boundary\n", "")
+        for boundary_line in ORCHESTRATOR.BMAD_HANDOFF.BMAD_EXPANSION_BOUNDARY:
+            content = content.replace(f"- {boundary_line}\n", "")
+        prd_path.write_text(content, encoding="utf-8")
+        return result
+
+    monkeypatch.setattr(
+        ORCHESTRATOR.BMAD_HANDOFF,
+        "generate_bmad_handoff_artifacts",
+        generate_then_remove_scope_boundary,
+    )
+
+    result = ORCHESTRATOR.run_new_action_pipeline(
+        str(context_path),
+        docs_path=tmp_path,
+        resume_state={
+            "context": {
+                "selected_candidate_id": "feature-context-gate",
+                "confirmation_response": "yes",
+            }
+        },
+    )
+
+    assert result["status"] == "blocked"
+    assert result["current_stage"] == "emit"
+    assert "doctor_status=blocked" in result["output"]
+    assert not list((tmp_path / ".nextlens").glob("packet-*.json"))
+    assert _any_doctor_line(
+        tmp_path,
+        check_id="handoff-scope",
+        status="fail",
+    )
 
 
 def test_run_new_action_pipeline_preserves_bottom_up_source_mode_and_structured_open_questions(tmp_path: Path) -> None:
@@ -167,6 +287,17 @@ top_down_context:
   relationshipRefs: []
 """
     ).strip()
+
+
+def _any_doctor_line(tmp_path: Path, *, check_id: str, status: str) -> bool:
+    for report in (tmp_path / ".nextlens").glob("doctor-*.jsonl"):
+        for raw_line in report.read_text(encoding="utf-8").splitlines():
+            if not raw_line.strip():
+                continue
+            line = json.loads(raw_line)
+            if line.get("check_id") == check_id and line.get("status") == status:
+                return True
+    return False
 
 
 def _extracted_concepts_yaml() -> str:

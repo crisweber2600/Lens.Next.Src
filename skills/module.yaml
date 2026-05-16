@@ -4,8 +4,8 @@ module_version: 1.0.0
 description: Deterministic top-down feature packet bridge with doctor validation and
   salmon correction routing.
 default_selected: false
-module_greeting: NextLens is ready. Run setup once, then use the New, Doctor, and
-  Salmon skills as separate parts of the top-down bridge.
+module_greeting: NextLens is ready. Run setup once, then use the New, Doctor, Validate,
+  and Salmon skills as separate parts of the top-down bridge.
 capabilities:
 - command: nextlens-setup
   action: configure
@@ -16,7 +16,8 @@ capabilities:
 - command: nextlens-new
   action: new
   skill: bmad-nextlens-new
-  description: Break discovery context into candidate Feature slices before creating one packet.
+  description: Break discovery context into candidate Feature slices before creating
+    one packet.
   entry_point: .agents/skills/bmad-nextlens-new/SKILL.md
   skill_type: workflow
 - command: nextlens-doctor
@@ -24,6 +25,12 @@ capabilities:
   skill: bmad-nextlens-doctor
   description: Run non-mutating validation checks on a Feature packet or landscape.
   entry_point: .agents/skills/bmad-nextlens-doctor/SKILL.md
+  skill_type: workflow
+- command: nextlens-validate
+  action: validate
+  skill: bmad-nextlens-validate
+  description: Run governed post-BMAD validation on implementation evidence; not Doctor.
+  entry_point: .agents/skills/bmad-nextlens-validate/SKILL.md
   skill_type: workflow
 - command: nextlens-salmon
   action: salmon
@@ -44,5 +51,5 @@ nextlens_idempotency_ttl_hours:
 directories:
 - '{nextlens_docs_path}'
 - '{nextlens_landscape_store}'
-post-install-notes: Use NextLens setup, new, doctor, and salmon actions from BMAD
-  help after setup completes.
+post-install-notes: Use NextLens setup, new, doctor, validate, and salmon actions
+  from BMAD help after setup completes.

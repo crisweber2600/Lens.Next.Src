@@ -82,7 +82,11 @@ def generate_salmon_signals_from_validation(
     *,
     now_factory: Any = None,
 ) -> SalmonSignalBatchResult:
-    findings = _sequence(validation_result.get("findings"))
+    findings = [
+        _enrich_validation_finding(finding, validation_result)
+        for finding in _sequence(validation_result.get("findings"))
+        if isinstance(finding, Mapping)
+    ]
     if not _salmon_required(validation_result, findings):
         return SalmonSignalBatchResult(
             status="skipped",
@@ -157,6 +161,12 @@ def build_landscape_update_proposal(
         "updateId": proposal_id,
         "status": status,
         "sourceRefs": _normalize_source_refs(source_refs or {}),
+        "authority": {
+            "livingLandscape": "authoritative",
+            "derivedGraph": "non_authoritative",
+            "livingLandscapeAuthoritative": True,
+            "derivedGraphAuthoritative": False,
+        },
         "updates": normalized_updates,
         "proposedAt": _utc_timestamp(now_factory),
     }
@@ -323,6 +333,113 @@ def _build_salmon_signal(
     }
 
 
+def _enrich_validation_finding(
+    finding: Mapping[str, Any],
+    validation_result: Mapping[str, Any],
+) -> dict[str, Any]:
+    enriched = dict(finding)
+    impact_level = str(enriched.get("impactLevel") or "").strip()
+    if impact_level not in SALMON_EVENT_MODEL.SALMON_IMPACT_LEVELS:
+        enriched["impactLevel"] = _mapped_impact_level(enriched)
+        impact_level = str(enriched["impactLevel"])
+    feature_id = str(
+        enriched.get("impactedFeature")
+        or validation_result.get("featureId")
+        or validation_result.get("feature_id")
+        or "feature"
+    )
+    enriched["impactedNodes"] = _coerce_impacted_nodes(enriched, feature_id, validation_result)
+    if impact_level == "bmad_correct_course_required" and not isinstance(enriched.get("recommendedAction"), Mapping):
+        enriched["recommendedActionDetails"] = (
+            "Run BMAD correct-course to revisit invalidated PRD, architecture, or story assumptions."
+        )
+    return enriched
+
+
+def _mapped_impact_level(finding: Mapping[str, Any]) -> str:
+    tokens = _finding_tokens(finding)
+    if _has_any(tokens, ("note_only", "implementation_note", "local_note")) or (
+        "minor" in tokens and "note" in tokens and "implementation" in tokens
+    ):
+        return "local_feature_note"
+    if _has_any(tokens, ("prd", "architecture", "architectural", "story")) and _has_any(
+        tokens, ("invalid", "invalidated", "invalidation", "assumption", "assumptions")
+    ):
+        return "bmad_correct_course_required"
+    if _has_any(tokens, ("operating_loop", "operatingloop", "loop")) and _has_any(
+        tokens, ("mismatch", "differs", "invalid", "invalidated")
+    ):
+        return "operating_loop_change"
+    if _has_any(tokens, ("role", "stakeholder")) and _has_any(
+        tokens, ("mismatch", "differs", "invalid", "invalidated", "evidence")
+    ):
+        return "role_or_stakeholder_change"
+    if _has_any(tokens, ("outcome", "value")) and _has_any(
+        tokens, ("missing", "differs", "different", "mismatch", "implemented_value", "implemented")
+    ):
+        return "outcome_reframe"
+    if _has_any(tokens, ("journey", "path")) and _has_any(
+        tokens, ("missing", "invalid", "invalidated", "evidence")
+    ):
+        return "journey_assumption_change"
+    if _has_any(tokens, ("durable_truth", "durable", "current_landscape", "currentlandscape", "correction", "truth")):
+        return "capability_or_landscape_update"
+    if _has_any(tokens, ("scope_leak", "scopeleak", "explicitoutofscope", "out_of_scope", "outofscope")):
+        return "feature_scope_change"
+    return "feature_scope_change"
+
+
+def _finding_tokens(finding: Mapping[str, Any]) -> set[str]:
+    token_text_parts: list[str] = []
+    for key in (
+        "category",
+        "type",
+        "findingType",
+        "issueClass",
+        "reference",
+        "field",
+        "path",
+        "canonicalPath",
+        "message",
+        "summary",
+        "issueDescription",
+        "description",
+    ):
+        value = finding.get(key)
+        if isinstance(value, (str, int, float, bool)):
+            if key in {"category", "type", "findingType", "issueClass", "reference", "field", "path"}:
+                token_text_parts.append(key)
+            token_text_parts.append(str(value))
+    text = " ".join(token_text_parts).lower()
+    normalized = text.replace("-", "_").replace(".", "_").replace("/", "_").replace(" ", "_")
+    raw_parts = text.replace("-", " ").replace("_", " ").replace(".", " ").replace("/", " ").split()
+    tokens = {part.strip() for part in raw_parts if part.strip()}
+    tokens.update(part.strip() for part in normalized.split("_") if part.strip())
+    if "operating" in tokens and "loop" in tokens:
+        tokens.add("operating_loop")
+    if "explicitoutofscope" in normalized:
+        tokens.add("explicitoutofscope")
+    if "out_of_scope" in normalized:
+        tokens.add("out_of_scope")
+    if "scope_leak" in normalized or "scopeleak" in normalized:
+        tokens.add("scope_leak")
+    if "durable_truth" in normalized:
+        tokens.add("durable_truth")
+    if "current_landscape" in normalized:
+        tokens.add("current_landscape")
+    if "currentlandscape" in normalized:
+        tokens.add("currentlandscape")
+    if "implemented_value" in normalized:
+        tokens.add("implemented_value")
+    if "note_only" in normalized:
+        tokens.add("note_only")
+    return tokens
+
+
+def _has_any(tokens: set[str], candidates: Sequence[str]) -> bool:
+    return any(candidate in tokens for candidate in candidates)
+
+
 def _recommended_action(finding: Mapping[str, Any], impact_level: str) -> dict[str, Any]:
     action_payload = finding.get("recommendedAction")
     if isinstance(action_payload, Mapping):
@@ -364,13 +481,47 @@ def _coerce_impacted_nodes(
     for field_name in SALMON_EVENT_MODEL.SALMON_IMPACTED_NODE_FIELDS:
         values = _sequence(impacted_nodes.get(field_name))
         if not values and field_name == "features":
-            values = _sequence(finding.get("features")) or _sequence(validation_result.get("features"))
+            values = _node_values(finding, "features", "featureIds", "featureId", "impactedFeature")
+            values = values or _node_values(validation_result, "features", "featureIds", "featureId", "feature_id")
             if not values and feature_id:
                 values = [feature_id]
         if not values:
-            values = _sequence(finding.get(field_name)) or _sequence(validation_result.get(field_name))
+            values = (
+                _node_values(finding, field_name, *_node_aliases(field_name))
+                or _node_values(validation_result, field_name, *_node_aliases(field_name))
+            )
         impacted_nodes[field_name] = [str(value) for value in values if str(value).strip()]
     return impacted_nodes
+
+
+def _node_aliases(field_name: str) -> tuple[str, ...]:
+    return {
+        "journeys": ("journeyIds", "journeyId", "impactedJourney", "journeyPath"),
+        "outcomes": ("outcomeIds", "outcomeId", "impactedOutcome"),
+        "roles": ("roleIds", "roleId", "stakeholderIds", "stakeholderId", "impactedRole", "impactedStakeholder"),
+        "operatingLoops": ("operatingLoopIds", "operatingLoopId", "loopIds", "loopId", "impactedOperatingLoop"),
+        "capabilities": ("capabilityIds", "capabilityId", "landscapeNodeIds", "landscapeNodeId", "impactedCapability"),
+        "bmadArtifacts": (
+            "bmadArtifactIds",
+            "bmadArtifactId",
+            "bmadArtifacts",
+            "bmadArtifact",
+            "prdRef",
+            "architectureRef",
+            "storyRef",
+        ),
+    }.get(field_name, ())
+
+
+def _node_values(payload: Mapping[str, Any], *keys: str) -> list[Any]:
+    values: list[Any] = []
+    for key in keys:
+        value = payload.get(key)
+        if isinstance(value, list):
+            values.extend(value)
+        elif value is not None and str(value).strip():
+            values.append(value)
+    return values
 
 
 def _packet_path(packet_id: str) -> str:

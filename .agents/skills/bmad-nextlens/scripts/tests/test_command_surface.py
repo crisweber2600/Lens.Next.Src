@@ -49,6 +49,37 @@ def test_parse_salmon_action_from_story_command() -> None:
     assert parsed.packet_source is None
 
 
+def test_parse_validate_action_from_story_command_with_required_args() -> None:
+    parsed = COMMAND_SURFACE.parse_story_command(
+        "nextlens validate --packet path/to/packet.json "
+        "--bmad-artifacts path/to/bmad-bundle.json "
+        "--implementation-evidence path/to/evidence.json"
+    )
+
+    assert parsed.mode == "validate"
+    assert parsed.packet_source == "path/to/packet.json"
+    assert parsed.bmad_artifacts_source == "path/to/bmad-bundle.json"
+    assert parsed.implementation_evidence_source == "path/to/evidence.json"
+    assert parsed.findings_source is None
+
+
+def test_parse_validate_action_accepts_docs_path_and_landscape_options() -> None:
+    parsed = COMMAND_SURFACE.parse_story_command(
+        "nextlens validate --packet packet.json "
+        "--implementation-evidence evidence.json "
+        "--docs-path docs "
+        "--landscape-update-source landscape-updates.json "
+        "--landscape-update-mode propose"
+    )
+
+    assert parsed.mode == "validate"
+    assert parsed.packet_source == "packet.json"
+    assert parsed.implementation_evidence_source == "evidence.json"
+    assert parsed.landscape_update_source == "landscape-updates.json"
+    assert parsed.landscape_update_mode == "propose"
+    assert parsed.overrides == {"docs_path": "docs"}
+
+
 def test_help_action_returns_help_mode() -> None:
     parsed = COMMAND_SURFACE.parse_story_command("nextlens --help")
 
@@ -57,6 +88,11 @@ def test_help_action_returns_help_mode() -> None:
     assert "NextLens BMAD module actions:" in help_text
     assert "nextlens setup" in help_text
     assert "nextlens new --context path/to/context.yaml" in help_text
+    assert "validate --packet <path> --implementation-evidence <path>" in help_text
+    assert "--landscape-update-mode propose|apply" in help_text
+    assert "proposal-only by default" in help_text
+    assert "post-BMAD validation" in help_text
+    assert "not Doctor" in help_text
 
 
 def test_setup_action_returns_setup_mode() -> None:
@@ -72,6 +108,24 @@ def test_invalid_arguments_include_help_text() -> None:
     assert "nextlens new --context path/to/context.yaml" in exc_info.value.help_text
 
 
+def test_validate_action_rejects_missing_packet() -> None:
+    with pytest.raises(COMMAND_SURFACE.CommandSurfaceError) as exc_info:
+        COMMAND_SURFACE.parse_story_command(
+            "nextlens validate --implementation-evidence path/to/evidence.json"
+        )
+
+    assert "Missing required argument 'packet_source'" in str(exc_info.value)
+    assert "--packet and --implementation-evidence" in str(exc_info.value)
+
+
+def test_validate_action_rejects_missing_implementation_evidence() -> None:
+    with pytest.raises(COMMAND_SURFACE.CommandSurfaceError) as exc_info:
+        COMMAND_SURFACE.parse_story_command("nextlens validate --packet path/to/packet.json")
+
+    assert "Missing required argument 'implementation_evidence_source'" in str(exc_info.value)
+    assert "--packet and --implementation-evidence" in str(exc_info.value)
+
+
 def test_module_help_registers_nextlens_actions() -> None:
     module_help = Path(__file__).resolve().parents[3] / "bmad-nextlens-setup" / "assets" / "module-help.csv"
     text = module_help.read_text(encoding="utf-8")
@@ -81,3 +135,5 @@ def test_module_help_registers_nextlens_actions() -> None:
     assert "Create Feature Packet,NF" in text
     assert "Run Doctor Checks,ND" in text
     assert "Route Salmon Findings,NS" in text
+    assert "Run Post-BMAD Validation,NV" in text
+    assert "post-BMAD validation" in text

@@ -37,6 +37,7 @@ After the operator confirms the final Feature packet:
 
 - Call `../bmad-nextlens/scripts/feature_packet_emitter.py` to write the JSON packet to the configured docs path.
 - Run NextLens Doctor validation on the emitted packet to verify the Feature definition meets governance requirements.
+- Generate BMAD handoff artifacts for the selected Feature and initialize the evidence bundle with packet, Doctor, and handoff references.
 - Display the packet path, Doctor status, and the recommended next step: "Continue the planning flow with `/bmad-nextlens-doctor` for full validation, then delegate Feature development to the normal top-down BMAD planning sequence (PRD → Architecture → Stories → Implementation)."
 - Do not stop at the confirmation prompt. Proceed immediately to emission and validation upon operator confirmation.
 
@@ -60,5 +61,9 @@ Optional args:
 Output:
 
 - One Feature packet JSON artifact in the configured NextLens docs path
+- BMAD handoff artifacts scoped to the selected Feature
+- Initial evidence bundle references for downstream lifecycle tracking
 - Doctor validation report
 - Framed next steps for continuing the top-down planning flow
+
+`bmad-nextlens-new` stops at discovery/context → candidate selection → Feature packet → BMAD handoff artifacts → initial evidence. It must not perform post-BMAD validation, Salmon routing, Landscape mutation, inline runtime repair, or Feature → Capability → Domain → System promotion.

@@ -389,18 +389,11 @@ def _handle_validate(context: dict[str, Any]) -> StageResult:
         )
 
     docs_path = context.get("docs_path", ".nextlens")
-    landscape_state = _build_landscape_state(context.get("loaded_context") or {}, docs_path)
     packet_output_path = FEATURE_PACKET_EMITTER.packet_output_path(docs_path, str(packet.get("packetId") or ""))
-    doctor_result = DOCTOR_CHECKS.run_preflight_doctor_checks(
-        DOCTOR_CHECKS.DoctorCheckContext(
-            landscape_state=landscape_state,
-            derived_graph=context.get("derived_graph") or {},
-            packet_candidate=packet,
-            selected_feature=context.get("selected_feature") or {},
-            docs_path=docs_path,
-            write_targets=[str(packet_output_path)],
-        ),
-        prompt_fn=lambda *_: str(context.get("confirmation_response") or "yes"),
+    doctor_result = _run_packet_doctor_checks(
+        context,
+        packet,
+        write_targets=[str(packet_output_path)],
     )
     if doctor_result.operation_blocked:
         return StageResult(
@@ -454,6 +447,29 @@ def _handle_emit(context: dict[str, Any]) -> StageResult:
         handoff_paths = dict(handoff_result.artifact_paths)
         handoff_status = "pass"
 
+    packet_output_path = FEATURE_PACKET_EMITTER.packet_output_path(docs_path, str(packet.get("packetId") or ""))
+    final_doctor_result = _run_packet_doctor_checks(
+        context,
+        packet,
+        write_targets=[str(packet_output_path), *handoff_paths.values()],
+    )
+    if final_doctor_result.operation_blocked:
+        return StageResult(
+            status="fail",
+            detail="Final Doctor validation blocked packet emission",
+            next_action="repair generated BMAD handoff artifacts before emission",
+            remediation_hints=tuple(result.message for result in final_doctor_result.run_result.blocking_results)
+            or tuple(result.message for result in final_doctor_result.run_result.advisory_results),
+            diagnostic_context={
+                "doctor_status": final_doctor_result.status,
+                "doctor_report_path": str(final_doctor_result.report_path) if final_doctor_result.report_path else "",
+            },
+            rollback_action="Packet was not emitted; repair handoff artifacts and rerun emission.",
+        )
+
+    packet["doctorSummary"] = _doctor_summary_payload(final_doctor_result)
+    final_doctor_report_path = str(final_doctor_result.report_path) if final_doctor_result.report_path else None
+
     emission = FEATURE_PACKET_EMITTER.emit_feature_packet(packet, docs_path)
     if emission.status != "pass":
         return StageResult(
@@ -477,7 +493,7 @@ def _handle_emit(context: dict[str, Any]) -> StageResult:
             "rankingTraceRef": "artifacts/ranking-trace.json",
             "doctorReportRef": _relative_artifact_ref(
                 docs_path,
-                context.get("doctor_report_path"),
+                final_doctor_report_path,
                 fallback="artifacts/doctor-report.jsonl",
             ),
             "salmonRoutingRef": "artifacts/salmon-routing.json",
@@ -493,7 +509,7 @@ def _handle_emit(context: dict[str, Any]) -> StageResult:
             "confirmation": "pass",
             "authoritative_write": "pass",
             "derived_graph_rebuild": "pass",
-            "doctor": "pass",
+            "doctor": final_doctor_result.status,
             "packet_emission": "pass",
             "bmad_handoff": handoff_status,
             "bmad_artifacts": "pending",
@@ -521,6 +537,7 @@ def _handle_emit(context: dict[str, Any]) -> StageResult:
             "packet_path": str(emission.packet_path),
             "evidence_bundle_path": str(evidence.path),
             "bmad_handoff_paths": handoff_paths,
+            "doctor_report_path": final_doctor_report_path,
         },
     )
 
@@ -638,6 +655,27 @@ def _top_down_context_ref(context: Mapping[str, Any]) -> str:
 
 def _stage_outcome_for_extracted_concepts(context: Mapping[str, Any]) -> str:
     return "skipped" if context.get("extracted_concepts_decision") == "already_curated" else "pass"
+
+
+def _run_packet_doctor_checks(
+    context: Mapping[str, Any],
+    packet: Mapping[str, Any],
+    *,
+    write_targets: Sequence[str],
+) -> Any:
+    docs_path = context.get("docs_path", ".nextlens")
+    landscape_state = _build_landscape_state(context.get("loaded_context") or {}, docs_path)
+    return DOCTOR_CHECKS.run_preflight_doctor_checks(
+        DOCTOR_CHECKS.DoctorCheckContext(
+            landscape_state=landscape_state,
+            derived_graph=context.get("derived_graph") or {},
+            packet_candidate=copy.deepcopy(dict(packet)),
+            selected_feature=context.get("selected_feature") or {},
+            docs_path=docs_path,
+            write_targets=tuple(write_targets),
+        ),
+        prompt_fn=lambda *_: str(context.get("confirmation_response") or "yes"),
+    )
 
 
 def _build_landscape_state(context: Mapping[str, Any], docs_path: str | Path) -> SimpleNamespace:

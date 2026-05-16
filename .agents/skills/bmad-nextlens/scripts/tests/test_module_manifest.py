@@ -8,12 +8,19 @@ import yaml
 MODULE_ROOT = Path(__file__).resolve().parents[2]
 SKILLS_ROOT = MODULE_ROOT.parent
 MANIFEST_PATH = SKILLS_ROOT / "bmad-nextlens-setup" / "assets" / "module.yaml"
-EXPECTED_COMMANDS = {"nextlens-setup", "nextlens-new", "nextlens-doctor", "nextlens-salmon"}
-EXPECTED_ACTIONS = {"configure", "new", "doctor", "salmon"}
+EXPECTED_COMMANDS = {
+    "nextlens-setup",
+    "nextlens-new",
+    "nextlens-doctor",
+    "nextlens-validate",
+    "nextlens-salmon",
+}
+EXPECTED_ACTIONS = {"configure", "new", "doctor", "validate", "salmon"}
 EXPECTED_SKILLS = {
     "nextlens-setup": "bmad-nextlens-setup",
     "nextlens-new": "bmad-nextlens-new",
     "nextlens-doctor": "bmad-nextlens-doctor",
+    "nextlens-validate": "bmad-nextlens-validate",
     "nextlens-salmon": "bmad-nextlens-salmon",
 }
 
@@ -27,6 +34,7 @@ def test_module_manifest_identity_fields_are_present() -> None:
     assert manifest["description"]
     assert manifest["default_selected"] is False
     assert "NextLens is ready" in manifest["module_greeting"]
+    assert "Validate" in manifest["module_greeting"]
     assert "separate parts" in manifest["module_greeting"]
 
 
@@ -39,6 +47,7 @@ def test_module_manifest_declares_expected_capabilities() -> None:
     assert capabilities["nextlens-setup"]["description"] == "Register or refresh the NextLens BMad module in this project."
     assert capabilities["nextlens-new"]["description"] == "Break discovery context into candidate Feature slices before creating one packet."
     assert capabilities["nextlens-doctor"]["description"] == "Run non-mutating validation checks on a Feature packet or landscape."
+    assert capabilities["nextlens-validate"]["description"] == "Run governed post-BMAD validation on implementation evidence; not Doctor."
     assert capabilities["nextlens-salmon"]["description"] == "Route correction findings through deduplication and impact classification."
     assert {command: item["skill"] for command, item in capabilities.items()} == EXPECTED_SKILLS
     assert {
