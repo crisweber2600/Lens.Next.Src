@@ -13,6 +13,7 @@ from typing import Any, Callable, Mapping
 
 NEW_STAGE_SEQUENCE = (
     "intake",
+    "extract",
     "sufficiency",
     "rank",
     "confirm",

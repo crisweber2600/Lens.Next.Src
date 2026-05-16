@@ -74,6 +74,20 @@ def compose_feature_packet(
             ranked_candidates,
             candidate_definition,
         ),
+        "system": _mapping_copy(_mapping_value(context, "system")),
+        "discoveryEpoch": _mapping_copy(_mapping_value(context, "discoveryEpoch")),
+        "roles": _context_collection_payload(context, "roles", trace.get("roleIds")),
+        "stakeholders": _context_collection_payload(context, "stakeholders"),
+        "outcomes": _context_collection_payload(context, "outcomes", trace.get("outcomeIds")),
+        "operatingLoops": _context_collection_payload(context, "operatingLoops", trace.get("operatingLoopIds")),
+        "journeys": _context_collection_payload(context, "journeys", trace.get("journeyIds")),
+        "openQuestions": _list_value(context.get("openQuestions")),
+        "risks": _context_collection_payload(context, "risks"),
+        "decisions": _context_collection_payload(context, "decisions"),
+        "relationshipRefs": _append_missing(
+            _list_value(context.get("relationshipRefs")),
+            tuple(_list_value(trace.get("relationshipRefs"))),
+        ),
         "sourceContextRefs": list(source_context_refs or SOURCE_CONTEXT_REFS),
         "authoritativeStateRef": str(authoritative_state_ref or docs_root / "landscape"),
         "derivedGraphRef": str(derived_graph_ref or docs_root / "derived" / "graph.json"),
@@ -87,7 +101,7 @@ def compose_feature_packet(
             schema_version=schema_module.FEATURE_PACKET_SCHEMA_VERSION,
             created_at=created_at,
         ),
-        "evidenceBundleRef": str(docs_root / ".nextlens" / "evidence" / f"{selected_candidate_id}.json"),
+        "evidenceBundleRef": str(docs_root / ".nextlens" / f"evidence-{packet_id}.yaml"),
         "createdAt": created_at,
     }
     validation = schema_module.validate_feature_packet_schema(
@@ -316,6 +330,40 @@ def _mapping_value(payload: Mapping[str, Any], key: str) -> Mapping[str, Any]:
     if isinstance(value, Mapping):
         return value
     return {}
+
+
+def _mapping_copy(value: Mapping[str, Any]) -> dict[str, Any]:
+    return {str(key): item for key, item in value.items()}
+
+
+def _context_collection_payload(
+    context: Mapping[str, Any],
+    key: str,
+    allowed_ids: Sequence[Any] | None = None,
+) -> list[Any]:
+    raw_values = context.get(key)
+    if isinstance(raw_values, (list, tuple)):
+        values = [dict(item) if isinstance(item, Mapping) else item for item in raw_values]
+    else:
+        values = []
+    if not allowed_ids:
+        return values
+
+    selected_ids = {str(item).strip() for item in allowed_ids if str(item).strip()}
+    if not selected_ids:
+        return values
+
+    filtered: list[Any] = []
+    for value in values:
+        if isinstance(value, Mapping):
+            value_id = str(value.get("id") or value.get("semanticId") or "").strip()
+            if value_id and value_id in selected_ids:
+                filtered.append(dict(value))
+                continue
+        elif str(value).strip() in selected_ids:
+            filtered.append(value)
+
+    return filtered or values
 
 
 def _first_id(*payloads: Mapping[str, Any], keys: Sequence[str]) -> str:

@@ -118,6 +118,13 @@ def test_compose_feature_packet_populates_refs_summaries_and_bmad_hints() -> Non
         "informational_count": 1,
     }
     assert packet["salmonRoutingSummary"] == {"status": "created", "events": 1}
+    assert packet["system"]["thesis"] == "Improve planning fidelity through top-down discovery."
+    assert packet["roles"] == [{"id": "role-operator", "name": "Operator"}]
+    assert packet["outcomes"] == [{"id": "outcome-reduced-ambiguity", "name": "Reduce ambiguity"}]
+    assert packet["journeys"] == [{"id": "journey-account-recovery", "name": "Account recovery"}]
+    assert packet["operatingLoops"] == [{"id": "loop-planning", "name": "Planning loop"}]
+    assert packet["openQuestions"] == ["Which proof points confirm candidate readiness?"]
+    assert packet["risks"] == [{"id": "risk-missing-trace", "name": "Missing traceability"}]
     assert packet["bmadConsumerHints"]["scopeContainmentWarning"] == (
         "This packet represents one selected Feature from top-down discovery. "
         "Do not expand into adjacent journeys, future Features, platform architecture, "
@@ -192,8 +199,20 @@ def _scored_candidate(candidate_id: str, name: str, score: float) -> FEATURE_SCO
 
 def _context() -> dict[str, object]:
     return {
-        "system": {"id": "system-nextlens"},
-        "discoveryEpoch": {"id": "epoch-2026-05-14"},
+        "system": {
+            "id": "system-nextlens",
+            "name": "NextLens",
+            "thesis": "Improve planning fidelity through top-down discovery.",
+        },
+        "discoveryEpoch": {"id": "epoch-2026-05-14", "status": "synthesized"},
+        "roles": [{"id": "role-operator", "name": "Operator"}],
+        "outcomes": [{"id": "outcome-reduced-ambiguity", "name": "Reduce ambiguity"}],
+        "journeys": [{"id": "journey-account-recovery", "name": "Account recovery"}],
+        "operatingLoops": [{"id": "loop-planning", "name": "Planning loop"}],
+        "openQuestions": ["Which proof points confirm candidate readiness?"],
+        "risks": [{"id": "risk-missing-trace", "name": "Missing traceability"}],
+        "decisions": [{"id": "decision-top-down", "name": "Require top-down context"}],
+        "relationshipRefs": ["system-nextlens->role-operator"],
         "candidateFeatures": [
             {
                 "id": "feature-password-recovery",

@@ -32,11 +32,11 @@ def test_new_pipeline_executes_stages_in_order_and_logs_transitions(tmp_path: Pa
     assert list(result.completed_stages) == list(STAGE_PIPELINE.NEW_STAGE_SEQUENCE)
     assert result.output_lines[0] == "[stage:intake]"
     assert "status=pass;" in result.output_lines[1]
-    assert any("progress=Stage 1 of 9 complete" in line for line in result.output_lines)
+    assert any("progress=Stage 1 of 10 complete" in line for line in result.output_lines)
     assert any(line == "[stage:route]" for line in result.output_lines)
     assert "[stage:route] status=pass;" in normalized_output
     assert "next_action=Pipeline complete." in normalized_output
-    assert any("progress=Stage 9 of 9 complete" in line for line in result.output_lines)
+    assert any("progress=Stage 10 of 10 complete" in line for line in result.output_lines)
     assert all("\u001b[" not in line for line in result.output_lines)
     assert [entry["stage"] for entry in result.evidence_bundle["stage_transitions"]] == list(
         STAGE_PIPELINE.NEW_STAGE_SEQUENCE
@@ -68,8 +68,8 @@ def test_blocking_stage_stops_pipeline_and_saves_resume_state(tmp_path: Path) ->
     result = pipeline.run("new", handlers, context={"context_source": "path/to/context.yaml"})
 
     assert result.status == "blocked"
-    assert list(result.completed_stages) == ["intake", "sufficiency"]
-    assert calls == ["intake", "sufficiency", "rank"]
+    assert list(result.completed_stages) == ["intake", "extract", "sufficiency"]
+    assert calls == ["intake", "extract", "sufficiency", "rank"]
     assert result.current_stage == "rank"
     assert result.next_action == "return to discovery and enrich journey context"
     assert result.state_path == tmp_path / ".nextlens" / "pipeline-state.yaml"
@@ -77,7 +77,7 @@ def test_blocking_stage_stops_pipeline_and_saves_resume_state(tmp_path: Path) ->
     assert any("status=fail;" in line for line in result.output_lines)
     assert any("rollback_action=No further stages were run; resume from saved state." in line for line in result.output_lines)
     assert any("diagnostic_stage=rank" in line for line in result.output_lines)
-    assert any("progress=Stage 3 of 9 blocked" in line for line in result.output_lines)
+    assert any("progress=Stage 4 of 10 blocked" in line for line in result.output_lines)
     saved_text = result.state_path.read_text(encoding="utf-8")
     assert 'current_stage: "rank"' in saved_text
     assert 'next_action: "return to discovery and enrich journey context"' in saved_text
@@ -106,7 +106,7 @@ def test_resume_state_skips_completed_stages_after_interruption(tmp_path: Path) 
     )
 
     assert interrupted.status == "blocked"
-    assert list(interrupted.completed_stages) == ["intake", "sufficiency", "rank"]
+    assert list(interrupted.completed_stages) == ["intake", "extract", "sufficiency", "rank"]
 
     resumed_calls: list[str] = []
 
@@ -126,6 +126,7 @@ def test_resume_state_skips_completed_stages_after_interruption(tmp_path: Path) 
     assert resumed.status == "complete"
     assert resumed_calls[0] == "confirm"
     assert "intake" not in resumed_calls
+    assert "extract" not in resumed_calls
     assert "sufficiency" not in resumed_calls
     assert "rank" not in resumed_calls
     assert list(resumed.completed_stages) == list(STAGE_PIPELINE.NEW_STAGE_SEQUENCE)
