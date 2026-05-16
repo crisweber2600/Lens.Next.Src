@@ -10,11 +10,28 @@ stopping at the confirmation gate.
 from __future__ import annotations
 
 import copy
+import importlib.util
 from datetime import datetime, timezone
 from pathlib import Path
+import sys
 from typing import Any, Callable, Mapping
 
-from stage_pipeline import NextLensStagePipeline, StageResult, PipelineInterrupted
+_STAGE_PIPELINE_PATH = Path(__file__).resolve().parent / "stage_pipeline.py"
+_STAGE_PIPELINE_SPEC = importlib.util.spec_from_file_location(
+    "bmad_nextlens_stage_pipeline", _STAGE_PIPELINE_PATH
+)
+if _STAGE_PIPELINE_SPEC is None or _STAGE_PIPELINE_SPEC.loader is None:
+    raise ImportError(
+        f"Could not load stage_pipeline module from '{_STAGE_PIPELINE_PATH}'. "
+        "Ensure the file exists and is readable."
+    )
+_STAGE_PIPELINE_MOD = importlib.util.module_from_spec(_STAGE_PIPELINE_SPEC)
+sys.modules.setdefault(_STAGE_PIPELINE_SPEC.name, _STAGE_PIPELINE_MOD)
+_STAGE_PIPELINE_SPEC.loader.exec_module(_STAGE_PIPELINE_MOD)
+
+NextLensStagePipeline = _STAGE_PIPELINE_MOD.NextLensStagePipeline
+StageResult = _STAGE_PIPELINE_MOD.StageResult
+PipelineInterrupted = _STAGE_PIPELINE_MOD.PipelineInterrupted
 
 
 def create_new_action_handlers() -> dict[str, Callable[[dict[str, Any]], StageResult]]:
