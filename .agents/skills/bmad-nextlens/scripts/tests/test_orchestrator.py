@@ -6,6 +6,8 @@ from pathlib import Path
 import sys
 from textwrap import dedent
 
+import yaml
+
 
 MODULE_PATH = Path(__file__).resolve().parent.parent / "orchestrator.py"
 SPEC = importlib.util.spec_from_file_location("nextlens_orchestrator", MODULE_PATH)
@@ -22,8 +24,28 @@ def test_run_new_action_pipeline_blocks_on_raw_prose_without_top_down_context(tm
     )
 
     assert result["status"] == "blocked"
-    assert result["current_stage"] == "intake"
+    assert result["current_stage"] == "sufficiency"
+    assert result["completed_stages"] == ["intake", "extract"]
     assert "top_down_context" in result["output"]
+    concepts = json.loads((tmp_path / ".nextlens" / "artifacts" / "extracted-concepts.json").read_text(encoding="utf-8"))
+    assert concepts["decision"] == "captured"
+    assert concepts["possibleOpenQuestions"]
+
+
+def test_run_new_action_pipeline_consumes_extracted_concepts_before_requiring_context(tmp_path: Path) -> None:
+    concepts_path = tmp_path / "extracted-concepts.yaml"
+    concepts_path.write_text(_extracted_concepts_yaml(), encoding="utf-8")
+
+    result = ORCHESTRATOR.run_new_action_pipeline(
+        str(concepts_path),
+        docs_path=tmp_path,
+    )
+
+    assert result["status"] == "blocked"
+    assert result["completed_stages"] == ["intake", "extract"]
+    artifact = json.loads((tmp_path / ".nextlens" / "artifacts" / "extracted-concepts.json").read_text(encoding="utf-8"))
+    assert artifact["decision"] == "consumed"
+    assert artifact["possibleCandidateFeatures"][0]["id"] == "feature-context-gate"
 
 
 def test_run_new_action_pipeline_blocks_when_context_sufficiency_fails(tmp_path: Path) -> None:
@@ -63,6 +85,15 @@ def test_run_new_action_pipeline_emits_packet_after_explicit_confirmation(tmp_pa
     assert packet["featureId"] == "feature-context-gate"
     assert packet["system"]["thesis"] == "Improve planning fidelity"
     assert packet["doctorSummary"]["status"] == "pass"
+    assert Path(packet["evidenceBundleRef"]).exists()
+    bundle = yaml.safe_load(Path(packet["evidenceBundleRef"]).read_text(encoding="utf-8"))["evidence_bundle"]
+    assert bundle["schemaVersion"] == "nextlens.evidence-bundle.v1"
+    assert bundle["packetId"] == packet["packetId"]
+    assert bundle["featureId"] == "feature-context-gate"
+    assert bundle["extractedConceptsRef"] == "artifacts/extracted-concepts.json"
+    assert bundle["stageOutcomes"]["extracted_concepts"] == "skipped"
+    skipped = json.loads((tmp_path / ".nextlens" / "artifacts" / "extracted-concepts.json").read_text(encoding="utf-8"))
+    assert skipped["decision"] == "already_curated"
     assert any((tmp_path / ".nextlens").glob("doctor-*.jsonl"))
 
 
@@ -106,6 +137,40 @@ top_down_context:
     - risk-three
   decisions: []
   relationshipRefs: []
+"""
+    ).strip()
+
+
+def _extracted_concepts_yaml() -> str:
+    return dedent(
+        """
+extracted_concepts:
+  schemaVersion: nextlens.extracted-concepts.v1
+  possibleRoles:
+    - id: role-operator
+      name: Operator
+  possibleStakeholders:
+    - id: stakeholder-reviewer
+      name: Reviewer
+  possibleOutcomes:
+    - id: outcome-reduce-ambiguity
+      name: Reduce ambiguity
+  possibleOperatingLoops:
+    - id: loop-planning
+      name: Planning loop
+  possibleJourneys:
+    - id: journey-intake
+      name: Intake
+  possibleCandidateFeatures:
+    - id: feature-context-gate
+      name: Context sufficiency gate
+  possibleRisks:
+    - id: risk-raw-prose
+      name: Raw prose bypass
+  possibleOpenQuestions:
+    - What top-down context is authoritative?
+  possibleRelationshipRefs:
+    - nextlens->role-operator
 """
     ).strip()
 

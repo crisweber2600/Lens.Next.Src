@@ -20,12 +20,90 @@ else:
     _YAML_IMPORT_ERROR = None
 
 
+NEXTLENS_EVIDENCE_BUNDLE_SCHEMA_VERSION = "nextlens.evidence-bundle.v1"
+
+NEXTLENS_STAGE_OUTCOME_DEFAULTS = {
+    "intake": "pass",
+    "extracted_concepts": "skipped",
+    "context_sufficiency": "pass",
+    "ranking": "pass",
+    "confirmation": "pass",
+    "authoritative_write": "pass",
+    "derived_graph_rebuild": "pass",
+    "doctor": "pass",
+    "packet_emission": "pass",
+    "bmad_handoff": "pending",
+    "implementation_evidence": "pending",
+    "validation": "pending",
+    "salmon": "none",
+    "landscape_update": "pending",
+}
+
+
 @dataclass(frozen=True)
 class EvidenceBundleResult:
     status: str
     path: Path | None = None
     bundle: dict[str, Any] = field(default_factory=dict)
     error: str | None = None
+
+
+def generate_nextlens_evidence_bundle(
+    docs_path: str | Path,
+    *,
+    packet: Mapping[str, Any],
+    artifact_refs: Mapping[str, Any] | None = None,
+    stage_outcomes: Mapping[str, str] | None = None,
+    now_factory: Callable[[], datetime] | None = None,
+    replace_fn: Callable[[str, str], None] | None = None,
+) -> EvidenceBundleResult:
+    try:
+        yaml_module = _require_yaml()
+        bundle = build_nextlens_evidence_bundle(
+            packet=packet,
+            artifact_refs=artifact_refs,
+            stage_outcomes=stage_outcomes,
+            now_factory=now_factory,
+        )
+        output_path = Path(str(packet.get("evidenceBundleRef") or "")).expanduser()
+        if not output_path.is_absolute():
+            output_path = Path(docs_path) / output_path
+        _atomic_write_yaml(output_path, bundle, yaml_module, replace_fn=replace_fn)
+        return EvidenceBundleResult(status="pass", path=output_path, bundle=bundle)
+    except Exception as exc:
+        return EvidenceBundleResult(status="fail", error=str(exc))
+
+
+def build_nextlens_evidence_bundle(
+    *,
+    packet: Mapping[str, Any],
+    artifact_refs: Mapping[str, Any] | None = None,
+    stage_outcomes: Mapping[str, str] | None = None,
+    now_factory: Callable[[], datetime] | None = None,
+) -> dict[str, Any]:
+    refs = dict(artifact_refs or {})
+    outcomes = dict(NEXTLENS_STAGE_OUTCOME_DEFAULTS)
+    outcomes.update({str(key): str(value) for key, value in dict(stage_outcomes or {}).items()})
+    packet_id = str(packet.get("packetId") or "")
+    feature_id = str(packet.get("featureId") or "")
+    return {
+        "evidence_bundle": {
+            "schemaVersion": NEXTLENS_EVIDENCE_BUNDLE_SCHEMA_VERSION,
+            "runId": str(refs.get("runId") or "run.001"),
+            "packetId": packet_id,
+            "featureId": feature_id,
+            "inputAnalysisRef": str(refs.get("inputAnalysisRef") or "artifacts/input-analysis.json"),
+            "extractedConceptsRef": str(refs.get("extractedConceptsRef") or "artifacts/extracted-concepts.json"),
+            "topDownContextRef": str(refs.get("topDownContextRef") or "artifacts/top-down-context.yaml"),
+            "contextSufficiencyRef": str(refs.get("contextSufficiencyRef") or "artifacts/context-sufficiency.json"),
+            "rankingTraceRef": str(refs.get("rankingTraceRef") or "artifacts/ranking-trace.json"),
+            "doctorReportRef": str(refs.get("doctorReportRef") or "artifacts/doctor-report.jsonl"),
+            "salmonRoutingRef": str(refs.get("salmonRoutingRef") or "artifacts/salmon-routing.json"),
+            "idempotencyDecisionRef": str(refs.get("idempotencyDecisionRef") or "artifacts/idempotency.json"),
+            "stageOutcomes": outcomes,
+            "createdAt": _utc_timestamp(now_factory),
+        }
+    }
 
 
 def evidence_bundle_path(docs_path: str | Path, *, run_id: str, packet_id: str | None = None) -> Path:

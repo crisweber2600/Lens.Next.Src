@@ -101,7 +101,7 @@ def compose_feature_packet(
             schema_version=schema_module.FEATURE_PACKET_SCHEMA_VERSION,
             created_at=created_at,
         ),
-        "evidenceBundleRef": str(docs_root / ".nextlens" / "evidence" / f"{selected_candidate_id}.json"),
+        "evidenceBundleRef": str(docs_root / ".nextlens" / f"evidence-{packet_id}.yaml"),
         "createdAt": created_at,
     }
     validation = schema_module.validate_feature_packet_schema(

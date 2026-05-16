@@ -53,6 +53,8 @@ def _load_runtime_module(module_name: str, file_name: str):
 CONTEXT_LOADER = _load_runtime_module("context_loader", "context_loader.py")
 DERIVED_GRAPH = _load_runtime_module("derived_graph", "derived_graph.py")
 DOCTOR_CHECKS = _load_runtime_module("doctor_checks", "doctor_checks.py")
+EVIDENCE_BUNDLE = _load_runtime_module("evidence_bundle", "evidence_bundle.py")
+EXTRACTED_CONCEPTS = _load_runtime_module("extracted_concepts", "extracted_concepts.py")
 FEATURE_PACKET_COMPOSER = _load_runtime_module("feature_packet_composer", "feature_packet_composer.py")
 FEATURE_PACKET_EMITTER = _load_runtime_module("feature_packet_emitter", "feature_packet_emitter.py")
 FEATURE_SCORING = _load_runtime_module("feature_scoring", "feature_scoring.py")
@@ -80,11 +82,12 @@ class _RuntimeLandscapeEntity:
 def create_new_action_handlers() -> dict[str, Callable[[dict[str, Any]], StageResult]]:
     """Create stage handlers for the 'new' action pipeline.
     
-    Returns handlers for: intake, sufficiency, rank, confirm, write,
+    Returns handlers for: intake, extract, sufficiency, rank, confirm, write,
     rebuild, validate, emit, route
     """
     return {
         "intake": _handle_intake,
+        "extract": _handle_extract,
         "sufficiency": _handle_sufficiency,
         "rank": _handle_rank,
         "confirm": _handle_confirm,
@@ -108,15 +111,23 @@ def _handle_intake(context: dict[str, Any]) -> StageResult:
 
     try:
         loaded = _load_top_down_context(source)
-    except CONTEXT_LOADER.ContextValidationError as exc:
+    except CONTEXT_LOADER.ContextValidationError as top_down_exc:
+        try:
+            extracted = EXTRACTED_CONCEPTS.load_extracted_concepts(source)
+            intake_mode = "extracted_concepts"
+        except EXTRACTED_CONCEPTS.ExtractedConceptsError:
+            extracted = EXTRACTED_CONCEPTS.build_from_raw_material(source)
+            intake_mode = "raw_discovery_material"
         return StageResult(
-            status="fail",
-            detail=str(exc),
-            next_action="Provide a top_down_context YAML payload or file before ranking candidates.",
-            remediation_hints=(
-                "Build a top_down_context payload before packet emission.",
-                "Raw prose must not be emitted directly as a Feature packet.",
-            ),
+            status="pass",
+            detail="Discovery material captured for extracted-concepts curation",
+            state_patch={
+                "context_loaded": False,
+                "source": source,
+                "intake_mode": intake_mode,
+                "intake_warning": str(top_down_exc),
+                "extracted_concepts": extracted,
+            },
         )
 
     return StageResult(
@@ -125,10 +136,42 @@ def _handle_intake(context: dict[str, Any]) -> StageResult:
         state_patch={
             "context_loaded": True,
             "source": source,
+            "intake_mode": "top_down_context",
             "loaded_context": loaded.payload,
             "context_warnings": list(loaded.warnings),
             "context_source_path": str(loaded.source_path) if loaded.source_path else None,
         },
+    )
+
+
+def _handle_extract(context: dict[str, Any]) -> StageResult:
+    """Capture or explicitly skip candidate concepts before top-down sufficiency."""
+    docs_path = context.get("docs_path", ".nextlens")
+    if context.get("context_loaded"):
+        concepts = EXTRACTED_CONCEPTS.build_already_curated(context.get("loaded_context") or {})
+        detail = "Extracted concepts skipped; top_down_context is already curated"
+        stage_status = "warning"
+    else:
+        concepts = dict(context.get("extracted_concepts") or {})
+        if not concepts:
+            return StageResult(
+                status="fail",
+                detail="No top_down_context or extracted_concepts could be captured",
+                next_action="Provide raw discovery material, extracted_concepts, or top_down_context.",
+            )
+        detail = "Extracted concepts captured; top_down_context still required before ranking"
+        stage_status = "pass"
+
+    artifact_path = EXTRACTED_CONCEPTS.write_extracted_concepts_artifact(docs_path, concepts)
+    return StageResult(
+        status=stage_status,
+        detail=detail,
+        state_patch={
+            "extracted_concepts_decision": concepts.get("decision"),
+            "extracted_concepts": concepts,
+            "extracted_concepts_path": str(artifact_path),
+        },
+        remediation_hints=(str(concepts.get("rationale") or ""),),
     )
 
 
@@ -137,7 +180,15 @@ def _handle_sufficiency(context: dict[str, Any]) -> StageResult:
     if not context.get("context_loaded"):
         return StageResult(
             status="fail",
-            detail="Context not loaded; intake stage may have failed",
+            detail="top_down_context is required before context sufficiency and candidate ranking",
+            next_action="curate_top_down_context",
+            remediation_hints=(
+                "Use the extracted_concepts artifact as candidate input, then provide authoritative top_down_context.",
+                "Raw prose or extracted_concepts must not be emitted directly as a Feature packet.",
+            ),
+            diagnostic_context={
+                "extracted_concepts_path": str(context.get("extracted_concepts_path") or ""),
+            },
         )
 
     report = CONTEXT_LOADER.evaluate_context_sufficiency(
@@ -394,13 +445,59 @@ def _handle_emit(context: dict[str, Any]) -> StageResult:
             remediation_hints=tuple(emission.output_lines),
             rollback_action=emission.rollback_guidance,
         )
+    evidence = EVIDENCE_BUNDLE.generate_nextlens_evidence_bundle(
+        docs_path,
+        packet=context.get("packet_candidate") or {},
+        artifact_refs={
+            "inputAnalysisRef": "artifacts/input-analysis.json",
+            "extractedConceptsRef": _relative_artifact_ref(
+                docs_path,
+                context.get("extracted_concepts_path"),
+                fallback="artifacts/extracted-concepts.json",
+            ),
+            "topDownContextRef": _top_down_context_ref(context),
+            "contextSufficiencyRef": "artifacts/context-sufficiency.json",
+            "rankingTraceRef": "artifacts/ranking-trace.json",
+            "doctorReportRef": _relative_artifact_ref(
+                docs_path,
+                context.get("doctor_report_path"),
+                fallback="artifacts/doctor-report.jsonl",
+            ),
+            "salmonRoutingRef": "artifacts/salmon-routing.json",
+            "idempotencyDecisionRef": "artifacts/idempotency.json",
+        },
+        stage_outcomes={
+            "intake": "pass",
+            "extracted_concepts": _stage_outcome_for_extracted_concepts(context),
+            "context_sufficiency": "pass",
+            "ranking": "pass",
+            "confirmation": "pass",
+            "authoritative_write": "pass",
+            "derived_graph_rebuild": "pass",
+            "doctor": "pass",
+            "packet_emission": "pass",
+            "bmad_handoff": "pending",
+            "implementation_evidence": "pending",
+            "validation": "pending",
+            "salmon": "none",
+            "landscape_update": "pending",
+        },
+    )
+    if evidence.status != "pass":
+        return StageResult(
+            status="fail",
+            detail=evidence.error or "Evidence bundle generation failed",
+            rollback_action="Packet was emitted; generate the evidence bundle before downstream handoff.",
+        )
+
     return StageResult(
         status="pass",
-        detail=f"Feature packet emitted to {emission.packet_path}",
+        detail=f"Feature packet emitted to {emission.packet_path}; evidence bundle written to {evidence.path}",
         state_patch={
             "packet_emitted": True,
             "emission_timestamp": _utc_timestamp(),
             "packet_path": str(emission.packet_path),
+            "evidence_bundle_path": str(evidence.path),
         },
     )
 
@@ -498,6 +595,26 @@ def _load_top_down_context(source: str) -> Any:
     if source_path.exists():
         return CONTEXT_LOADER.load_context_file(source_path)
     return CONTEXT_LOADER.parse_context_yaml(source)
+
+
+def _relative_artifact_ref(docs_path: str | Path, value: Any, *, fallback: str) -> str:
+    if not value:
+        return fallback
+    try:
+        return str(Path(value).resolve().relative_to((Path(docs_path) / ".nextlens").resolve()))
+    except (OSError, ValueError):
+        return str(value)
+
+
+def _top_down_context_ref(context: Mapping[str, Any]) -> str:
+    source_path = context.get("context_source_path")
+    if source_path:
+        return str(source_path)
+    return "artifacts/top-down-context.yaml"
+
+
+def _stage_outcome_for_extracted_concepts(context: Mapping[str, Any]) -> str:
+    return "skipped" if context.get("extracted_concepts_decision") == "already_curated" else "pass"
 
 
 def _build_landscape_state(context: Mapping[str, Any], docs_path: str | Path) -> SimpleNamespace:

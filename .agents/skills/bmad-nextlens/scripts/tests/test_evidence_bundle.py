@@ -96,6 +96,39 @@ def test_errors_and_warnings_are_preserved() -> None:
     assert bundle["errors_and_warnings"]["exception_traces"][0]["message"] == "bad packet"
 
 
+def test_generate_nextlens_evidence_bundle_writes_signal_model_bundle(tmp_path: Path) -> None:
+    packet = {
+        "packetId": "packet.feature.context_sufficiency_gate.001",
+        "featureId": "feature.context_sufficiency_gate",
+        "evidenceBundleRef": str(tmp_path / ".nextlens" / "evidence-packet.feature.context_sufficiency_gate.001.yaml"),
+    }
+
+    result = EVIDENCE_BUNDLE.generate_nextlens_evidence_bundle(
+        tmp_path,
+        packet=packet,
+        artifact_refs={
+            "runId": "run.001",
+            "extractedConceptsRef": "artifacts/extracted-concepts.json",
+            "doctorReportRef": "artifacts/doctor-report.jsonl",
+        },
+        stage_outcomes={"extracted_concepts": "pass", "salmon": "created"},
+        now_factory=lambda: datetime(2026, 5, 14, 10, 0, 6, tzinfo=timezone.utc),
+    )
+
+    assert result.status == "pass"
+    bundle = yaml.safe_load(result.path.read_text(encoding="utf-8"))["evidence_bundle"]
+    assert bundle["schemaVersion"] == "nextlens.evidence-bundle.v1"
+    assert bundle["runId"] == "run.001"
+    assert bundle["packetId"] == packet["packetId"]
+    assert bundle["featureId"] == packet["featureId"]
+    assert bundle["extractedConceptsRef"] == "artifacts/extracted-concepts.json"
+    assert bundle["doctorReportRef"] == "artifacts/doctor-report.jsonl"
+    assert bundle["stageOutcomes"]["extracted_concepts"] == "pass"
+    assert bundle["stageOutcomes"]["bmad_handoff"] == "pending"
+    assert bundle["stageOutcomes"]["salmon"] == "created"
+    assert bundle["createdAt"] == "2026-05-14T10:00:06Z"
+
+
 def _manifest() -> dict[str, object]:
     collector = EVIDENCE_COLLECTOR.EvidenceCollector(
         run_id="run-1",
