@@ -33,10 +33,13 @@ NEXTLENS_STAGE_OUTCOME_DEFAULTS = {
     "doctor": "pass",
     "packet_emission": "pass",
     "bmad_handoff": "pending",
+    "bmad_artifacts": "pending",
+    "stories": "pending",
     "implementation_evidence": "pending",
     "validation": "pending",
     "salmon": "none",
     "landscape_update": "pending",
+    "derived_graph_refresh": "pending",
 }
 
 
@@ -74,6 +77,42 @@ def generate_nextlens_evidence_bundle(
         return EvidenceBundleResult(status="fail", error=str(exc))
 
 
+def merge_nextlens_evidence_bundle(
+    docs_path: str | Path,
+    *,
+    packet: Mapping[str, Any],
+    artifact_refs: Mapping[str, Any],
+    stage_outcomes: Mapping[str, str],
+    now_factory: Callable[[], datetime] | None = None,
+    replace_fn: Callable[[str, str], None] | None = None,
+) -> EvidenceBundleResult:
+    try:
+        yaml_module = _require_yaml()
+        output_path = nextlens_evidence_bundle_path(docs_path, packet=packet)
+        if output_path.exists():
+            loaded = yaml_module.safe_load(output_path.read_text(encoding="utf-8")) or {}
+            if not isinstance(loaded, Mapping):
+                raise ValueError(f"Evidence bundle at {output_path} must be a mapping.")
+            bundle = _merge_nextlens_evidence_bundle_payload(
+                loaded,
+                packet=packet,
+                artifact_refs=artifact_refs,
+                stage_outcomes=stage_outcomes,
+                now_factory=now_factory,
+            )
+        else:
+            bundle = build_nextlens_evidence_bundle(
+                packet=packet,
+                artifact_refs=artifact_refs,
+                stage_outcomes=stage_outcomes,
+                now_factory=now_factory,
+            )
+        _atomic_write_yaml(output_path, bundle, yaml_module, replace_fn=replace_fn)
+        return EvidenceBundleResult(status="pass", path=output_path, bundle=bundle)
+    except Exception as exc:
+        return EvidenceBundleResult(status="fail", error=str(exc))
+
+
 def build_nextlens_evidence_bundle(
     *,
     packet: Mapping[str, Any],
@@ -86,6 +125,7 @@ def build_nextlens_evidence_bundle(
     outcomes.update({str(key): str(value) for key, value in dict(stage_outcomes or {}).items()})
     packet_id = str(packet.get("packetId") or "")
     feature_id = str(packet.get("featureId") or "")
+    derived_graph_ref = refs.get("derivedGraphRef") or packet.get("derivedGraphRef")
     return {
         "evidence_bundle": {
             "schemaVersion": NEXTLENS_EVIDENCE_BUNDLE_SCHEMA_VERSION,
@@ -100,10 +140,32 @@ def build_nextlens_evidence_bundle(
             "doctorReportRef": str(refs.get("doctorReportRef") or "artifacts/doctor-report.jsonl"),
             "salmonRoutingRef": str(refs.get("salmonRoutingRef") or "artifacts/salmon-routing.json"),
             "idempotencyDecisionRef": str(refs.get("idempotencyDecisionRef") or "artifacts/idempotency.json"),
+            "bmadHandoffRefs": _string_mapping(refs.get("bmadHandoffRefs")),
+            "evidenceBundleRef": _string_or_none(refs.get("evidenceBundleRef") or packet.get("evidenceBundleRef")),
+            "evidenceRef": _string_or_none(refs.get("evidenceRef") or refs.get("evidenceBundleRef") or packet.get("evidenceBundleRef")),
+            "bmadArtifactBundleRef": _string_or_none(refs.get("bmadArtifactBundleRef")),
+            "implementationEvidenceRef": _string_or_none(refs.get("implementationEvidenceRef")),
+            "validationResultRef": _string_or_none(refs.get("validationResultRef")),
+            "validationRef": _string_or_none(refs.get("validationRef") or refs.get("validationResultRef")),
+            "salmonSignalRefs": _string_list(refs.get("salmonSignalRefs")),
+            "salmonRef": _string_or_none(refs.get("salmonRef") or _first_string(refs.get("salmonSignalRefs"))),
+            "landscapeUpdateRef": _string_or_none(refs.get("landscapeUpdateRef")),
+            "derivedGraphRef": _string_or_none(derived_graph_ref),
+            "sourceRefs": _string_mapping(refs.get("sourceRefs")),
             "stageOutcomes": outcomes,
             "createdAt": _utc_timestamp(now_factory),
         }
     }
+
+
+def nextlens_evidence_bundle_path(docs_path: str | Path, *, packet: Mapping[str, Any]) -> Path:
+    evidence_bundle_ref = str(packet.get("evidenceBundleRef") or "").strip()
+    if not evidence_bundle_ref:
+        raise ValueError("packet.evidenceBundleRef is required for evidence bundle path.")
+    output_path = Path(evidence_bundle_ref).expanduser()
+    if not output_path.is_absolute():
+        output_path = Path(docs_path) / output_path
+    return output_path
 
 
 def evidence_bundle_path(docs_path: str | Path, *, run_id: str, packet_id: str | None = None) -> Path:
@@ -252,6 +314,43 @@ def _atomic_write_yaml(
         raise
 
 
+def _merge_nextlens_evidence_bundle_payload(
+    existing: Mapping[str, Any],
+    *,
+    packet: Mapping[str, Any],
+    artifact_refs: Mapping[str, Any],
+    stage_outcomes: Mapping[str, str],
+    now_factory: Callable[[], datetime] | None,
+) -> dict[str, Any]:
+    root = dict(existing)
+    current_bundle = _mapping(root.get("evidence_bundle"))
+    if not current_bundle:
+        return build_nextlens_evidence_bundle(
+            packet=packet,
+            artifact_refs=artifact_refs,
+            stage_outcomes=stage_outcomes,
+            now_factory=now_factory,
+        )
+
+    merged_bundle = dict(current_bundle)
+    merged_bundle.setdefault("schemaVersion", NEXTLENS_EVIDENCE_BUNDLE_SCHEMA_VERSION)
+    merged_bundle["packetId"] = str(packet.get("packetId") or merged_bundle.get("packetId") or "")
+    merged_bundle["featureId"] = str(packet.get("featureId") or merged_bundle.get("featureId") or "")
+    for key, value in dict(artifact_refs).items():
+        if key == "salmonSignalRefs":
+            merged_bundle[key] = _string_list(value)
+        elif key in {"bmadHandoffRefs", "sourceRefs"}:
+            merged_bundle[key] = _string_mapping(value)
+        else:
+            merged_bundle[key] = _string_or_none(value)
+    outcomes = dict(_mapping(merged_bundle.get("stageOutcomes")))
+    outcomes.update({str(key): str(value) for key, value in dict(stage_outcomes).items()})
+    merged_bundle["stageOutcomes"] = outcomes
+    merged_bundle["updatedAt"] = _utc_timestamp(now_factory)
+    root["evidence_bundle"] = merged_bundle
+    return root
+
+
 def _mapping(value: Any) -> Mapping[str, Any]:
     return value if isinstance(value, Mapping) else {}
 
@@ -264,6 +363,28 @@ def _string_or_none(value: Any) -> str | None:
     if value is None:
         return None
     return str(value)
+
+
+def _first_string(value: Any) -> str | None:
+    values = _string_list(value)
+    return values[0] if values else None
+
+
+def _string_list(value: Any) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, Mapping):
+        return [str(item) for item in value.values() if str(item).strip()]
+    if isinstance(value, (list, tuple)):
+        return [str(item) for item in value if str(item).strip()]
+    text = str(value).strip()
+    return [text] if text else []
+
+
+def _string_mapping(value: Any) -> dict[str, str]:
+    if not isinstance(value, Mapping):
+        return {}
+    return {str(key): str(item) for key, item in value.items() if item is not None}
 
 
 def _require_yaml():

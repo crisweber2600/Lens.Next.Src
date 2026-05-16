@@ -151,6 +151,7 @@ def _repo_fixture(tmp_path: Path) -> Path:
         "bmad-nextlens-setup",
         "bmad-nextlens-new",
         "bmad-nextlens-doctor",
+        "bmad-nextlens-validate",
         "bmad-nextlens-salmon",
     ):
         skill_path = repo_root / ".agents" / "skills" / skill_name / "SKILL.md"

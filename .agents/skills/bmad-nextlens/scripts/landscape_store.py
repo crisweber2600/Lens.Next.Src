@@ -28,6 +28,7 @@ LANDSCAPE_ENTITY_DIRECTORIES = (
     "capability",
     "decision",
     "risk",
+    "feature",
 )
 
 

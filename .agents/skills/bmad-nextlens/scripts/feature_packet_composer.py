@@ -59,6 +59,7 @@ def compose_feature_packet(
     candidate_definition = _candidate_definition(context, selected_candidate_id)
     created_at = _utc_timestamp(now_factory)
     packet_id = (packet_id_factory or _uuid4)()
+    source_mode = _source_mode(context, schema_module.FEATURE_PACKET_SOURCE_MODE)
     selected_feature = _selected_feature_payload(selected_candidate, candidate_definition)
     trace = _trace_payload(candidate_definition, context)
 
@@ -66,7 +67,7 @@ def compose_feature_packet(
         "schemaVersion": schema_module.FEATURE_PACKET_SCHEMA_VERSION,
         "packetId": packet_id,
         "featureId": selected_candidate_id,
-        "sourceMode": schema_module.FEATURE_PACKET_SOURCE_MODE,
+        "sourceMode": source_mode,
         "selectedFeature": selected_feature,
         "trace": trace,
         "selectionRationale": _selection_rationale_payload(
@@ -81,7 +82,7 @@ def compose_feature_packet(
         "outcomes": _context_collection_payload(context, "outcomes", trace.get("outcomeIds")),
         "operatingLoops": _context_collection_payload(context, "operatingLoops", trace.get("operatingLoopIds")),
         "journeys": _context_collection_payload(context, "journeys", trace.get("journeyIds")),
-        "openQuestions": _list_value(context.get("openQuestions")),
+        "openQuestions": _structured_list_value(context.get("openQuestions")),
         "risks": _context_collection_payload(context, "risks"),
         "decisions": _context_collection_payload(context, "decisions"),
         "relationshipRefs": _append_missing(
@@ -107,6 +108,7 @@ def compose_feature_packet(
     validation = schema_module.validate_feature_packet_schema(
         packet,
         selected_candidate_id=selected_candidate_id,
+        expected_source_mode=source_mode,
     )
     return FeaturePacketCompositionResult(
         status="pass" if validation.is_valid else "fail",
@@ -366,6 +368,11 @@ def _context_collection_payload(
     return filtered or values
 
 
+def _source_mode(context: Mapping[str, Any], default: str) -> str:
+    raw_value = context.get("sourceMode") or context.get("source_mode") or default
+    return str(raw_value).strip() or default
+
+
 def _first_id(*payloads: Mapping[str, Any], keys: Sequence[str]) -> str:
     for payload in payloads:
         for key in keys:
@@ -429,6 +436,18 @@ def _list_value(value: Any) -> list[str]:
     if not isinstance(value, list):
         return []
     return [str(item) for item in value]
+
+
+def _structured_list_value(value: Any) -> list[Any]:
+    if not isinstance(value, (list, tuple)):
+        return []
+    items: list[Any] = []
+    for item in value:
+        if isinstance(item, Mapping):
+            items.append(dict(item))
+        else:
+            items.append(item)
+    return items
 
 
 def _append_missing(values: Sequence[Any], required_values: Sequence[str]) -> list[str]:

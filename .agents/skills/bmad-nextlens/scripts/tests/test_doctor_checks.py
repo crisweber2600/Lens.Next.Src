@@ -179,11 +179,24 @@ def test_registry_contains_required_ep7_doctor_checks() -> None:
     check_ids = sorted(check.check_id for check in DOCTOR_CHECKS.build_default_doctor_check_registry().list_checks())
 
     assert check_ids == [
+        "bmad-artifact-bundle",
+        "bmad-story-trace",
         "context-readiness",
+        "derived-graph-authority",
+        "derived-graph-stale",
         "feature-scope",
         "graph-consistency",
+        "handoff-artifacts-optional",
+        "handoff-artifacts-required",
+        "handoff-scope",
+        "implementation-evidence-identity",
+        "implementation-evidence-schema",
+        "landscape-update-schema",
+        "review-evidence",
+        "salmon-signal-schema",
         "schema-validity",
         "traceability",
+        "validation-result-schema",
         "write-boundary",
     ]
 
@@ -398,8 +411,8 @@ def test_write_doctor_jsonl_report_and_summary(tmp_path: Path) -> None:
     assert len(lines) == len(run_result.results) + 1
     assert lines[0]["check_id"] == "context-readiness"
     summary = lines[-1]
-    assert summary["checks_run"] == 6
-    assert summary["passed"] == 6
+    assert summary["checks_run"] == 19
+    assert summary["passed"] == 19
     assert summary["overall_status"] == "pass"
 
 

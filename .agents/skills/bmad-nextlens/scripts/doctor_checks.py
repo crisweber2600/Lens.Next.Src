@@ -20,6 +20,8 @@ DOCTOR_STATUSES = frozenset({"pass", "warning", "fail"})
 ADVISORY_CONFIRMATION_PROMPT = "Proceed with advisory findings? [Y/n]"
 DEFAULT_DOCS_SUBPATH = ".nextlens"
 DOCTOR_REPORT_NAME_TEMPLATE = "doctor-{run_id}.jsonl"
+HANDOFF_REQUIRED_HINTS = ("prdInput", "uxInput", "architectureInput")
+HANDOFF_OPTIONAL_HINTS = ("epicStoryInput", "readinessInput")
 
 
 @dataclass(frozen=True)
@@ -238,6 +240,19 @@ def build_default_doctor_check_registry() -> DoctorCheckRegistry:
         _build_context_readiness_check(),
         _build_write_boundary_check(),
         _build_graph_consistency_check(),
+        _build_handoff_required_artifacts_check(),
+        _build_handoff_optional_artifacts_check(),
+        _build_handoff_scope_check(),
+        _build_bmad_artifact_bundle_check(),
+        _build_bmad_story_trace_check(),
+        _build_implementation_evidence_schema_check(),
+        _build_implementation_evidence_identity_check(),
+        _build_validation_result_schema_check(),
+        _build_salmon_signal_schema_check(),
+        _build_landscape_update_schema_check(),
+        _build_derived_graph_authority_check(),
+        _build_derived_graph_stale_check(),
+        _build_review_evidence_check(),
     ):
         registry.register(check)
     return registry
@@ -258,7 +273,10 @@ def write_doctor_jsonl_report(
     advisory = len(run_result.advisory_results)
     overall_status = _overall_doctor_status(run_result)
     payload_lines = []
-    for result in sorted(run_result.results, key=lambda item: item.check_id or ""):
+    for result in sorted(
+        run_result.results,
+        key=lambda item: (0 if item.check_id == "context-readiness" else 1, item.check_id or ""),
+    ):
         payload_lines.append(
             json.dumps(
                 {
@@ -413,6 +431,162 @@ def _build_graph_consistency_check() -> DoctorCheck:
         description="Validate derived graph consistency against authoritative landscape state.",
         remediation="Rebuild graph from current landscape state and re-run checks.",
         execute=_check_graph_consistency,
+    )
+
+
+def _build_handoff_required_artifacts_check() -> DoctorCheck:
+    return DoctorCheck(
+        check_id="handoff-artifacts-required",
+        name="BMAD handoff artifacts required",
+        category="readiness",
+        severity="blocking",
+        description="Verify required BMAD handoff artifacts referenced by the packet exist.",
+        remediation="Generate BMAD handoff artifacts and update packet hints before downstream planning.",
+        execute=_check_handoff_artifacts_required,
+    )
+
+
+def _build_handoff_optional_artifacts_check() -> DoctorCheck:
+    return DoctorCheck(
+        check_id="handoff-artifacts-optional",
+        name="BMAD handoff artifacts optional",
+        category="readiness",
+        severity="advisory",
+        description="Check for optional BMAD handoff artifacts referenced by the packet.",
+        remediation="Generate optional BMAD handoff artifacts when available.",
+        execute=_check_handoff_artifacts_optional,
+    )
+
+
+def _build_handoff_scope_check() -> DoctorCheck:
+    return DoctorCheck(
+        check_id="handoff-scope",
+        name="BMAD handoff scope boundary",
+        category="scope",
+        severity="blocking",
+        description="Ensure BMAD handoff files retain scope containment boundaries.",
+        remediation="Add scope containment warning and avoid inviting scope expansion in handoff files.",
+        execute=_check_handoff_scope,
+    )
+
+
+def _build_bmad_artifact_bundle_check() -> DoctorCheck:
+    return DoctorCheck(
+        check_id="bmad-artifact-bundle",
+        name="BMAD artifact bundle schema",
+        category="schema",
+        severity="blocking",
+        description="Validate BMAD artifact bundle schema and required fields.",
+        remediation="Repair BMAD artifact bundle schema issues before validation.",
+        execute=_check_bmad_artifact_bundle,
+    )
+
+
+def _build_bmad_story_trace_check() -> DoctorCheck:
+    return DoctorCheck(
+        check_id="bmad-story-trace",
+        name="BMAD story traceability",
+        category="traceability",
+        severity="blocking",
+        description="Validate BMAD story traces reference known artifacts or features.",
+        remediation="Update BMAD story traces to reference valid artifacts and features.",
+        execute=_check_bmad_story_trace,
+    )
+
+
+def _build_implementation_evidence_schema_check() -> DoctorCheck:
+    return DoctorCheck(
+        check_id="implementation-evidence-schema",
+        name="Implementation evidence schema",
+        category="schema",
+        severity="blocking",
+        description="Validate implementation evidence schema when validation is requested.",
+        remediation="Provide complete implementation evidence before validation.",
+        execute=_check_implementation_evidence_schema,
+    )
+
+
+def _build_implementation_evidence_identity_check() -> DoctorCheck:
+    return DoctorCheck(
+        check_id="implementation-evidence-identity",
+        name="Implementation evidence identity",
+        category="traceability",
+        severity="blocking",
+        description="Ensure implementation evidence packetId/featureId match the packet.",
+        remediation="Align implementation evidence identifiers with the emitted packet.",
+        execute=_check_implementation_evidence_identity,
+    )
+
+
+def _build_validation_result_schema_check() -> DoctorCheck:
+    return DoctorCheck(
+        check_id="validation-result-schema",
+        name="Validation result schema",
+        category="schema",
+        severity="blocking",
+        description="Validate downstream validation result schema.",
+        remediation="Repair validation result payload before downstream processing.",
+        execute=_check_validation_result_schema,
+    )
+
+
+def _build_salmon_signal_schema_check() -> DoctorCheck:
+    return DoctorCheck(
+        check_id="salmon-signal-schema",
+        name="Salmon signal schema",
+        category="schema",
+        severity="blocking",
+        description="Validate Salmon signal schema payloads.",
+        remediation="Repair invalid Salmon signals before routing.",
+        execute=_check_salmon_signal_schema,
+    )
+
+
+def _build_landscape_update_schema_check() -> DoctorCheck:
+    return DoctorCheck(
+        check_id="landscape-update-schema",
+        name="Landscape update schema",
+        category="schema",
+        severity="blocking",
+        description="Validate landscape update proposal schema.",
+        remediation="Repair landscape update payloads before applying.",
+        execute=_check_landscape_update_schema,
+    )
+
+
+def _build_derived_graph_authority_check() -> DoctorCheck:
+    return DoctorCheck(
+        check_id="derived-graph-authority",
+        name="Derived graph authority",
+        category="scope",
+        severity="blocking",
+        description="Prevent derived graph projections from being treated as authoritative.",
+        remediation="Mark only curated landscape state as authoritative truth.",
+        execute=_check_derived_graph_authority,
+    )
+
+
+def _build_derived_graph_stale_check() -> DoctorCheck:
+    return DoctorCheck(
+        check_id="derived-graph-stale",
+        name="Derived graph staleness",
+        category="schema",
+        severity="advisory",
+        description="Detect stale derived graph projections.",
+        remediation="Rebuild derived graph from current landscape state.",
+        execute=_check_derived_graph_stale,
+    )
+
+
+def _build_review_evidence_check() -> DoctorCheck:
+    return DoctorCheck(
+        check_id="review-evidence",
+        name="Optional review evidence",
+        category="readiness",
+        severity="advisory",
+        description="Confirm optional review evidence is available for downstream validation.",
+        remediation="Add goal, outcome, and journey evidence when available.",
+        execute=_check_review_evidence,
     )
 
 
@@ -775,6 +949,836 @@ def _check_graph_consistency(context: DoctorCheckContext) -> DoctorCheckResult:
         references=tuple(_dedupe_values(issues)),
         remediation="Rebuild derived graph and repair referenced relationships before emission.",
     )
+
+
+def _check_handoff_artifacts_required(context: DoctorCheckContext) -> DoctorCheckResult:
+    packet = _as_mapping(context.packet_candidate)
+    hints = _extract_handoff_hints(packet)
+    if not hints:
+        return DoctorCheckResult(
+            status="pass",
+            severity="blocking",
+            check_id="handoff-artifacts-required",
+            message="No BMAD handoff hints were provided.",
+            references=(),
+            remediation="",
+        )
+
+    docs_root = Path(context.docs_path) if context.docs_path else None
+    missing: list[str] = []
+    unresolved: list[str] = []
+    for field in HANDOFF_REQUIRED_HINTS:
+        raw_value = hints.get(field)
+        path = _resolve_handoff_path(raw_value, docs_root)
+        if path is None:
+            continue
+        if docs_root is None and not path.is_absolute():
+            unresolved.append(field)
+            continue
+        if not path.exists():
+            missing.append(f"{field}:{path}")
+
+    if unresolved:
+        return DoctorCheckResult(
+            status="warning",
+            severity="blocking",
+            check_id="handoff-artifacts-required",
+            message="docs_path is required to validate required BMAD handoff artifacts.",
+            references=tuple(sorted(set(unresolved))),
+            remediation="Provide docs_path to verify handoff artifacts.",
+        )
+    if missing:
+        return DoctorCheckResult(
+            status="fail",
+            severity="blocking",
+            check_id="handoff-artifacts-required",
+            message="Required BMAD handoff artifacts are missing.",
+            references=tuple(_dedupe_values(missing)),
+            remediation="Generate required BMAD handoff artifacts before downstream planning.",
+        )
+    return DoctorCheckResult(
+        status="pass",
+        severity="blocking",
+        check_id="handoff-artifacts-required",
+        message="Required BMAD handoff artifacts are present.",
+        references=tuple(sorted(HANDOFF_REQUIRED_HINTS)),
+        remediation="",
+    )
+
+
+def _check_handoff_artifacts_optional(context: DoctorCheckContext) -> DoctorCheckResult:
+    packet = _as_mapping(context.packet_candidate)
+    hints = _extract_handoff_hints(packet)
+    if not hints:
+        return DoctorCheckResult(
+            status="pass",
+            severity="advisory",
+            check_id="handoff-artifacts-optional",
+            message="No BMAD handoff hints were provided.",
+            references=(),
+            remediation="",
+        )
+
+    docs_root = Path(context.docs_path) if context.docs_path else None
+    missing: list[str] = []
+    unresolved: list[str] = []
+    for field in HANDOFF_OPTIONAL_HINTS:
+        raw_value = hints.get(field)
+        path = _resolve_handoff_path(raw_value, docs_root)
+        if path is None:
+            continue
+        if docs_root is None and not path.is_absolute():
+            unresolved.append(field)
+            continue
+        if not path.exists():
+            missing.append(f"{field}:{path}")
+
+    if unresolved:
+        return DoctorCheckResult(
+            status="warning",
+            severity="advisory",
+            check_id="handoff-artifacts-optional",
+            message="docs_path is required to validate optional BMAD handoff artifacts.",
+            references=tuple(sorted(set(unresolved))),
+            remediation="Provide docs_path to verify optional handoff artifacts.",
+        )
+    if missing:
+        return DoctorCheckResult(
+            status="warning",
+            severity="advisory",
+            check_id="handoff-artifacts-optional",
+            message="Optional BMAD handoff artifacts are missing.",
+            references=tuple(_dedupe_values(missing)),
+            remediation="Generate optional BMAD handoff artifacts when available.",
+        )
+    return DoctorCheckResult(
+        status="pass",
+        severity="advisory",
+        check_id="handoff-artifacts-optional",
+        message="Optional BMAD handoff artifacts are present.",
+        references=tuple(sorted(HANDOFF_OPTIONAL_HINTS)),
+        remediation="",
+    )
+
+
+def _check_handoff_scope(context: DoctorCheckContext) -> DoctorCheckResult:
+    packet = _as_mapping(context.packet_candidate)
+    hints = _extract_handoff_hints(packet)
+    docs_root = Path(context.docs_path) if context.docs_path else None
+    if not hints or docs_root is None:
+        return DoctorCheckResult(
+            status="pass",
+            severity="blocking",
+            check_id="handoff-scope",
+            message="No BMAD handoff files were provided for scope validation.",
+            references=(),
+            remediation="",
+        )
+
+    handoff_module = _load_runtime_module("bmad_handoff", "bmad_handoff.py")
+    issues: list[str] = []
+    for raw_value in hints.values():
+        path = _resolve_handoff_path(raw_value, docs_root)
+        if path is None or not path.exists():
+            continue
+        try:
+            content = path.read_text(encoding="utf-8")
+        except OSError as exc:
+            issues.append(f"{path}: unable to read ({exc})")
+            continue
+
+        boundary_issues = _handoff_boundary_issues(content, handoff_module)
+        issues.extend(f"{path}: {issue}" for issue in boundary_issues)
+        expansion_lines = _handoff_expansion_invites(content)
+        issues.extend(f"{path}: {line}" for line in expansion_lines)
+
+    if issues:
+        return DoctorCheckResult(
+            status="fail",
+            severity="blocking",
+            check_id="handoff-scope",
+            message="BMAD handoff scope boundary violations detected.",
+            references=tuple(_dedupe_values(issues)),
+            remediation="Restore scope containment warning and remove expansion invitations from handoff files.",
+        )
+    return DoctorCheckResult(
+        status="pass",
+        severity="blocking",
+        check_id="handoff-scope",
+        message="BMAD handoff files preserve scope boundaries.",
+        references=(),
+        remediation="",
+    )
+
+
+def _check_bmad_artifact_bundle(context: DoctorCheckContext) -> DoctorCheckResult:
+    bundle, errors = _load_downstream_payload(context, "bmad_artifact_bundle")
+    if errors:
+        return DoctorCheckResult(
+            status="fail",
+            severity="blocking",
+            check_id="bmad-artifact-bundle",
+            message="Failed to load BMAD artifact bundle.",
+            references=tuple(_dedupe_values(errors)),
+            remediation="Repair BMAD artifact bundle references before validation.",
+        )
+    if not bundle:
+        return DoctorCheckResult(
+            status="pass",
+            severity="blocking",
+            check_id="bmad-artifact-bundle",
+            message="No BMAD artifact bundle was supplied.",
+            references=(),
+            remediation="",
+        )
+
+    downstream = _load_runtime_module("downstream_hierarchy", "downstream_hierarchy.py")
+    validation = downstream.validate_bmad_artifact_bundle(bundle)
+    if validation.errors:
+        issues = [issue.message or issue.field for issue in validation.errors]
+        return DoctorCheckResult(
+            status="fail",
+            severity="blocking",
+            check_id="bmad-artifact-bundle",
+            message="BMAD artifact bundle schema validation failed.",
+            references=tuple(_dedupe_values(issues)),
+            remediation="Repair BMAD artifact bundle schema errors before downstream validation.",
+        )
+    return DoctorCheckResult(
+        status="pass",
+        severity="blocking",
+        check_id="bmad-artifact-bundle",
+        message="BMAD artifact bundle schema is valid.",
+        references=(),
+        remediation="",
+    )
+
+
+def _check_bmad_story_trace(context: DoctorCheckContext) -> DoctorCheckResult:
+    bundle, errors = _load_downstream_payload(context, "bmad_artifact_bundle")
+    if errors or not bundle:
+        return DoctorCheckResult(
+            status="pass",
+            severity="blocking",
+            check_id="bmad-story-trace",
+            message="No BMAD artifact bundle was supplied for story trace checks.",
+            references=(),
+            remediation="",
+        )
+
+    downstream = _load_runtime_module("downstream_hierarchy", "downstream_hierarchy.py")
+    validation = downstream.validate_bmad_artifact_bundle(bundle)
+    trace_errors = [
+        issue.message or issue.field
+        for issue in validation.errors
+        if "tracesTo" in issue.field
+    ]
+    if trace_errors:
+        return DoctorCheckResult(
+            status="fail",
+            severity="blocking",
+            check_id="bmad-story-trace",
+            message="BMAD story traceability is invalid.",
+            references=tuple(_dedupe_values(trace_errors)),
+            remediation="Ensure BMAD story traces reference known artifacts or feature identifiers.",
+        )
+    return DoctorCheckResult(
+        status="pass",
+        severity="blocking",
+        check_id="bmad-story-trace",
+        message="BMAD story traceability is valid.",
+        references=(),
+        remediation="",
+    )
+
+
+def _check_implementation_evidence_schema(context: DoctorCheckContext) -> DoctorCheckResult:
+    packet = _as_mapping(context.packet_candidate)
+    evidence, errors = _load_downstream_payload(context, "implementation_evidence")
+    validation_requested = _validation_requested(packet)
+    if errors:
+        return DoctorCheckResult(
+            status="fail",
+            severity="blocking",
+            check_id="implementation-evidence-schema",
+            message="Failed to load implementation evidence.",
+            references=tuple(_dedupe_values(errors)),
+            remediation="Repair implementation evidence references before validation.",
+        )
+    if not evidence:
+        if validation_requested:
+            return DoctorCheckResult(
+                status="fail",
+                severity="blocking",
+                check_id="implementation-evidence-schema",
+                message="Implementation evidence is required for validation but missing.",
+                references=("implementationEvidence",),
+                remediation="Provide implementation evidence before running validation.",
+            )
+        return DoctorCheckResult(
+            status="pass",
+            severity="blocking",
+            check_id="implementation-evidence-schema",
+            message="No implementation evidence supplied.",
+            references=(),
+            remediation="",
+        )
+
+    downstream = _load_runtime_module("downstream_hierarchy", "downstream_hierarchy.py")
+    validation = downstream.validate_implementation_evidence(evidence)
+    schema_errors = [
+        issue.message or issue.field
+        for issue in validation.errors
+        if issue.field not in {"packetId", "featureId"}
+    ]
+    if schema_errors and validation_requested:
+        return DoctorCheckResult(
+            status="fail",
+            severity="blocking",
+            check_id="implementation-evidence-schema",
+            message="Implementation evidence schema validation failed.",
+            references=tuple(_dedupe_values(schema_errors)),
+            remediation="Repair implementation evidence schema issues before validation.",
+        )
+    if schema_errors:
+        return DoctorCheckResult(
+            status="warning",
+            severity="blocking",
+            check_id="implementation-evidence-schema",
+            message="Implementation evidence schema has issues.",
+            references=tuple(_dedupe_values(schema_errors)),
+            remediation="Repair implementation evidence schema issues before validation.",
+        )
+    return DoctorCheckResult(
+        status="pass",
+        severity="blocking",
+        check_id="implementation-evidence-schema",
+        message="Implementation evidence schema is valid.",
+        references=(),
+        remediation="",
+    )
+
+
+def _check_implementation_evidence_identity(context: DoctorCheckContext) -> DoctorCheckResult:
+    packet = _as_mapping(context.packet_candidate)
+    evidence, errors = _load_downstream_payload(context, "implementation_evidence")
+    if errors or not evidence:
+        return DoctorCheckResult(
+            status="pass",
+            severity="blocking",
+            check_id="implementation-evidence-identity",
+            message="No implementation evidence supplied for identity checks.",
+            references=(),
+            remediation="",
+        )
+
+    downstream = _load_runtime_module("downstream_hierarchy", "downstream_hierarchy.py")
+    validation = downstream.validate_implementation_evidence(
+        evidence,
+        expected_packet_id=str(packet.get("packetId") or "") or None,
+        expected_feature_id=str(packet.get("featureId") or "") or None,
+    )
+    mismatch_errors = [
+        issue.message or issue.field
+        for issue in validation.errors
+        if issue.field in {"packetId", "featureId"}
+    ]
+    if mismatch_errors:
+        return DoctorCheckResult(
+            status="fail",
+            severity="blocking",
+            check_id="implementation-evidence-identity",
+            message="Implementation evidence identifiers do not match packet.",
+            references=tuple(_dedupe_values(mismatch_errors)),
+            remediation="Align implementation evidence packetId/featureId with the emitted packet.",
+        )
+    return DoctorCheckResult(
+        status="pass",
+        severity="blocking",
+        check_id="implementation-evidence-identity",
+        message="Implementation evidence identifiers match packet.",
+        references=(),
+        remediation="",
+    )
+
+
+def _check_validation_result_schema(context: DoctorCheckContext) -> DoctorCheckResult:
+    result_payload, errors = _load_downstream_payload(context, "validation_result")
+    if errors:
+        return DoctorCheckResult(
+            status="fail",
+            severity="blocking",
+            check_id="validation-result-schema",
+            message="Failed to load validation result payload.",
+            references=tuple(_dedupe_values(errors)),
+            remediation="Repair validation result references before downstream processing.",
+        )
+    if not result_payload:
+        return DoctorCheckResult(
+            status="pass",
+            severity="blocking",
+            check_id="validation-result-schema",
+            message="No validation result payload supplied.",
+            references=(),
+            remediation="",
+        )
+
+    downstream = _load_runtime_module("downstream_hierarchy", "downstream_hierarchy.py")
+    validation = downstream.validate_validation_result(result_payload)
+    if validation.errors:
+        issues = [issue.message or issue.field for issue in validation.errors]
+        return DoctorCheckResult(
+            status="fail",
+            severity="blocking",
+            check_id="validation-result-schema",
+            message="Validation result schema is invalid.",
+            references=tuple(_dedupe_values(issues)),
+            remediation="Repair validation result schema before downstream processing.",
+        )
+    return DoctorCheckResult(
+        status="pass",
+        severity="blocking",
+        check_id="validation-result-schema",
+        message="Validation result schema is valid.",
+        references=(),
+        remediation="",
+    )
+
+
+def _check_salmon_signal_schema(context: DoctorCheckContext) -> DoctorCheckResult:
+    events = _load_downstream_events(context)
+    if not events:
+        return DoctorCheckResult(
+            status="pass",
+            severity="blocking",
+            check_id="salmon-signal-schema",
+            message="No Salmon signals were supplied.",
+            references=(),
+            remediation="",
+        )
+
+    salmon_model = _load_runtime_module("salmon_event_model", "salmon_event_model.py")
+    issues: list[str] = []
+    for idx, event in enumerate(events):
+        validation = salmon_model.validate_salmon_event(event)
+        if not validation.is_valid:
+            for error in validation.errors:
+                issues.append(f"event[{idx}]: {error.message or error.field}")
+    if issues:
+        return DoctorCheckResult(
+            status="fail",
+            severity="blocking",
+            check_id="salmon-signal-schema",
+            message="Salmon signal schema validation failed.",
+            references=tuple(_dedupe_values(issues)),
+            remediation="Repair Salmon signal payloads before routing.",
+        )
+    return DoctorCheckResult(
+        status="pass",
+        severity="blocking",
+        check_id="salmon-signal-schema",
+        message="Salmon signal schema is valid.",
+        references=(),
+        remediation="",
+    )
+
+
+def _check_landscape_update_schema(context: DoctorCheckContext) -> DoctorCheckResult:
+    updates = _load_downstream_updates(context)
+    if not updates:
+        return DoctorCheckResult(
+            status="pass",
+            severity="blocking",
+            check_id="landscape-update-schema",
+            message="No landscape updates were supplied.",
+            references=(),
+            remediation="",
+        )
+
+    downstream = _load_runtime_module("downstream_salmon_landscape", "downstream_salmon_landscape.py")
+    issues: list[str] = []
+    for idx, update in enumerate(updates):
+        issues.extend(
+            f"update[{idx}]: {issue}"
+            for issue in _validate_landscape_update(update, downstream)
+        )
+    if issues:
+        return DoctorCheckResult(
+            status="fail",
+            severity="blocking",
+            check_id="landscape-update-schema",
+            message="Landscape update schema validation failed.",
+            references=tuple(_dedupe_values(issues)),
+            remediation="Repair landscape update payloads before applying.",
+        )
+    return DoctorCheckResult(
+        status="pass",
+        severity="blocking",
+        check_id="landscape-update-schema",
+        message="Landscape update schema is valid.",
+        references=(),
+        remediation="",
+    )
+
+
+def _check_derived_graph_authority(context: DoctorCheckContext) -> DoctorCheckResult:
+    packet = _as_mapping(context.packet_candidate)
+    if _has_authoritative_graph_flag(packet):
+        return DoctorCheckResult(
+            status="fail",
+            severity="blocking",
+            check_id="derived-graph-authority",
+            message="Derived graph was marked as authoritative.",
+            references=("derivedGraphAuthoritative",),
+            remediation="Ensure derived graph outputs remain non-authoritative projections.",
+        )
+    return DoctorCheckResult(
+        status="pass",
+        severity="blocking",
+        check_id="derived-graph-authority",
+        message="Derived graph remains non-authoritative.",
+        references=(),
+        remediation="",
+    )
+
+
+def _check_derived_graph_stale(context: DoctorCheckContext) -> DoctorCheckResult:
+    graph_payload = _prepare_graph_payload(context.derived_graph)
+    if not graph_payload:
+        return DoctorCheckResult(
+            status="pass",
+            severity="advisory",
+            check_id="derived-graph-stale",
+            message="No derived graph payload was supplied.",
+            references=(),
+            remediation="",
+        )
+
+    derived_graph = _load_runtime_module("derived_graph", "derived_graph.py")
+    try:
+        validation = derived_graph.validate_graph_consistency(graph_payload, context.landscape_state)
+    except Exception as exc:
+        return DoctorCheckResult(
+            status="warning",
+            severity="advisory",
+            check_id="derived-graph-stale",
+            message=f"Derived graph staleness check failed: {exc}",
+            references=(),
+            remediation="Rebuild derived graph from current landscape state.",
+        )
+
+    stale_issues = [
+        issue.message
+        for issue in validation.issues
+        if getattr(issue, "code", "") == "graph_checksum_stale"
+        or "checksum" in issue.message.lower()
+    ]
+    if stale_issues:
+        return DoctorCheckResult(
+            status="warning",
+            severity="advisory",
+            check_id="derived-graph-stale",
+            message="Derived graph appears stale.",
+            references=tuple(_dedupe_values(stale_issues)),
+            remediation="Rebuild derived graph from current landscape state.",
+        )
+    return DoctorCheckResult(
+        status="pass",
+        severity="advisory",
+        check_id="derived-graph-stale",
+        message="Derived graph is current.",
+        references=(),
+        remediation="",
+    )
+
+
+def _check_review_evidence(context: DoctorCheckContext) -> DoctorCheckResult:
+    evidence, errors = _load_downstream_payload(context, "implementation_evidence")
+    if errors or not evidence:
+        return DoctorCheckResult(
+            status="pass",
+            severity="advisory",
+            check_id="review-evidence",
+            message="No implementation evidence supplied for review evidence checks.",
+            references=(),
+            remediation="",
+        )
+
+    missing: list[str] = []
+    if not _as_list(evidence.get("goalEvidence")):
+        missing.append("goalEvidence")
+    if not _as_list(evidence.get("outcomeEvidence")):
+        missing.append("outcomeEvidence")
+    if not _as_list(evidence.get("journeyEvidence")):
+        missing.append("journeyEvidence")
+
+    if missing:
+        return DoctorCheckResult(
+            status="warning",
+            severity="advisory",
+            check_id="review-evidence",
+            message="Optional review evidence is missing.",
+            references=tuple(missing),
+            remediation="Provide goal, outcome, and journey evidence when available.",
+        )
+    return DoctorCheckResult(
+        status="pass",
+        severity="advisory",
+        check_id="review-evidence",
+        message="Optional review evidence is present.",
+        references=(),
+        remediation="",
+    )
+
+
+def _extract_handoff_hints(packet: Mapping[str, Any]) -> Mapping[str, Any]:
+    hints = _as_mapping(packet.get("bmadConsumerHints"))
+    if not hints:
+        hints = _as_mapping(packet.get("bmadConsumerContext"))
+    return hints
+
+
+def _resolve_handoff_path(value: Any, docs_root: Path | None) -> Path | None:
+    if not isinstance(value, str) or not value.strip():
+        return None
+    if not _looks_like_path(value):
+        return None
+    path = Path(value).expanduser()
+    if not path.is_absolute() and docs_root:
+        path = docs_root / path
+    return path
+
+
+def _looks_like_path(value: str) -> bool:
+    lowered = value.strip().lower()
+    if lowered.endswith((".md", ".markdown")):
+        return True
+    if "/" in lowered or "\\" in lowered:
+        return True
+    return False
+
+
+def _handoff_boundary_issues(content: str, handoff_module: Any) -> list[str]:
+    lowered = content.lower()
+    issues: list[str] = []
+    warning_text = str(getattr(handoff_module, "DEFAULT_SCOPE_CONTAINMENT_WARNING", "")).lower()
+    has_warning = "scope containment warning" in lowered or (warning_text and warning_text in lowered)
+    if not has_warning:
+        issues.append("missing scope containment warning")
+
+    boundary_lines = [str(item).lower() for item in getattr(handoff_module, "BMAD_EXPANSION_BOUNDARY", ())]
+    has_boundary_header = "bmad expansion boundary" in lowered
+    has_boundary_line = any(line and line in lowered for line in boundary_lines)
+    if not (has_boundary_header or has_boundary_line):
+        issues.append("missing BMAD expansion boundary")
+    return issues
+
+
+def _handoff_expansion_invites(content: str) -> list[str]:
+    invites: list[str] = []
+    for raw_line in content.splitlines():
+        line = raw_line.strip()
+        lower = line.lower()
+        if not line:
+            continue
+        if ("adjacent journey" in lower or "adjacent journeys" in lower) and _looks_like_expansion(lower):
+            invites.append(f"invites adjacent journeys: {line}")
+        if ("future feature" in lower or "future features" in lower) and _looks_like_expansion(lower):
+            invites.append(f"invites future features: {line}")
+    return invites
+
+
+def _looks_like_expansion(line: str) -> bool:
+    if any(term in line for term in ("do not", "don't", "avoid", "never")):
+        return False
+    return any(term in line for term in ("build", "implement", "expand", "include", "add"))
+
+
+def _validation_requested(packet: Mapping[str, Any]) -> bool:
+    if bool(packet.get("validationRequested") or packet.get("validationRequired")):
+        return True
+    downstream = _extract_downstream_mapping(packet)
+    for key in ("validationResult", "validation", "validationResultRef"):
+        if _has_meaningful_value(downstream.get(key) if downstream else None):
+            return True
+    return False
+
+
+def _extract_downstream_mapping(packet: Mapping[str, Any]) -> Mapping[str, Any]:
+    for key in ("downstreamArtifacts", "downstreamHierarchy", "downstream", "downstream_hierarchy"):
+        value = packet.get(key)
+        if isinstance(value, Mapping):
+            return value
+    return {}
+
+
+def _load_downstream_payload(context: DoctorCheckContext, payload_key: str) -> tuple[Mapping[str, Any] | None, list[str]]:
+    packet = _as_mapping(context.packet_candidate)
+    downstream = _extract_downstream_mapping(packet)
+    key_map = {
+        "bmad_artifact_bundle": ("bmadArtifactBundle", "artifactBundle", "bmad_artifact_bundle"),
+        "implementation_evidence": ("implementationEvidence", "implementation_evidence"),
+        "validation_result": ("validationResult", "validation_result", "validation"),
+    }
+    ref_map = {
+        "bmad_artifact_bundle": ("bmadArtifactBundleRef", "artifactBundleRef", "bmadArtifactBundlePath"),
+        "implementation_evidence": ("implementationEvidenceRef", "implementationEvidencePath"),
+        "validation_result": ("validationResultRef", "validationResultPath"),
+    }
+    payload = _first_value(downstream, key_map.get(payload_key, ())) or _first_value(packet, key_map.get(payload_key, ()))
+    errors: list[str] = []
+    if isinstance(payload, Mapping):
+        return payload, errors
+    if isinstance(payload, str) and payload.strip():
+        payload, load_errors = _load_payload_from_ref(payload, context.docs_path)
+        errors.extend(load_errors)
+        return payload, errors
+
+    ref = _first_value(downstream, ref_map.get(payload_key, ())) or _first_value(packet, ref_map.get(payload_key, ()))
+    if isinstance(ref, str) and ref.strip():
+        payload, load_errors = _load_payload_from_ref(ref, context.docs_path)
+        errors.extend(load_errors)
+        return payload, errors
+    return None, errors
+
+
+def _load_payload_from_ref(ref: str, docs_path: str | Path | None) -> tuple[Mapping[str, Any] | None, list[str]]:
+    errors: list[str] = []
+    path = Path(ref)
+    if not path.is_absolute() and docs_path:
+        path = Path(docs_path) / path
+    if not path.exists():
+        return None, [f"missing payload at {path}"]
+    try:
+        raw = path.read_text(encoding="utf-8")
+    except OSError as exc:
+        return None, [f"unable to read payload at {path}: {exc}"]
+
+    if path.suffix.lower() in {".json"}:
+        try:
+            payload = json.loads(raw)
+        except json.JSONDecodeError as exc:
+            return None, [f"invalid JSON at {path}: {exc}"]
+        if not isinstance(payload, Mapping):
+            return None, [f"payload at {path} must be an object"]
+        return payload, []
+    if path.suffix.lower() in {".yaml", ".yml"}:
+        try:
+            import yaml  # type: ignore
+        except ModuleNotFoundError as exc:
+            return None, [f"PyYAML not available for {path}: {exc}"]
+        payload = yaml.safe_load(raw)
+        if not isinstance(payload, Mapping):
+            return None, [f"payload at {path} must be an object"]
+        return payload, []
+    return None, [f"unsupported payload format at {path}"]
+
+
+def _first_value(mapping: Mapping[str, Any], keys: Sequence[str]) -> Any:
+    for key in keys:
+        if key in mapping:
+            return mapping.get(key)
+    return None
+
+
+def _load_downstream_events(context: DoctorCheckContext) -> list[Mapping[str, Any]]:
+    packet = _as_mapping(context.packet_candidate)
+    downstream = _extract_downstream_mapping(packet)
+    for key in ("salmonSignals", "salmonEvents", "salmonSignal"):
+        value = downstream.get(key) if downstream else packet.get(key)
+        if isinstance(value, Mapping):
+            return [value]
+        if isinstance(value, list):
+            return [item for item in value if isinstance(item, Mapping)]
+    return []
+
+
+def _load_downstream_updates(context: DoctorCheckContext) -> list[Mapping[str, Any]]:
+    packet = _as_mapping(context.packet_candidate)
+    downstream = _extract_downstream_mapping(packet)
+    for key in ("landscapeUpdates", "landscapeUpdate", "landscapeUpdateProposal"):
+        value = downstream.get(key) if downstream else packet.get(key)
+        if isinstance(value, Mapping):
+            return [value]
+        if isinstance(value, list):
+            return [item for item in value if isinstance(item, Mapping)]
+    return []
+
+
+def _validate_landscape_update(update: Mapping[str, Any], downstream_module: Any) -> list[str]:
+    issues: list[str] = []
+    if not isinstance(update, Mapping):
+        return ["landscape update must be an object"]
+
+    schema_version = str(update.get("schemaVersion") or "")
+    if schema_version != downstream_module.LANDSCAPE_UPDATE_SCHEMA_VERSION:
+        issues.append("schemaVersion mismatch")
+
+    update_id = str(update.get("updateId") or "")
+    if not update_id.strip():
+        issues.append("updateId is required")
+
+    status = str(update.get("status") or "").strip().lower()
+    if status not in downstream_module.LANDSCAPE_UPDATE_STATUSES:
+        issues.append("status is invalid")
+
+    source_refs = update.get("sourceRefs")
+    if source_refs is not None and not isinstance(source_refs, Mapping):
+        issues.append("sourceRefs must be an object")
+
+    updates = update.get("updates")
+    if not isinstance(updates, list):
+        issues.append("updates must be an array")
+    else:
+        for item in updates:
+            if not isinstance(item, Mapping):
+                issues.append("updates entries must be objects")
+                continue
+            try:
+                downstream_module._normalize_update(item)
+            except Exception as exc:
+                issues.append(str(exc))
+    return issues
+
+
+def _has_authoritative_graph_flag(payload: Any) -> bool:
+    if isinstance(payload, Mapping):
+        for key, value in payload.items():
+            lowered = str(key).lower()
+            if lowered in {
+                "derivedgraphauthoritative",
+                "derivedgraphisauthoritative",
+                "derived_graph_authoritative",
+                "authoritativederivedgraph",
+            } and _is_truthy_flag(value):
+                return True
+            if _has_authoritative_graph_flag(value):
+                return True
+    if isinstance(payload, list):
+        return any(_has_authoritative_graph_flag(item) for item in payload)
+    return False
+
+
+def _is_truthy_flag(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        return value != 0
+    if isinstance(value, str):
+        return value.strip().lower() in {"true", "yes", "1"}
+    return bool(value)
+
+
+def _prepare_graph_payload(raw_payload: Any) -> Mapping[str, Any]:
+    graph_payload = _as_mapping(raw_payload)
+    if not graph_payload:
+        return {}
+    graph_payload = dict(graph_payload.items())
+    for key in ("nodes", "edges"):
+        value = graph_payload.get(key, ())
+        if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+            graph_payload[key] = list(value)
+    return graph_payload
 
 
 def _doctor_report_path(docs_path: str | Path, run_id: str) -> Path:

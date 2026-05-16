@@ -9,8 +9,8 @@ from typing import Any, Mapping
 import uuid
 
 
-SALMON_EVENT_SCHEMA_VERSION = "1.0"
-SALMON_SOURCE_TYPES = frozenset({"human", "doctor", "review", "implementation"})
+SALMON_EVENT_SCHEMA_VERSION = "nextlens.salmon-signal.v1"
+SALMON_SOURCE_TYPES = frozenset({"human", "doctor", "review", "implementation", "validation"})
 SALMON_SEVERITIES = frozenset({"blocking", "advisory", "informational"})
 SALMON_ACTION_TYPES = frozenset({"local_note", "landscape_update", "block_packet", "correct_course"})
 SALMON_ROUTING_STATUSES = frozenset({"created", "merged", "duplicate_ignored"})

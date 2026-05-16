@@ -28,6 +28,7 @@
         ".agents/skills/bmad-nextlens",
         ".agents/skills/bmad-nextlens-new",
         ".agents/skills/bmad-nextlens-doctor",
+        ".agents/skills/bmad-nextlens-validate",
         ".agents/skills/bmad-nextlens-salmon"
       ]
     }

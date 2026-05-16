@@ -27,6 +27,7 @@ def test_build_graph_schema_exposes_required_node_types_and_properties() -> None
             "capability",
             "decision",
             "risk",
+            "feature",
         ]
     ).issubset(set(schema["nodes"]["types"]))
     assert schema["nodes"]["properties"] == ["id", "type", "label", "metadata"]

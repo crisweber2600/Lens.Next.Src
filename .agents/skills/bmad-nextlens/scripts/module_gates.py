@@ -86,10 +86,28 @@ CAPABILITIES = (
         "args": "{packet_source: packet path}|{docs_path: optional docs root}",
         "phase": "anytime",
         "after": "bmad-nextlens-new:new",
-        "before": "bmad-nextlens-salmon:salmon",
+        "before": "bmad-nextlens-validate:validate",
         "required": "false",
         "output_location": "nextlens_docs_path",
         "outputs": "doctor validation report",
+    },
+    {
+        "command": "nextlens-validate",
+        "action": "validate",
+        "skill": "bmad-nextlens-validate",
+        "skill_dir": ".agents/skills/bmad-nextlens-validate",
+        "skill_path": ".agents/skills/bmad-nextlens-validate/SKILL.md",
+        "display_name": "Run Post-BMAD Validation",
+        "menu_code": "NV",
+        "name": "NextLens Validate",
+        "description": "Run governed post-BMAD validation on implementation evidence; not Doctor.",
+        "args": "{packet_source: packet path}|{implementation_evidence_source: implementation evidence path}|{bmad_artifacts_source: optional BMAD artifact bundle path}|{docs_path: optional docs root}",
+        "phase": "anytime",
+        "after": "bmad-nextlens-doctor:doctor",
+        "before": "bmad-nextlens-salmon:salmon",
+        "required": "false",
+        "output_location": "nextlens_docs_path",
+        "outputs": "post-BMAD validation report",
     },
     {
         "command": "nextlens-salmon",
@@ -103,7 +121,7 @@ CAPABILITIES = (
         "description": "Route correction findings through deduplication and impact classification.",
         "args": "{findings_source: findings path}|{docs_path: optional docs root}",
         "phase": "anytime",
-        "after": "bmad-nextlens-doctor:doctor",
+        "after": "bmad-nextlens-validate:validate",
         "before": "",
         "required": "false",
         "output_location": "nextlens_landscape_store",
@@ -241,7 +259,7 @@ def _module_yaml_text() -> str:
         "module_version": "1.0.0",
         "description": "Deterministic top-down feature packet bridge with doctor validation and salmon correction routing.",
         "default_selected": False,
-        "module_greeting": "NextLens is ready. Run setup once, then use the New, Doctor, and Salmon skills as separate parts of the top-down bridge.",
+        "module_greeting": "NextLens is ready. Run setup once, then use the New, Doctor, Validate, and Salmon skills as separate parts of the top-down bridge.",
         "capabilities": [
             {
                 "command": capability["command"],
@@ -267,7 +285,7 @@ def _module_yaml_text() -> str:
             "type": "number",
         },
         "directories": ["{nextlens_docs_path}", "{nextlens_landscape_store}"],
-        "post-install-notes": "Use NextLens setup, new, doctor, and salmon actions from BMAD help after setup completes.",
+        "post-install-notes": "Use NextLens setup, new, doctor, validate, and salmon actions from BMAD help after setup completes.",
     }
     return _yaml_dump(payload)
 

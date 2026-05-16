@@ -7,7 +7,7 @@ description: Runs non-mutating NextLens doctor validation checks on a Feature pa
 
 ## Purpose
 
-Validate an emitted Feature packet or reconstructed landscape state without mutating project artifacts.
+Validate an emitted Feature packet, BMAD handoff refs, downstream artifacts, or reconstructed landscape state without mutating project artifacts.
 
 ## On Activation
 
@@ -16,6 +16,7 @@ Validate an emitted Feature packet or reconstructed landscape state without muta
 - Normalize arguments with `../bmad-nextlens/scripts/command_surface.py` using action `doctor`.
 - Require `packet_source`; optionally accept `docs_path` to override the configured docs root.
 - Use the shared implementation under `../bmad-nextlens/scripts/doctor_checks.py` and related support modules.
+- Treat Doctor as a health gate only. It validates packet, handoff, validation result, Salmon signal, Landscape update, and Derived Graph authority contracts but does not repair or apply changes.
 
 ## Action Contract
 
@@ -30,3 +31,5 @@ Optional args:
 Output:
 
 - A doctor validation report describing packet or landscape findings.
+
+Doctor is non-mutating validation. It must never apply Landscape updates, refresh authoritative state, re-run implementation repair, or treat Derived Graph output as authoritative.

@@ -39,6 +39,7 @@ def test_marketplace_manifest_skill_paths_are_repo_relative_and_exist() -> None:
         ".agents/skills/bmad-nextlens",
         ".agents/skills/bmad-nextlens-new",
         ".agents/skills/bmad-nextlens-doctor",
+        ".agents/skills/bmad-nextlens-validate",
         ".agents/skills/bmad-nextlens-salmon",
     ]
 
