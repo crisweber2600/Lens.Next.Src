@@ -22,6 +22,7 @@ else:
 SCHEMA_VERSION = "nextlens.extracted-concepts.v1"
 ENVELOPE_KEY = "extracted_concepts"
 ARTIFACT_REF = "artifacts/extracted-concepts.json"
+EXTRACTION_COVERAGE_ARTIFACT_REF = "artifacts/extraction-coverage.json"
 
 POSSIBLE_COLLECTIONS = (
     "possibleRoles",
@@ -73,14 +74,39 @@ def load_extracted_concepts(source: str) -> dict[str, Any]:
 def build_from_raw_material(source: str) -> dict[str, Any]:
     raw_text = _source_text(source).strip()
     summary = raw_text[:240]
-    open_question = "Curate top_down_context from the supplied discovery material before Feature packet emission."
+    extracted = _extract_raw_discovery_inventory(raw_text, source_ref=_source_ref(source))
+    open_questions = list(extracted["possibleOpenQuestions"])
+    open_questions.append(
+        {
+            "id": "question-curate-top-down-context",
+            "text": "Curate top_down_context from the supplied discovery material before Feature packet emission.",
+            "severity": "major",
+        }
+    )
+    if extracted["extractionCoverage"]["extractionConfidence"] == "low":
+        open_questions.append(
+            {
+                "id": "question-candidate-inventory-insufficient",
+                "text": "Candidate inventory is sparse; return to discovery or provide structured idea markers before ranking.",
+                "severity": "blocking",
+            }
+        )
     return normalize_extracted_concepts(
         {
             "schemaVersion": SCHEMA_VERSION,
             "decision": "captured",
             "rationale": "Raw discovery material was captured as candidate concepts; it is not authoritative top-down context.",
             "sourceSummary": summary,
-            "possibleOpenQuestions": [{"id": "question-curate-top-down-context", "text": open_question}],
+            "possibleRoles": extracted["possibleRoles"],
+            "possibleStakeholders": extracted["possibleStakeholders"],
+            "possibleOutcomes": extracted["possibleOutcomes"],
+            "possibleOperatingLoops": extracted["possibleOperatingLoops"],
+            "possibleJourneys": extracted["possibleJourneys"],
+            "possibleCandidateFeatures": extracted["possibleCandidateFeatures"],
+            "possibleRisks": extracted["possibleRisks"],
+            "possibleOpenQuestions": open_questions,
+            "possibleRelationshipRefs": extracted["possibleRelationshipRefs"],
+            "extractionCoverage": extracted["extractionCoverage"],
         },
         decision="captured",
     )
@@ -107,6 +133,8 @@ def normalize_extracted_concepts(payload: Mapping[str, Any], *, decision: str) -
         normalized[key] = _list_value(payload.get(key))
     if payload.get("sourceSummary"):
         normalized["sourceSummary"] = str(payload["sourceSummary"])
+    if isinstance(payload.get("extractionCoverage"), Mapping):
+        normalized["extractionCoverage"] = dict(payload["extractionCoverage"])
     return normalized
 
 
@@ -118,6 +146,26 @@ def write_extracted_concepts_artifact(docs_path: str | Path, concepts: Mapping[s
     try:
         with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as handle:
             json.dump(dict(concepts), handle, indent=2, sort_keys=True)
+            handle.write("\n")
+        os.replace(str(temp_path), str(output_path))
+    except Exception:
+        if temp_path.exists():
+            temp_path.unlink()
+        raise
+    return output_path
+
+
+def write_extraction_coverage_artifact(docs_path: str | Path, concepts: Mapping[str, Any]) -> Path | None:
+    coverage = concepts.get("extractionCoverage")
+    if not isinstance(coverage, Mapping):
+        return None
+    output_path = Path(docs_path) / ".nextlens" / EXTRACTION_COVERAGE_ARTIFACT_REF
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    fd, temp_name = tempfile.mkstemp(dir=str(output_path.parent), prefix="extraction-coverage-", suffix=".tmp")
+    temp_path = Path(temp_name)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as handle:
+            json.dump(dict(coverage), handle, indent=2, sort_keys=True)
             handle.write("\n")
         os.replace(str(temp_path), str(output_path))
     except Exception:
@@ -353,6 +401,8 @@ def _normalize_candidate_features(
             base_id = str(item.get("id") or f"feature.curated.{index}").strip()
             name = str(item.get("name") or item.get("title") or "Curated candidate").strip()
             goal = str(item.get("goal") or item.get("summary") or f"Advance {name}").strip()
+            source_refs = _list_value(item.get("sourceRefs"))
+            extraction_confidence = str(item.get("extractionConfidence") or "").strip()
         else:
             text = str(item).strip()
             if not text:
@@ -360,9 +410,10 @@ def _normalize_candidate_features(
             base_id = f"feature.{_slugify(text)}"
             name = text
             goal = f"Advance {text}"
+            source_refs = []
+            extraction_confidence = ""
 
-        candidates.append(
-            {
+        candidate_payload = {
                 "id": base_id,
                 "name": name,
                 "goal": goal,
@@ -386,8 +437,14 @@ def _normalize_candidate_features(
                 "outcomeIds": outcome_ids,
                 "journeyIds": journey_ids,
                 "riskRefs": risk_ids,
+                "bmadInputs": {"prd": True, "ux": True, "architecture": True},
             }
-        )
+        if source_refs:
+            candidate_payload["sourceRefs"] = [str(ref) for ref in source_refs]
+            candidate_payload["relationshipRefs"] = [f"{base_id}->{ref}" for ref in candidate_payload["sourceRefs"]]
+        if extraction_confidence:
+            candidate_payload["extractionConfidence"] = extraction_confidence
+        candidates.append(candidate_payload)
 
     if not candidates:
         fallback_id = "feature.curated.default"
@@ -420,6 +477,313 @@ def _normalize_candidate_features(
         )
 
     return candidates
+
+
+def _extract_raw_discovery_inventory(raw_text: str, *, source_ref: str) -> dict[str, Any]:
+    sections = _raw_sections(raw_text)
+    ideas = _extract_idea_markers(raw_text, sections, source_ref=source_ref)
+    fallback_warnings: list[str] = []
+    if not ideas and raw_text:
+        fallback_warnings.append("No markdown headings or bracketed idea labels were detected; generated a low-confidence fallback candidate.")
+        ideas = [
+            {
+                "marker": "fallback",
+                "id": "feature.curated.default",
+                "name": "Curated Feature Candidate",
+                "goal": "Continue governed packet flow after extracted-concepts curation.",
+                "sourceRefs": [source_ref],
+                "section": "raw-discovery",
+                "line": 1,
+                "confidence": "low",
+            }
+        ]
+
+    candidate_features = [
+        {
+            "id": idea["id"],
+            "name": idea["name"],
+            "goal": idea["goal"],
+            "sourceRefs": idea["sourceRefs"],
+            "extractionConfidence": idea["confidence"],
+        }
+        for idea in ideas
+    ]
+    source_idea_refs = [
+        {
+            "marker": idea["marker"],
+            "candidateId": idea["id"],
+            "section": idea["section"],
+            "line": idea["line"],
+            "sourceRefs": idea["sourceRefs"],
+        }
+        for idea in ideas
+    ]
+    confidence = "low" if not candidate_features or any(idea["confidence"] == "low" for idea in ideas) else "medium"
+    if len(candidate_features) >= 6:
+        confidence = "high"
+    return {
+        "possibleRoles": _keyword_concepts(
+            raw_text,
+            "role",
+            {
+                "student": "Student",
+                "teacher": "Teacher",
+                "parent": "Parent",
+                "joey": "Joey AI coach",
+                "systems coach": "Systems coach",
+            },
+        ),
+        "possibleStakeholders": _keyword_concepts(
+            raw_text,
+            "stakeholder",
+            {
+                "student": "Student",
+                "teacher": "Teacher",
+                "parent": "Parent",
+                "administrator": "Administrator",
+                "rti": "RtI team",
+            },
+        ),
+        "possibleOutcomes": _keyword_concepts(
+            raw_text,
+            "outcome",
+            {
+                "assessment": "Assessment evidence",
+                "mastery": "Mastery visibility",
+                "writing": "Writing growth",
+                "micro-credential": "Teacher capability growth",
+                "reporting": "Family reporting clarity",
+                "mood": "Student readiness and belonging",
+            },
+        ),
+        "possibleOperatingLoops": _keyword_concepts(
+            raw_text,
+            "loop",
+            {
+                "daily": "Daily learning evidence loop",
+                "workshop": "Workshop model loop",
+                "benchmark": "Benchmark assessment loop",
+                "rti": "RtI response loop",
+                "conference": "Shared conference loop",
+            },
+        ),
+        "possibleJourneys": _keyword_concepts(
+            raw_text,
+            "journey",
+            {
+                "joey": "Student Joey coaching journey",
+                "teacher dashboard": "Teacher dashboard journey",
+                "assessment": "Assessment battery journey",
+                "writing": "Writing evidence journey",
+                "parent": "Parent reporting journey",
+                "unit": "Unit and standards journey",
+            },
+        ),
+        "possibleCandidateFeatures": candidate_features,
+        "possibleRisks": [
+            {"id": "risk.raw-discovery-overreach", "name": "Raw discovery may overstate implementation scope", "severity": "medium"},
+            {"id": "risk.candidate-collisions", "name": "Nearby ideas may need clustering before packet emission", "severity": "medium"},
+            {"id": "risk.source-coverage-gaps", "name": "Some source ideas may require human curation", "severity": "medium"},
+        ],
+        "possibleOpenQuestions": [
+            {
+                "id": "question-confirm-candidate-clustering",
+                "text": "Which extracted idea should become the one selected Feature, and which adjacent ideas stay out of scope?",
+                "severity": "major",
+            }
+        ],
+        "possibleRelationshipRefs": [
+            f"{idea['id']}->{ref}"
+            for idea in ideas
+            for ref in idea["sourceRefs"]
+        ],
+        "extractionCoverage": {
+            "inputSourceRefs": [source_ref],
+            "extractedCandidateCount": len(candidate_features),
+            "sourceIdeaCount": len(source_idea_refs),
+            "sourceIdeaRefs": source_idea_refs,
+            "groupedSourceSections": sections,
+            "unclusteredIdeaRefs": [],
+            "droppedIdeaRefs": [],
+            "extractionWarnings": fallback_warnings,
+            "extractionConfidence": confidence,
+        },
+    }
+
+
+def _extract_idea_markers(raw_text: str, sections: list[dict[str, Any]], *, source_ref: str) -> list[dict[str, Any]]:
+    lines = raw_text.splitlines()
+    bracket_pattern = re.compile(r"^\s*(?:[-*]\s*)?\[(?P<label>[A-Za-z][^\]#]{0,48})\s*#(?P<number>\d+)\]\s*(?P<title>.*)$")
+    heading_pattern = re.compile(r"^\s{0,3}#{2,5}\s+(?P<title>.+?)\s*$")
+    bullet_pattern = re.compile(r"^\s*[-*]\s+(?P<title>.+?)\s*$")
+    ideas: list[dict[str, Any]] = []
+    seen_ids: set[str] = set()
+    for index, line in enumerate(lines):
+        match = bracket_pattern.match(line)
+        if match:
+            label = match.group("label").strip()
+            number = match.group("number").strip()
+            title = _clean_title(match.group("title")) or label
+            marker = f"{label} #{number}"
+            candidate_id = f"feature.{_slugify(label)}-{number}"
+            section = _section_for_line(sections, index + 1)
+            goal = _nearby_goal(lines, index, title)
+            _append_unique_idea(
+                ideas,
+                seen_ids,
+                {
+                    "marker": marker,
+                    "id": candidate_id,
+                    "name": title,
+                    "goal": goal,
+                    "sourceRefs": [f"{source_ref}#line-{index + 1}", f"{source_ref}#{_slugify(section)}"],
+                    "section": section,
+                    "line": index + 1,
+                    "confidence": "high",
+                },
+            )
+            continue
+
+        heading_match = heading_pattern.match(line)
+        if heading_match:
+            title = _clean_title(heading_match.group("title"))
+            if _heading_is_candidate(title):
+                section = title
+                _append_unique_idea(
+                    ideas,
+                    seen_ids,
+                    {
+                        "marker": f"heading:{title}",
+                        "id": f"feature.{_slugify(title)}",
+                        "name": title,
+                        "goal": _nearby_goal(lines, index, title),
+                        "sourceRefs": [f"{source_ref}#line-{index + 1}", f"{source_ref}#{_slugify(section)}"],
+                        "section": section,
+                        "line": index + 1,
+                        "confidence": "medium",
+                    },
+                )
+            continue
+
+        bullet_match = bullet_pattern.match(line)
+        if bullet_match:
+            title = _clean_title(bullet_match.group("title"))
+            if _heading_is_candidate(title) and len(title.split()) <= 24:
+                section = _section_for_line(sections, index + 1)
+                _append_unique_idea(
+                    ideas,
+                    seen_ids,
+                    {
+                        "marker": f"bullet:{title}",
+                        "id": f"feature.{_slugify(title)}",
+                        "name": title,
+                        "goal": _nearby_goal(lines, index, title),
+                        "sourceRefs": [f"{source_ref}#line-{index + 1}", f"{source_ref}#{_slugify(section)}"],
+                        "section": section,
+                        "line": index + 1,
+                        "confidence": "medium",
+                    },
+                )
+    return ideas
+
+
+def _append_unique_idea(ideas: list[dict[str, Any]], seen_ids: set[str], idea: dict[str, Any]) -> None:
+    if idea["id"] in seen_ids:
+        return
+    seen_ids.add(idea["id"])
+    ideas.append(idea)
+
+
+def _nearby_goal(lines: list[str], start_index: int, title: str) -> str:
+    snippets: list[str] = []
+    for line in lines[start_index + 1 : start_index + 7]:
+        stripped = line.strip(" -*\t")
+        if not stripped:
+            continue
+        if stripped.startswith("#") or re.match(r"^\[[A-Za-z].*#\d+\]", stripped):
+            break
+        if stripped.lower().startswith(("concept:", "novelty:", "goal:", "outcome:", "summary:")):
+            stripped = stripped.split(":", 1)[1].strip()
+        snippets.append(stripped)
+        if len(" ".join(snippets)) >= 160:
+            break
+    goal = " ".join(snippets).strip()
+    return goal[:260] if goal else f"Advance {title} as a bounded Feature candidate."
+
+
+def _raw_sections(raw_text: str) -> list[dict[str, Any]]:
+    sections: list[dict[str, Any]] = []
+    for line_number, line in enumerate(raw_text.splitlines(), start=1):
+        match = re.match(r"^\s{0,3}(#{1,5})\s+(.+?)\s*$", line)
+        if match:
+            sections.append(
+                {
+                    "title": _clean_title(match.group(2)),
+                    "level": len(match.group(1)),
+                    "line": line_number,
+                }
+            )
+    return sections
+
+
+def _section_for_line(sections: list[dict[str, Any]], line_number: int) -> str:
+    current = "raw-discovery"
+    for section in sections:
+        if int(section.get("line") or 0) <= line_number:
+            current = str(section.get("title") or current)
+        else:
+            break
+    return current
+
+
+def _heading_is_candidate(title: str) -> bool:
+    lowered = title.lower()
+    if len(title.split()) > 16:
+        return False
+    keywords = (
+        "coach",
+        "dashboard",
+        "assessment",
+        "benchmark",
+        "hfw",
+        "writing",
+        "spelling",
+        "unit",
+        "workshop",
+        "credential",
+        "report",
+        "rti",
+        "store",
+        "reward",
+        "feature",
+        "concept",
+    )
+    return any(keyword in lowered for keyword in keywords)
+
+
+def _keyword_concepts(raw_text: str, prefix: str, terms: Mapping[str, str]) -> list[dict[str, Any]]:
+    lowered = raw_text.lower()
+    concepts = [
+        {"id": f"{prefix}.{_slugify(name)}", "name": name}
+        for term, name in terms.items()
+        if term in lowered
+    ]
+    if not concepts:
+        concepts.append({"id": f"{prefix}.operator", "name": "Operator"})
+    return concepts
+
+
+def _clean_title(value: str) -> str:
+    cleaned = re.sub(r"^[\s:,-]+|[\s:,-]+$", "", value.strip())
+    cleaned = re.sub(r"\s+", " ", cleaned)
+    return cleaned
+
+
+def _source_ref(source: str) -> str:
+    source_path = Path(source)
+    if source_path.exists():
+        return source_path.name
+    return "raw-discovery"
 
 
 def _slugify(value: str) -> str:
