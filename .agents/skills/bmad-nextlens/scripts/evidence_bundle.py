@@ -33,10 +33,13 @@ NEXTLENS_STAGE_OUTCOME_DEFAULTS = {
     "doctor": "pass",
     "packet_emission": "pass",
     "bmad_handoff": "pending",
+    "bmad_artifacts": "pending",
+    "stories": "pending",
     "implementation_evidence": "pending",
     "validation": "pending",
     "salmon": "none",
     "landscape_update": "pending",
+    "derived_graph_refresh": "pending",
 }
 
 
@@ -86,6 +89,7 @@ def build_nextlens_evidence_bundle(
     outcomes.update({str(key): str(value) for key, value in dict(stage_outcomes or {}).items()})
     packet_id = str(packet.get("packetId") or "")
     feature_id = str(packet.get("featureId") or "")
+    derived_graph_ref = refs.get("derivedGraphRef") or packet.get("derivedGraphRef")
     return {
         "evidence_bundle": {
             "schemaVersion": NEXTLENS_EVIDENCE_BUNDLE_SCHEMA_VERSION,
@@ -100,6 +104,13 @@ def build_nextlens_evidence_bundle(
             "doctorReportRef": str(refs.get("doctorReportRef") or "artifacts/doctor-report.jsonl"),
             "salmonRoutingRef": str(refs.get("salmonRoutingRef") or "artifacts/salmon-routing.json"),
             "idempotencyDecisionRef": str(refs.get("idempotencyDecisionRef") or "artifacts/idempotency.json"),
+            "bmadHandoffRefs": _string_mapping(refs.get("bmadHandoffRefs")),
+            "bmadArtifactBundleRef": _string_or_none(refs.get("bmadArtifactBundleRef")),
+            "implementationEvidenceRef": _string_or_none(refs.get("implementationEvidenceRef")),
+            "validationResultRef": _string_or_none(refs.get("validationResultRef")),
+            "salmonSignalRefs": _string_list(refs.get("salmonSignalRefs")),
+            "landscapeUpdateRef": _string_or_none(refs.get("landscapeUpdateRef")),
+            "derivedGraphRef": _string_or_none(derived_graph_ref),
             "stageOutcomes": outcomes,
             "createdAt": _utc_timestamp(now_factory),
         }
@@ -264,6 +275,23 @@ def _string_or_none(value: Any) -> str | None:
     if value is None:
         return None
     return str(value)
+
+
+def _string_list(value: Any) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, Mapping):
+        return [str(item) for item in value.values() if str(item).strip()]
+    if isinstance(value, (list, tuple)):
+        return [str(item) for item in value if str(item).strip()]
+    text = str(value).strip()
+    return [text] if text else []
+
+
+def _string_mapping(value: Any) -> dict[str, str]:
+    if not isinstance(value, Mapping):
+        return {}
+    return {str(key): str(item) for key, item in value.items() if item is not None}
 
 
 def _require_yaml():

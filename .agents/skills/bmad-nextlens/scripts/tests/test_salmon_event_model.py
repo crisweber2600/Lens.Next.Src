@@ -16,9 +16,9 @@ SPEC.loader.exec_module(SALMON_EVENT_MODEL)
 def test_build_salmon_event_schema_declares_version_required_fields_and_enums() -> None:
     schema = SALMON_EVENT_MODEL.build_salmon_event_schema()
 
-    assert schema["schemaVersion"] == "1.0"
+    assert schema["schemaVersion"] == "nextlens.salmon-signal.v1"
     assert "dedupFingerprint" in schema["required"]
-    assert schema["sourceTypes"] == ["doctor", "human", "implementation", "review"]
+    assert schema["sourceTypes"] == ["doctor", "human", "implementation", "review", "validation"]
     assert schema["severities"] == ["advisory", "blocking", "informational"]
     assert "bmadArtifacts" in schema["impactedNodeFields"]
 
@@ -70,7 +70,7 @@ def _error_by_field(result: object, field_name: str) -> object:
 
 def _event() -> dict[str, object]:
     return {
-        "schemaVersion": "1.0",
+        "schemaVersion": "nextlens.salmon-signal.v1",
         "id": "550e8400-e29b-41d4-a716-446655440000",
         "raisedFrom": "doctor-check",
         "source": {"type": "doctor", "sourceId": "feature-scope"},

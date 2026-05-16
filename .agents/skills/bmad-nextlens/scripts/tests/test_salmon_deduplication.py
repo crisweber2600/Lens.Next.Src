@@ -89,7 +89,7 @@ def test_deduplicate_salmon_event_merges_new_source_into_existing_event(tmp_path
 
 def _event(*, event_id: str = "550e8400-e29b-41d4-a716-446655440000", source_id: str) -> dict[str, object]:
     return {
-        "schemaVersion": "1.0",
+        "schemaVersion": "nextlens.salmon-signal.v1",
         "id": event_id,
         "raisedFrom": "doctor-check",
         "source": {"type": "doctor", "sourceId": source_id},

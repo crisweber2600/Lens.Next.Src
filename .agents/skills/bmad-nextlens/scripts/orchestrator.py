@@ -58,6 +58,7 @@ EXTRACTED_CONCEPTS = _load_runtime_module("extracted_concepts", "extracted_conce
 FEATURE_PACKET_COMPOSER = _load_runtime_module("feature_packet_composer", "feature_packet_composer.py")
 FEATURE_PACKET_EMITTER = _load_runtime_module("feature_packet_emitter", "feature_packet_emitter.py")
 FEATURE_SCORING = _load_runtime_module("feature_scoring", "feature_scoring.py")
+BMAD_HANDOFF = _load_runtime_module("bmad_handoff", "bmad_handoff.py")
 
 
 @dataclass(frozen=True)
@@ -437,7 +438,23 @@ def _handle_emit(context: dict[str, Any]) -> StageResult:
             detail="Packet not validated",
         )
     docs_path = context.get("docs_path", ".nextlens")
-    emission = FEATURE_PACKET_EMITTER.emit_feature_packet(context.get("packet_candidate") or {}, docs_path)
+    packet = copy.deepcopy(dict(context.get("packet_candidate") or {}))
+    handoff_enabled = context.get("bmad_handoff_enabled", True)
+    handoff_status = "pending"
+    handoff_paths: dict[str, str] = {}
+    if handoff_enabled:
+        handoff_result = BMAD_HANDOFF.generate_bmad_handoff_artifacts(docs_path, packet, update_packet=True)
+        if handoff_result.status != "pass":
+            return StageResult(
+                status="fail",
+                detail=handoff_result.error or "BMAD handoff artifact generation failed",
+                rollback_action="Packet was not emitted; resolve handoff generation errors and retry emission.",
+            )
+        packet = handoff_result.packet
+        handoff_paths = dict(handoff_result.artifact_paths)
+        handoff_status = "pass"
+
+    emission = FEATURE_PACKET_EMITTER.emit_feature_packet(packet, docs_path)
     if emission.status != "pass":
         return StageResult(
             status="fail",
@@ -447,7 +464,7 @@ def _handle_emit(context: dict[str, Any]) -> StageResult:
         )
     evidence = EVIDENCE_BUNDLE.generate_nextlens_evidence_bundle(
         docs_path,
-        packet=context.get("packet_candidate") or {},
+        packet=packet,
         artifact_refs={
             "inputAnalysisRef": "artifacts/input-analysis.json",
             "extractedConceptsRef": _relative_artifact_ref(
@@ -465,6 +482,8 @@ def _handle_emit(context: dict[str, Any]) -> StageResult:
             ),
             "salmonRoutingRef": "artifacts/salmon-routing.json",
             "idempotencyDecisionRef": "artifacts/idempotency.json",
+            "bmadHandoffRefs": handoff_paths,
+            "derivedGraphRef": packet.get("derivedGraphRef"),
         },
         stage_outcomes={
             "intake": "pass",
@@ -476,11 +495,14 @@ def _handle_emit(context: dict[str, Any]) -> StageResult:
             "derived_graph_rebuild": "pass",
             "doctor": "pass",
             "packet_emission": "pass",
-            "bmad_handoff": "pending",
+            "bmad_handoff": handoff_status,
+            "bmad_artifacts": "pending",
+            "stories": "pending",
             "implementation_evidence": "pending",
             "validation": "pending",
             "salmon": "none",
             "landscape_update": "pending",
+            "derived_graph_refresh": "pending",
         },
     )
     if evidence.status != "pass":
@@ -498,6 +520,7 @@ def _handle_emit(context: dict[str, Any]) -> StageResult:
             "emission_timestamp": _utc_timestamp(),
             "packet_path": str(emission.packet_path),
             "evidence_bundle_path": str(evidence.path),
+            "bmad_handoff_paths": handoff_paths,
         },
     )
 
