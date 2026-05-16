@@ -130,6 +130,7 @@ def _base_packet_payload() -> dict[str, object]:
     return {
         "trace": {
             "systemId": "system-main",
+            "discoveryEpochId": "epoch-2026-05-14",
             "roleIds": ["role-operator"],
             "outcomeIds": ["outcome-reduce-ambiguity"],
             "journeyIds": ["journey-onboard"],
@@ -281,9 +282,28 @@ def test_traceability_identifies_unresolved_references(tmp_path: Path) -> None:
     )
     result = DOCTOR_CHECKS._check_traceability(context)
 
-    assert result.status == "warning"
-    assert result.severity == "advisory"
-    assert "does not resolve" in result.message
+    assert result.status == "fail"
+    assert result.severity == "blocking"
+    assert "top-down lineage" in result.message
+    assert "system-missing" in result.references
+
+
+def test_traceability_blocks_when_journey_trace_is_missing(tmp_path: Path) -> None:
+    context = _build_ok_context(tmp_path)
+    packet = _base_packet_payload()
+    packet["trace"]["journeyIds"] = []
+    context = DOCTOR_CHECKS.DoctorCheckContext(
+        landscape_state=context.landscape_state,
+        derived_graph=context.derived_graph,
+        packet_candidate=packet,
+        selected_feature=_base_selected_feature(),
+    )
+
+    result = DOCTOR_CHECKS._check_traceability(context)
+
+    assert result.status == "fail"
+    assert result.severity == "blocking"
+    assert "packet.trace.journeyIds" in result.references
 
 
 def test_context_readiness_requires_required_inputs(tmp_path: Path) -> None:
@@ -299,9 +319,29 @@ def test_context_readiness_requires_required_inputs(tmp_path: Path) -> None:
     )
     result = DOCTOR_CHECKS._check_context_readiness(context)
 
+    assert result.status == "fail"
+    assert result.severity == "blocking"
+    assert "roles" in result.references
+
+
+def test_context_readiness_warns_for_missing_advisory_inputs(tmp_path: Path) -> None:
+    context = _build_ok_context(tmp_path)
+    packet = _base_packet_payload()
+    packet.pop("bmadConsumerHints")
+    packet["openQuestions"] = []
+    packet["risks"] = []
+    context = DOCTOR_CHECKS.DoctorCheckContext(
+        landscape_state=context.landscape_state,
+        derived_graph=context.derived_graph,
+        packet_candidate=packet,
+        selected_feature=_base_selected_feature(),
+    )
+
+    result = DOCTOR_CHECKS._check_context_readiness(context)
+
     assert result.status == "warning"
     assert result.severity == "advisory"
-    assert "prdInput" in result.references[0]
+    assert "prdInput" in result.references
 
 
 def test_write_boundary_blocks_non_contained_targets(tmp_path: Path) -> None:
@@ -387,7 +427,9 @@ def test_run_preflight_doctor_checks_prompts_for_advisory_and_uses_operator_resp
 ) -> None:
     context = _build_ok_context(tmp_path)
     packet = _base_packet_payload()
-    packet["trace"]["systemId"] = "system-missing"
+    packet.pop("bmadConsumerHints")
+    packet["openQuestions"] = []
+    packet["risks"] = []
     context = DOCTOR_CHECKS.DoctorCheckContext(
         landscape_state=context.landscape_state,
         derived_graph=context.derived_graph,

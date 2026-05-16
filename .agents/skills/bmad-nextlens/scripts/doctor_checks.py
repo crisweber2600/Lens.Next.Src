@@ -509,23 +509,38 @@ def _check_traceability(context: DoctorCheckContext) -> DoctorCheckResult:
     system_id = str(trace.get("systemId") or "").strip()
     if not system_id:
         issues.append("packet.trace.systemId is missing")
+        references.append("packet.trace.systemId")
     elif system_id not in entities_by_id:
         issues.append(f"systemId '{system_id}' does not resolve")
         references.append(system_id)
 
+    discovery_epoch_id = str(trace.get("discoveryEpochId") or "").strip()
+    if not discovery_epoch_id:
+        issues.append("packet.trace.discoveryEpochId is missing")
+        references.append("packet.trace.discoveryEpochId")
+
     role_ids = _as_list(trace.get("roleIds"))
+    if not role_ids:
+        issues.append("packet.trace.roleIds is missing")
+        references.append("packet.trace.roleIds")
     role_invalid = _invalid_references(role_ids, _ids_by_type(entities_by_id, "role"))
     if role_invalid:
         issues.append(f"trace.roleIds contains unresolved ids: {', '.join(role_invalid)}")
         references.extend(role_invalid)
 
     outcome_ids = _as_list(trace.get("outcomeIds"))
+    if not outcome_ids:
+        issues.append("packet.trace.outcomeIds is missing")
+        references.append("packet.trace.outcomeIds")
     outcome_invalid = _invalid_references(outcome_ids, _ids_by_type(entities_by_id, "outcome"))
     if outcome_invalid:
         issues.append(f"trace.outcomeIds contains unresolved ids: {', '.join(outcome_invalid)}")
         references.extend(outcome_invalid)
 
     journey_ids = _as_list(trace.get("journeyIds"))
+    if not journey_ids:
+        issues.append("packet.trace.journeyIds is missing")
+        references.append("packet.trace.journeyIds")
     journey_invalid = _invalid_references(journey_ids, _ids_by_type(entities_by_id, "journey"))
     if journey_invalid:
         issues.append(f"trace.journeyIds contains unresolved ids: {', '.join(journey_invalid)}")
@@ -538,16 +553,16 @@ def _check_traceability(context: DoctorCheckContext) -> DoctorCheckResult:
 
     if issues:
         return DoctorCheckResult(
-            status="warning",
-            severity="advisory",
+            status="fail",
+            severity="blocking",
             check_id="traceability",
-            message="Traceability has unresolved references that does not resolve to valid landscape IDs.",
+            message="Traceability is missing required top-down lineage or contains unresolved references.",
             references=tuple(_dedupe_values(references)),
-            remediation="Align packet trace with valid landscape IDs or refresh candidate generation.",
+            remediation="Populate discovery epoch, role, outcome, and journey trace fields with valid landscape IDs before emission.",
         )
     return DoctorCheckResult(
         status="pass",
-        severity="advisory",
+        severity="blocking",
         check_id="traceability",
         message="Packet traceability is resolvable.",
         references=(
@@ -562,17 +577,18 @@ def _check_traceability(context: DoctorCheckContext) -> DoctorCheckResult:
 
 def _check_context_readiness(context: DoctorCheckContext) -> DoctorCheckResult:
     packet = _as_mapping(context.packet_candidate)
-    missing: list[str] = []
+    blocking_missing: list[str] = []
+    advisory_missing: list[str] = []
     hints = _as_mapping(packet.get("bmadConsumerHints"))
     if not hints:
         hints = _as_mapping(packet.get("bmadConsumerContext"))
     for field in ("prdInput", "uxInput", "architectureInput"):
         if not _has_meaningful_value(hints.get(field)):
-            missing.append(field)
+            advisory_missing.append(field)
 
     system = _as_mapping(packet.get("system"))
     if not _has_meaningful_value(system.get("thesis")):
-        missing.append("system.thesis")
+        blocking_missing.append("system.thesis")
 
     roles = _as_list(packet.get("roles"))
     outcomes = _as_list(packet.get("outcomes"))
@@ -580,31 +596,40 @@ def _check_context_readiness(context: DoctorCheckContext) -> DoctorCheckResult:
     if not roles:
         roles = _as_list(_extract_by_type(packet, "roles"))
         if not roles:
-            missing.append("roles")
+            blocking_missing.append("roles")
     if not outcomes:
         outcomes = _as_list(_extract_by_type(packet, "outcomes"))
         if not outcomes:
-            missing.append("outcomes")
+            blocking_missing.append("outcomes")
     if not journeys:
         journeys = _as_list(_extract_by_type(packet, "journeys"))
         if not journeys:
-            missing.append("journeys")
+            blocking_missing.append("journeys")
 
     open_questions = _as_list(packet.get("openQuestions"))
     risks = _as_list(packet.get("risks"))
     if not open_questions:
-        missing.append("openQuestions")
+        advisory_missing.append("openQuestions")
     if not risks:
-        missing.append("risks")
+        advisory_missing.append("risks")
 
-    if missing:
+    if blocking_missing:
+        return DoctorCheckResult(
+            status="fail",
+            severity="blocking",
+            check_id="context-readiness",
+            message="Context readiness check found missing required top-down context.",
+            references=tuple(blocking_missing),
+            remediation="Populate system thesis, role, outcome, and journey context before emission.",
+        )
+    if advisory_missing:
         return DoctorCheckResult(
             status="warning",
             severity="advisory",
             check_id="context-readiness",
-            message="Context readiness check found missing required data.",
-            references=tuple(missing),
-            remediation="Populate BMAD hints and missing context fields before emission.",
+            message="Context readiness check found advisory gaps.",
+            references=tuple(advisory_missing),
+            remediation="Populate BMAD hints, open questions, and risks before emission when available.",
         )
     return DoctorCheckResult(
         status="pass",
