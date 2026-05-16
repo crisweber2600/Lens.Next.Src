@@ -41,6 +41,20 @@ def emit_feature_packet(
     now_factory: Callable[[], datetime] | None = None,
     replace_fn: Callable[[str, str], None] | None = None,
 ) -> FeaturePacketEmissionResult:
+    """Emit Feature packet to configured output location.
+    
+    After successful emission, the next steps are:
+    1. Run NextLens Doctor validation on the emitted packet
+    2. Delegate Feature development to normal top-down BMAD planning:
+       - Clarify feature intent and boundaries
+       - Create PRD-level specifications
+       - Define architectural implications
+       - Generate stories and acceptance criteria
+       - Prepare execution handoff
+    
+    This stage does NOT complete the planning flow. It is the beginning of
+    the Feature packet lifecycle, not the end.
+    """
     packet_id = str(packet.get("packetId") or "").strip()
     try:
         output_path = packet_output_path(docs_path, packet_id)
@@ -59,7 +73,12 @@ def emit_feature_packet(
         return FeaturePacketEmissionResult(
             status="pass",
             packet_path=output_path,
-            output_lines=(f"Packet emitted to: {output_path}",),
+            output_lines=(
+                f"Packet emitted to: {output_path}",
+                "Next steps:",
+                "1. Validate with: /bmad-nextlens-doctor",
+                "2. Delegate to top-down BMAD planning flow",
+            ),
             evidence_event={
                 "stage": "emit-packet",
                 "status": "pass",

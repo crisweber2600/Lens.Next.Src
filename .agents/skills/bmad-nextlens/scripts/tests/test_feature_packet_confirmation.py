@@ -42,7 +42,7 @@ def test_confirm_response_records_evidence_and_proceeds_to_emission() -> None:
     assert result.proceed_to_emission is True
     assert result.write_permitted is True
     assert result.packet_emitted is False
-    assert result.next_action == "emit_packet"
+    assert result.next_action == "continue_to_emission"
     assert result.evidence_event == {
         "stage": "final-confirmation",
         "status": "confirmed",

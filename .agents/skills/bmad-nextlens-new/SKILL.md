@@ -28,6 +28,15 @@ This gate is mandatory and happens before any Feature packet is composed or emit
 - If `vscode_askQuestions` or an equivalent runtime question tool is unavailable, render the numbered candidate menu, state that no Feature packet has been emitted, and stop. Do not infer confirmation from silence, defaults, or the highest-ranked candidate.
 - Proceed to packet composition only after an explicit operator response confirms the highlighted candidate. Then run the final packet confirmation gate before emission.
 
+## Confirmation and Post-Confirmation Flow
+
+After the operator confirms the final Feature packet:
+
+- Call `../bmad-nextlens/scripts/feature_packet_emitter.py` to write the JSON packet to the configured docs path.
+- Run NextLens Doctor validation on the emitted packet to verify the Feature definition meets governance requirements.
+- Display the packet path, Doctor status, and the recommended next step: "Continue the planning flow with `/bmad-nextlens-doctor` for full validation, then delegate Feature development to the normal top-down BMAD planning sequence (PRD → Architecture → Stories → Implementation)."
+- Do not stop at the confirmation prompt. Proceed immediately to emission and validation upon operator confirmation.
+
 ## Action Contract
 
 Required args:
@@ -40,4 +49,6 @@ Optional args:
 
 Output:
 
-- One Feature packet JSON artifact in the configured NextLens docs path.
+- One Feature packet JSON artifact in the configured NextLens docs path
+- Doctor validation report
+- Framed next steps for continuing the top-down planning flow

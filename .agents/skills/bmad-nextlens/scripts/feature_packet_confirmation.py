@@ -47,6 +47,14 @@ def handle_final_confirmation_response(
     *,
     now_factory: Any = None,
 ) -> FeaturePacketConfirmationResult:
+    """Handle operator's final confirmation response.
+    
+    CRITICAL: When confirmation is obtained (Y/yes), this handler must return
+    status='confirmed' with proceed_to_emission=True. The stage pipeline will then
+    continue to the next stages (write, rebuild, validate, emit, route) rather
+    than stopping at the confirmation gate. The delegate/agent MUST NOT interrupt
+    the pipeline after receiving this result.
+    """
     normalized = (response or "").strip().lower()
     if normalized in {"", "y", "yes"}:
         return FeaturePacketConfirmationResult(
@@ -54,7 +62,7 @@ def handle_final_confirmation_response(
             proceed_to_emission=True,
             write_permitted=True,
             packet_emitted=False,
-            output_lines=("final_confirmation: confirmed",),
+            output_lines=("final_confirmation: confirmed; pipeline will proceed to emission and routing stages",),
             evidence_event={
                 "stage": "final-confirmation",
                 "status": "confirmed",
@@ -62,7 +70,7 @@ def handle_final_confirmation_response(
                 "featureId": packet.get("featureId"),
                 "confirmedAt": _utc_timestamp(now_factory),
             },
-            next_action="emit_packet",
+            next_action="continue_to_emission",
         )
 
     if normalized in {"n", "no"}:
