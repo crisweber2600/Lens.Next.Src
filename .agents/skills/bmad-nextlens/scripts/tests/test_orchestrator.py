@@ -17,22 +17,24 @@ sys.modules[SPEC.name] = ORCHESTRATOR
 SPEC.loader.exec_module(ORCHESTRATOR)
 
 
-def test_run_new_action_pipeline_blocks_on_raw_prose_without_top_down_context(tmp_path: Path) -> None:
+def test_run_new_action_pipeline_curates_top_down_context_from_raw_prose(tmp_path: Path) -> None:
     result = ORCHESTRATOR.run_new_action_pipeline(
         "Start with one useful Feature. Do not assume a system exists.",
         docs_path=tmp_path,
     )
 
     assert result["status"] == "blocked"
-    assert result["current_stage"] == "sufficiency"
-    assert result["completed_stages"] == ["intake", "extract"]
-    assert "top_down_context" in result["output"]
+    assert result["current_stage"] == "confirm"
+    assert result["completed_stages"] == ["intake", "extract", "sufficiency", "rank"]
+    assert "confirm_ranked_candidate" in result["output"]
     concepts = json.loads((tmp_path / ".nextlens" / "artifacts" / "extracted-concepts.json").read_text(encoding="utf-8"))
     assert concepts["decision"] == "captured"
     assert concepts["possibleOpenQuestions"]
+    curated_path = tmp_path / ".nextlens" / "artifacts" / "top-down-context.yaml"
+    assert curated_path.exists()
 
 
-def test_run_new_action_pipeline_consumes_extracted_concepts_before_requiring_context(tmp_path: Path) -> None:
+def test_run_new_action_pipeline_consumes_extracted_concepts_and_curates_context(tmp_path: Path) -> None:
     concepts_path = tmp_path / "extracted-concepts.yaml"
     concepts_path.write_text(_extracted_concepts_yaml(), encoding="utf-8")
 
@@ -42,10 +44,13 @@ def test_run_new_action_pipeline_consumes_extracted_concepts_before_requiring_co
     )
 
     assert result["status"] == "blocked"
-    assert result["completed_stages"] == ["intake", "extract"]
+    assert result["current_stage"] == "confirm"
+    assert result["completed_stages"] == ["intake", "extract", "sufficiency", "rank"]
     artifact = json.loads((tmp_path / ".nextlens" / "artifacts" / "extracted-concepts.json").read_text(encoding="utf-8"))
     assert artifact["decision"] == "consumed"
     assert artifact["possibleCandidateFeatures"][0]["id"] == "feature-context-gate"
+    curated_path = tmp_path / ".nextlens" / "artifacts" / "top-down-context.yaml"
+    assert curated_path.exists()
 
 
 def test_run_new_action_pipeline_blocks_when_context_sufficiency_fails(tmp_path: Path) -> None:

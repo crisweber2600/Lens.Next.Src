@@ -178,25 +178,53 @@ def _handle_extract(context: dict[str, Any]) -> StageResult:
 
 def _handle_sufficiency(context: dict[str, Any]) -> StageResult:
     """Validate that context has sufficient information for candidacy analysis."""
+    state_patch: dict[str, Any] = {}
     if not context.get("context_loaded"):
-        return StageResult(
-            status="fail",
-            detail="top_down_context is required before context sufficiency and candidate ranking",
-            next_action="curate_top_down_context",
-            remediation_hints=(
-                "Use the extracted_concepts artifact as candidate input, then provide authoritative top_down_context.",
-                "Raw prose or extracted_concepts must not be emitted directly as a Feature packet.",
-            ),
-            diagnostic_context={
-                "extracted_concepts_path": str(context.get("extracted_concepts_path") or ""),
-            },
+        extracted_concepts = context.get("extracted_concepts")
+        if not isinstance(extracted_concepts, Mapping) or not extracted_concepts:
+            return StageResult(
+                status="fail",
+                detail="top_down_context is required before context sufficiency and candidate ranking",
+                next_action="curate_top_down_context",
+                remediation_hints=(
+                    "Use the extracted_concepts artifact as candidate input, then provide authoritative top_down_context.",
+                    "Raw prose or extracted_concepts must not be emitted directly as a Feature packet.",
+                ),
+                diagnostic_context={
+                    "extracted_concepts_path": str(context.get("extracted_concepts_path") or ""),
+                },
+            )
+
+        docs_path = context.get("docs_path", ".nextlens")
+        curated_context = EXTRACTED_CONCEPTS.derive_curated_top_down_context(
+            extracted_concepts,
+            source_ref=context.get("source"),
+        )
+        curated_context_path = EXTRACTED_CONCEPTS.write_curated_top_down_context_artifact(
+            docs_path,
+            curated_context,
+        )
+        loaded = _load_top_down_context(str(curated_context_path))
+        state_patch.update(
+            {
+                "context_loaded": True,
+                "loaded_context": loaded.payload,
+                "context_warnings": list(loaded.warnings),
+                "context_source_path": str(curated_context_path),
+                "top_down_context_curated": True,
+                "top_down_context_curated_path": str(curated_context_path),
+                "top_down_context_curated_from": str(context.get("extracted_concepts_path") or ""),
+            }
         )
 
     report = CONTEXT_LOADER.evaluate_context_sufficiency(
         CONTEXT_LOADER.LoadedContext(
-            payload=copy.deepcopy(dict(context.get("loaded_context") or {})),
-            warnings=tuple(str(item) for item in context.get("context_warnings", ())),
-            version_mismatch=bool(context.get("context_warnings")),
+            payload=copy.deepcopy(dict((state_patch.get("loaded_context") or context.get("loaded_context")) or {})),
+            warnings=tuple(
+                str(item)
+                for item in (state_patch.get("context_warnings") or context.get("context_warnings", ()))
+            ),
+            version_mismatch=bool(state_patch.get("context_warnings") or context.get("context_warnings")),
         )
     )
     if report.status == "blocked":
@@ -215,8 +243,13 @@ def _handle_sufficiency(context: dict[str, Any]) -> StageResult:
     stage_status = "warning" if report.status == "ready_with_warnings" else "pass"
     return StageResult(
         status=stage_status,
-        detail="Context meets sufficiency requirements" if stage_status == "pass" else "Context is ready with warnings",
+        detail=(
+            "Context meets sufficiency requirements"
+            if stage_status == "pass"
+            else "Context is ready with warnings"
+        ),
         state_patch={
+            **state_patch,
             "sufficiency_validated": True,
             "sufficiency_status": report.status,
             "sufficiency_warnings": list(report.warnings),
