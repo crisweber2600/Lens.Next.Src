@@ -140,6 +140,13 @@ def test_validate_current_repository_package_passes() -> None:
 def _repo_fixture(tmp_path: Path) -> Path:
     source_root = Path(__file__).resolve().parents[5]
     repo_root = tmp_path / "NextLens"
+    shared_skill_path = repo_root / ".agents" / "skills" / "bmad-nextlens" / "SKILL.md"
+    shared_skill_path.parent.mkdir(parents=True, exist_ok=True)
+    source_shared_skill = source_root / ".agents" / "skills" / "bmad-nextlens" / "SKILL.md"
+    if source_shared_skill.exists():
+        shutil.copyfile(source_shared_skill, shared_skill_path)
+    else:
+        shared_skill_path.write_text("# bmad-nextlens\n", encoding="utf-8")
     for skill_name in (
         "bmad-nextlens-setup",
         "bmad-nextlens-new",

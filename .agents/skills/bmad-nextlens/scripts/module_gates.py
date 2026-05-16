@@ -29,6 +29,12 @@ SETUP_SKILL = "bmad-nextlens-setup"
 SETUP_ASSETS_DIR = Path(".agents") / "skills" / SETUP_SKILL / "assets"
 CONFIG_DISCOVERY_MODULE_YAML = Path("skills") / "module.yaml"
 EXPECTED_MARKETPLACE_PLUGIN_COUNT = 1
+SHARED_RUNTIME_SKILLS = (
+    {
+        "skill_dir": ".agents/skills/bmad-nextlens",
+        "skill_path": ".agents/skills/bmad-nextlens/SKILL.md",
+    },
+)
 
 CAPABILITIES = (
     {
@@ -320,6 +326,10 @@ def _marketplace_json_text() -> str:
 def _marketplace_plugin_skills() -> list[str]:
     setup_skill_dir = ".agents/skills/bmad-nextlens-setup"
     skills = [setup_skill_dir]
+    for shared_skill in SHARED_RUNTIME_SKILLS:
+        skill_dir = str(shared_skill["skill_dir"]).strip()
+        if skill_dir and skill_dir not in skills:
+            skills.append(skill_dir)
     for capability in CAPABILITIES:
         skill_dir = str(capability.get("skill_dir", "")).strip()
         if skill_dir and skill_dir not in skills:
@@ -417,6 +427,7 @@ def _validate_cross_manifest_consistency(
     }
     expected_skills = {capability["skill"] for capability in CAPABILITIES}
     expected_skill_dirs = {capability["skill_dir"] for capability in CAPABILITIES}
+    expected_skill_dirs.update(shared_skill["skill_dir"] for shared_skill in SHARED_RUNTIME_SKILLS)
     marketplace_plugin_names = {str(plugin.get("name")) for plugin in marketplace_plugins}
     if (
         yaml_commands != expected_commands
@@ -432,6 +443,10 @@ def _validate_cross_manifest_consistency(
 
 def _skill_reference_findings(root: Path) -> tuple[ModuleGateFinding, ...]:
     findings = []
+    for shared_skill in SHARED_RUNTIME_SKILLS:
+        skill_path = shared_skill["skill_path"]
+        if not (root / skill_path).is_file():
+            findings.append(_finding("skill-reference-missing", f"Required shared skill file does not exist: {skill_path}.", "Create the shared runtime skill file before running create-module."))
     for capability in CAPABILITIES:
         skill_path = capability["skill_path"]
         if not (root / skill_path).is_file():

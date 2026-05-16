@@ -36,6 +36,7 @@ def test_marketplace_manifest_declares_one_installable_plugin() -> None:
 def test_marketplace_manifest_skill_paths_are_repo_relative_and_exist() -> None:
     expected_skill_paths = [
         ".agents/skills/bmad-nextlens-setup",
+        ".agents/skills/bmad-nextlens",
         ".agents/skills/bmad-nextlens-new",
         ".agents/skills/bmad-nextlens-doctor",
         ".agents/skills/bmad-nextlens-salmon",
@@ -53,11 +54,14 @@ def test_marketplace_manifest_skill_paths_are_repo_relative_and_exist() -> None:
 def test_marketplace_manifest_resolves_to_single_nextlens_module() -> None:
     plugin = _manifest()["plugins"][0]
     setup_skill = REPO_ROOT / ".agents" / "skills" / "bmad-nextlens-setup"
+    shared_runtime_skill = REPO_ROOT / ".agents" / "skills" / "bmad-nextlens"
     module_yaml = yaml.safe_load((setup_skill / "assets" / "module.yaml").read_text(encoding="utf-8"))
 
     assert plugin["name"] == module_yaml["code"] == "nxl"
     assert plugin["skills"][0] == ".agents/skills/bmad-nextlens-setup"
+    assert plugin["skills"][1] == ".agents/skills/bmad-nextlens"
     assert (setup_skill / "assets" / "module-help.csv").is_file()
+    assert (shared_runtime_skill / "SKILL.md").is_file()
     assert "NextLens New Packet" not in json.dumps(plugin)
 
 

@@ -25,6 +25,7 @@
       },
       "skills": [
         ".agents/skills/bmad-nextlens-setup",
+        ".agents/skills/bmad-nextlens",
         ".agents/skills/bmad-nextlens-new",
         ".agents/skills/bmad-nextlens-doctor",
         ".agents/skills/bmad-nextlens-salmon"
