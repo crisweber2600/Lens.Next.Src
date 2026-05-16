@@ -116,9 +116,20 @@ def test_validation_findings_without_impact_level_are_enriched(tmp_path: Path) -
                 "architectureRef": "architecture.md",
             },
             {
+                "type": "story_trace_mismatch",
+                "issueDescription": "Story evidence points at a changed implementation path.",
+                "message": "Story evidence points at a changed implementation path.",
+                "storyRef": "stories/story-1.md",
+            },
+            {
                 "category": "implementation",
                 "type": "minor_implementation_note",
                 "message": "Minor implementation note only.",
+            },
+            {
+                "category": "unclassified",
+                "type": "unexpected_signal",
+                "message": "Unknown validation finding still needs a conservative Salmon signal.",
             },
         ],
     }
@@ -134,7 +145,9 @@ def test_validation_findings_without_impact_level_are_enriched(tmp_path: Path) -
         "operating_loop_change",
         "capability_or_landscape_update",
         "bmad_correct_course_required",
+        "bmad_correct_course_required",
         "local_feature_note",
+        "feature_scope_change",
     ]
     by_impact = {event["discovery"]["impactLevel"]: event for event in result.events}
     assert by_impact["feature_scope_change"]["impactedNodes"]["features"] == ["feature-password-recovery"]
@@ -143,8 +156,36 @@ def test_validation_findings_without_impact_level_are_enriched(tmp_path: Path) -
     assert by_impact["role_or_stakeholder_change"]["impactedNodes"]["roles"] == ["role-support-agent"]
     assert by_impact["operating_loop_change"]["impactedNodes"]["operatingLoops"] == ["loop-planning"]
     assert by_impact["capability_or_landscape_update"]["impactedNodes"]["capabilities"] == ["capability-routing"]
-    assert by_impact["bmad_correct_course_required"]["impactedNodes"]["bmadArtifacts"] == ["architecture.md"]
+    bmad_events = [
+        event for event in result.events if event["discovery"]["impactLevel"] == "bmad_correct_course_required"
+    ]
+    assert [event["impactedNodes"]["bmadArtifacts"] for event in bmad_events] == [
+        ["architecture.md"],
+        ["stories/story-1.md"],
+    ]
     assert by_impact["bmad_correct_course_required"]["recommendedAction"] == {
         "type": "correct_course",
         "details": "Run BMAD correct-course to revisit invalidated PRD, architecture, or story assumptions.",
     }
+
+
+def test_post_validation_finding_fallback_is_last_resort(tmp_path: Path) -> None:
+    validation = {
+        "status": "salmon_required",
+        "salmonRequired": True,
+        "featureId": "feature-fallback",
+        "validationId": "validation-fallback",
+        "findings": [
+            {
+                "category": "unknown",
+                "type": "unexpected_signal",
+                "message": "No known mapping tokens are present.",
+            }
+        ],
+    }
+
+    result = DOWNSTREAM.generate_salmon_signals_from_validation(validation, tmp_path)
+
+    assert result.status == "pass"
+    assert result.events[0]["discovery"]["impactLevel"] == "feature_scope_change"
+    assert result.events[0]["impactedNodes"]["features"] == ["feature-fallback"]

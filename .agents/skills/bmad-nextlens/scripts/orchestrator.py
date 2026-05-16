@@ -546,9 +546,9 @@ def _handle_route(context: dict[str, Any]) -> StageResult:
     """Frame next steps for continuing the planning flow.
     
     This stage completes the NEW action by clarifying that after packet
-    emission, the operator should continue with Doctor validation and
-    then route to the normal top-down BMAD planning sequence
-    (PRD → Architecture → Stories → Implementation).
+    emission, the operator may run Doctor for non-mutating health validation,
+    should continue through BMAD planning/implementation, and should run
+    Validate only after BMAD implementation evidence exists.
     """
     if not context.get("packet_emitted"):
         return StageResult(
@@ -558,18 +558,25 @@ def _handle_route(context: dict[str, Any]) -> StageResult:
     
     return StageResult(
         status="pass",
-        detail="Pipeline complete. Next steps framed.",
+        detail=(
+            "Pipeline complete. Optional Doctor health check; BMAD "
+            "planning/implementation; then Validate after BMAD implementation evidence exists."
+        ),
         state_patch={
             "next_steps_framed": True,
             "suggested_flow": (
-                "1. Run `/bmad-nextlens-doctor` to validate the emitted packet\n"
-                "2. Once Doctor validation passes, delegate Feature development to the "
-                "normal top-down BMAD planning sequence:\n"
+                "1. Run `/bmad-nextlens-doctor` for non-mutating health validation if desired.\n"
+                "2. Delegate Feature development to the normal top-down BMAD "
+                "planning/implementation sequence:\n"
                 "   - Clarify feature intent and boundaries\n"
                 "   - Create PRD-level specifications\n"
                 "   - Define architectural implications\n"
                 "   - Generate stories and acceptance criteria\n"
-                "   - Prepare execution handoff to implementation team"
+                "   - Prepare execution handoff to implementation team\n"
+                "   - Capture BMAD implementation evidence\n"
+                "3. After BMAD implementation evidence exists, run `/bmad-nextlens-validate`.\n"
+                "4. Validate generates a validation result, routes Salmon if needed, "
+                "prepares Landscape proposal/apply output, and updates the evidence-bundle."
             ),
         },
     )

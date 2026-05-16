@@ -121,6 +121,18 @@ def test_run_new_action_pipeline_emits_packet_after_explicit_confirmation(tmp_pa
         line.get("check_id") == "handoff-scope" and line.get("status") == "pass"
         for line in final_lines
     )
+    route_output = result["output"].replace("\n  ", " ")
+    suggested_flow = result["resume_state"]["context"]["suggested_flow"]
+    assert "Optional Doctor health check" in route_output
+    assert "Validate after BMAD implementation evidence exists" in route_output
+    assert "`/bmad-nextlens-doctor` for non-mutating health validation" in suggested_flow
+    assert "After BMAD implementation evidence exists, run `/bmad-nextlens-validate`" in suggested_flow
+    assert "validation result" in suggested_flow
+    assert "routes Salmon if needed" in suggested_flow
+    assert "Landscape proposal/apply output" in suggested_flow
+    assert "updates the evidence-bundle" in suggested_flow
+    assert "auto-promotion" not in route_output
+    assert "auto-promotion" not in suggested_flow
 
 
 def test_run_new_action_pipeline_blocks_when_final_handoff_artifact_is_missing(

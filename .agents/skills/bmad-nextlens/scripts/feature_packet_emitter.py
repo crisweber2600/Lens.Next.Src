@@ -44,13 +44,17 @@ def emit_feature_packet(
     """Emit Feature packet to configured output location.
     
     After successful emission, the next steps are:
-    1. Run NextLens Doctor validation on the emitted packet
-    2. Delegate Feature development to normal top-down BMAD planning:
+    1. Optionally run NextLens Doctor for non-mutating packet health validation
+    2. Delegate Feature development to normal top-down BMAD planning and implementation:
        - Clarify feature intent and boundaries
        - Create PRD-level specifications
        - Define architectural implications
        - Generate stories and acceptance criteria
        - Prepare execution handoff
+       - Capture implementation evidence
+    3. After BMAD implementation evidence exists, run NextLens Validate to generate
+       validation results, route Salmon when needed, prepare Landscape proposal/apply
+       output, and update the evidence-bundle.
     
     This stage does NOT complete the planning flow. It is the beginning of
     the Feature packet lifecycle, not the end.
@@ -76,8 +80,10 @@ def emit_feature_packet(
             output_lines=(
                 f"Packet emitted to: {output_path}",
                 "Next steps:",
-                "1. Validate with: /bmad-nextlens-doctor",
-                "2. Delegate to top-down BMAD planning flow",
+                "1. Optional health check: run /bmad-nextlens-doctor for non-mutating packet validation.",
+                "2. Delegate Feature development to BMAD planning/implementation.",
+                "3. After BMAD implementation evidence exists, run /bmad-nextlens-validate.",
+                "4. Validate creates a validation result, routes Salmon if needed, prepares Landscape proposal/apply output, and updates the evidence-bundle.",
             ),
             evidence_event={
                 "stage": "emit-packet",

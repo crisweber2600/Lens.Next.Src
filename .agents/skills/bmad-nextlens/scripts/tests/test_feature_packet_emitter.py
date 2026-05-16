@@ -32,9 +32,19 @@ def test_emit_feature_packet_creates_nextlens_dir_and_writes_indented_json(tmp_p
     assert result.output_lines == (
         f"Packet emitted to: {expected_path}",
         "Next steps:",
-        "1. Validate with: /bmad-nextlens-doctor",
-        "2. Delegate to top-down BMAD planning flow",
+        "1. Optional health check: run /bmad-nextlens-doctor for non-mutating packet validation.",
+        "2. Delegate Feature development to BMAD planning/implementation.",
+        "3. After BMAD implementation evidence exists, run /bmad-nextlens-validate.",
+        "4. Validate creates a validation result, routes Salmon if needed, prepares Landscape proposal/apply output, and updates the evidence-bundle.",
     )
+    output = "\n".join(result.output_lines)
+    assert "/bmad-nextlens-doctor" in output
+    assert "non-mutating packet validation" in output
+    assert "/bmad-nextlens-validate" in output
+    assert "After BMAD implementation evidence exists" in output
+    assert "Landscape proposal/apply output" in output
+    assert "evidence-bundle" in output
+    assert "auto-promotion" not in output
     assert expected_path.exists()
     assert json.loads(expected_path.read_text(encoding="utf-8")) == packet
     assert expected_path.read_text(encoding="utf-8").startswith("{\n  ")

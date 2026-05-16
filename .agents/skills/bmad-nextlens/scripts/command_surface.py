@@ -108,7 +108,7 @@ def build_help_text() -> str:
         "  new --context <path> [--docs-path <path>]",
         "  doctor --packet <path> [--docs-path <path>]",
         "  salmon --findings <path> [--docs-path <path>]",
-        "  validate --packet <path> --implementation-evidence <path> [--bmad-artifacts <path>] [--docs-path <path>] [--landscape-update-mode propose|apply]",
+        "  validate --packet <path> --implementation-evidence <path> [--bmad-artifacts <path>] [--docs-path <path>] [--landscape-update-source <path>] [--landscape-update-mode propose|apply]",
         "  help | --help",
         "",
         "Validate runs governed post-BMAD validation for implementation evidence; it is not Doctor.",

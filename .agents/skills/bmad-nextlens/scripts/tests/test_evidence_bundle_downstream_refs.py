@@ -125,9 +125,11 @@ def test_evidence_bundle_downstream_refs_stay_consistent(tmp_path: Path) -> None
     assert bundle_payload["salmonSignalRefs"] == post_result.refs["salmonSignalRefs"]
     assert bundle_payload["landscapeUpdateRef"] == post_result.refs["landscapeUpdateRef"]
     assert bundle_payload["derivedGraphRef"] == packet["derivedGraphRef"]
+    assert bundle_payload["sourceRefs"] == post_result.landscape_result.update["sourceRefs"]
     assert bundle_payload["stageOutcomes"]["bmad_handoff"] == "pass"
-    assert bundle_payload["stageOutcomes"]["validation"] == "warn"
-    assert bundle_payload["stageOutcomes"]["landscape_update"] == "pass"
+    assert bundle_payload["stageOutcomes"]["validation"] == "salmon_required"
+    assert bundle_payload["stageOutcomes"]["salmon"] == "created"
+    assert bundle_payload["stageOutcomes"]["landscape_update"] == "proposed"
 
 
 def _write_json(path: Path, payload: dict[str, object]) -> None:

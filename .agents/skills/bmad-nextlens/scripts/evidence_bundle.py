@@ -141,12 +141,17 @@ def build_nextlens_evidence_bundle(
             "salmonRoutingRef": str(refs.get("salmonRoutingRef") or "artifacts/salmon-routing.json"),
             "idempotencyDecisionRef": str(refs.get("idempotencyDecisionRef") or "artifacts/idempotency.json"),
             "bmadHandoffRefs": _string_mapping(refs.get("bmadHandoffRefs")),
+            "evidenceBundleRef": _string_or_none(refs.get("evidenceBundleRef") or packet.get("evidenceBundleRef")),
+            "evidenceRef": _string_or_none(refs.get("evidenceRef") or refs.get("evidenceBundleRef") or packet.get("evidenceBundleRef")),
             "bmadArtifactBundleRef": _string_or_none(refs.get("bmadArtifactBundleRef")),
             "implementationEvidenceRef": _string_or_none(refs.get("implementationEvidenceRef")),
             "validationResultRef": _string_or_none(refs.get("validationResultRef")),
+            "validationRef": _string_or_none(refs.get("validationRef") or refs.get("validationResultRef")),
             "salmonSignalRefs": _string_list(refs.get("salmonSignalRefs")),
+            "salmonRef": _string_or_none(refs.get("salmonRef") or _first_string(refs.get("salmonSignalRefs"))),
             "landscapeUpdateRef": _string_or_none(refs.get("landscapeUpdateRef")),
             "derivedGraphRef": _string_or_none(derived_graph_ref),
+            "sourceRefs": _string_mapping(refs.get("sourceRefs")),
             "stageOutcomes": outcomes,
             "createdAt": _utc_timestamp(now_factory),
         }
@@ -334,7 +339,7 @@ def _merge_nextlens_evidence_bundle_payload(
     for key, value in dict(artifact_refs).items():
         if key == "salmonSignalRefs":
             merged_bundle[key] = _string_list(value)
-        elif key == "bmadHandoffRefs":
+        elif key in {"bmadHandoffRefs", "sourceRefs"}:
             merged_bundle[key] = _string_mapping(value)
         else:
             merged_bundle[key] = _string_or_none(value)
@@ -358,6 +363,11 @@ def _string_or_none(value: Any) -> str | None:
     if value is None:
         return None
     return str(value)
+
+
+def _first_string(value: Any) -> str | None:
+    values = _string_list(value)
+    return values[0] if values else None
 
 
 def _string_list(value: Any) -> list[str]:

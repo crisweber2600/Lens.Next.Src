@@ -111,7 +111,14 @@ def test_generate_nextlens_evidence_bundle_writes_signal_model_bundle(tmp_path: 
             "extractedConceptsRef": "artifacts/extracted-concepts.json",
             "doctorReportRef": "artifacts/doctor-report.jsonl",
         },
-        stage_outcomes={"extracted_concepts": "pass", "salmon": "created"},
+        stage_outcomes={
+            "extracted_concepts": "pass",
+            "implementation_evidence": "pass_with_warnings",
+            "validation": "salmon_required",
+            "salmon": "created",
+            "landscape_update": "proposed",
+            "derived_graph_refresh": "stale",
+        },
         now_factory=lambda: datetime(2026, 5, 14, 10, 0, 6, tzinfo=timezone.utc),
     )
 
@@ -125,7 +132,11 @@ def test_generate_nextlens_evidence_bundle_writes_signal_model_bundle(tmp_path: 
     assert bundle["doctorReportRef"] == "artifacts/doctor-report.jsonl"
     assert bundle["stageOutcomes"]["extracted_concepts"] == "pass"
     assert bundle["stageOutcomes"]["bmad_handoff"] == "pending"
+    assert bundle["stageOutcomes"]["implementation_evidence"] == "pass_with_warnings"
+    assert bundle["stageOutcomes"]["validation"] == "salmon_required"
     assert bundle["stageOutcomes"]["salmon"] == "created"
+    assert bundle["stageOutcomes"]["landscape_update"] == "proposed"
+    assert bundle["stageOutcomes"]["derived_graph_refresh"] == "stale"
     assert bundle["createdAt"] == "2026-05-14T10:00:06Z"
 
 

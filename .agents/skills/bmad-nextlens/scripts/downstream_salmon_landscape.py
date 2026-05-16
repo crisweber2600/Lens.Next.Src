@@ -357,40 +357,25 @@ def _enrich_validation_finding(
 
 
 def _mapped_impact_level(finding: Mapping[str, Any]) -> str:
-    tokens = _finding_tokens(finding)
-    if _has_any(tokens, ("note_only", "implementation_note", "local_note")) or (
-        "minor" in tokens and "note" in tokens and "implementation" in tokens
-    ):
-        return "local_feature_note"
-    if _has_any(tokens, ("prd", "architecture", "architectural", "story")) and _has_any(
-        tokens, ("invalid", "invalidated", "invalidation", "assumption", "assumptions")
-    ):
-        return "bmad_correct_course_required"
-    if _has_any(tokens, ("operating_loop", "operatingloop", "loop")) and _has_any(
-        tokens, ("mismatch", "differs", "invalid", "invalidated")
-    ):
-        return "operating_loop_change"
-    if _has_any(tokens, ("role", "stakeholder")) and _has_any(
-        tokens, ("mismatch", "differs", "invalid", "invalidated", "evidence")
-    ):
-        return "role_or_stakeholder_change"
-    if _has_any(tokens, ("outcome", "value")) and _has_any(
-        tokens, ("missing", "differs", "different", "mismatch", "implemented_value", "implemented")
-    ):
-        return "outcome_reframe"
-    if _has_any(tokens, ("journey", "path")) and _has_any(
-        tokens, ("missing", "invalid", "invalidated", "evidence")
-    ):
-        return "journey_assumption_change"
-    if _has_any(tokens, ("durable_truth", "durable", "current_landscape", "currentlandscape", "correction", "truth")):
-        return "capability_or_landscape_update"
-    if _has_any(tokens, ("scope_leak", "scopeleak", "explicitoutofscope", "out_of_scope", "outofscope")):
-        return "feature_scope_change"
+    text = _finding_match_text(finding)
+    ordered_mappings = (
+        (("scope", "scope_leak", "explicit_out_of_scope", "explicitoutofscope"), "feature_scope_change"),
+        (("journey", "journey_evidence", "journey_path"), "journey_assumption_change"),
+        (("outcome", "outcome_evidence", "value_mismatch"), "outcome_reframe"),
+        (("role", "stakeholder", "review_owner"), "role_or_stakeholder_change"),
+        (("operating_loop", "operatingloop", "loop"), "operating_loop_change"),
+        (("landscape", "current_truth", "currenttruth", "capability"), "capability_or_landscape_update"),
+        (("bmad", "prd", "architecture", "epic", "story"), "bmad_correct_course_required"),
+        (("note", "local"), "local_feature_note"),
+    )
+    for needles, impact_level in ordered_mappings:
+        if any(needle in text for needle in needles):
+            return impact_level
     return "feature_scope_change"
 
 
-def _finding_tokens(finding: Mapping[str, Any]) -> set[str]:
-    token_text_parts: list[str] = []
+def _finding_match_text(finding: Mapping[str, Any]) -> str:
+    parts: list[str] = []
     for key in (
         "category",
         "type",
@@ -407,37 +392,9 @@ def _finding_tokens(finding: Mapping[str, Any]) -> set[str]:
     ):
         value = finding.get(key)
         if isinstance(value, (str, int, float, bool)):
-            if key in {"category", "type", "findingType", "issueClass", "reference", "field", "path"}:
-                token_text_parts.append(key)
-            token_text_parts.append(str(value))
-    text = " ".join(token_text_parts).lower()
-    normalized = text.replace("-", "_").replace(".", "_").replace("/", "_").replace(" ", "_")
-    raw_parts = text.replace("-", " ").replace("_", " ").replace(".", " ").replace("/", " ").split()
-    tokens = {part.strip() for part in raw_parts if part.strip()}
-    tokens.update(part.strip() for part in normalized.split("_") if part.strip())
-    if "operating" in tokens and "loop" in tokens:
-        tokens.add("operating_loop")
-    if "explicitoutofscope" in normalized:
-        tokens.add("explicitoutofscope")
-    if "out_of_scope" in normalized:
-        tokens.add("out_of_scope")
-    if "scope_leak" in normalized or "scopeleak" in normalized:
-        tokens.add("scope_leak")
-    if "durable_truth" in normalized:
-        tokens.add("durable_truth")
-    if "current_landscape" in normalized:
-        tokens.add("current_landscape")
-    if "currentlandscape" in normalized:
-        tokens.add("currentlandscape")
-    if "implemented_value" in normalized:
-        tokens.add("implemented_value")
-    if "note_only" in normalized:
-        tokens.add("note_only")
-    return tokens
-
-
-def _has_any(tokens: set[str], candidates: Sequence[str]) -> bool:
-    return any(candidate in tokens for candidate in candidates)
+            parts.append(str(value))
+    text = " ".join(parts).lower()
+    return text.replace("-", "_").replace(".", "_").replace("/", "_").replace(" ", "_")
 
 
 def _recommended_action(finding: Mapping[str, Any], impact_level: str) -> dict[str, Any]:
@@ -498,7 +455,16 @@ def _node_aliases(field_name: str) -> tuple[str, ...]:
     return {
         "journeys": ("journeyIds", "journeyId", "impactedJourney", "journeyPath"),
         "outcomes": ("outcomeIds", "outcomeId", "impactedOutcome"),
-        "roles": ("roleIds", "roleId", "stakeholderIds", "stakeholderId", "impactedRole", "impactedStakeholder"),
+        "roles": (
+            "roleIds",
+            "roleId",
+            "stakeholderIds",
+            "stakeholderId",
+            "impactedRole",
+            "impactedStakeholder",
+            "reviewOwner",
+            "reviewOwnerId",
+        ),
         "operatingLoops": ("operatingLoopIds", "operatingLoopId", "loopIds", "loopId", "impactedOperatingLoop"),
         "capabilities": ("capabilityIds", "capabilityId", "landscapeNodeIds", "landscapeNodeId", "impactedCapability"),
         "bmadArtifacts": (
@@ -508,7 +474,10 @@ def _node_aliases(field_name: str) -> tuple[str, ...]:
             "bmadArtifact",
             "prdRef",
             "architectureRef",
+            "epicRef",
             "storyRef",
+            "storyIds",
+            "storyId",
         ),
     }.get(field_name, ())
 
@@ -557,9 +526,20 @@ def _normalize_update(update: Mapping[str, Any]) -> dict[str, Any]:
 
 def _normalize_source_refs(source_refs: Mapping[str, Any]) -> dict[str, Any]:
     source_map = {str(key): value for key, value in source_refs.items()}
+    evidence_bundle_ref = (
+        source_map.get("evidenceBundleRef")
+        or source_map.get("evidenceBundle")
+        or source_map.get("evidenceRef")
+        or source_map.get("evidence")
+    )
     normalized = {
         "packetRef": source_map.get("packetRef") or source_map.get("packet"),
-        "evidenceRef": source_map.get("evidenceRef") or source_map.get("evidence"),
+        "evidenceBundleRef": evidence_bundle_ref,
+        "evidenceRef": evidence_bundle_ref,
+        "implementationEvidenceRef": (
+            source_map.get("implementationEvidenceRef")
+            or source_map.get("implementationEvidence")
+        ),
         "validationRef": source_map.get("validationRef") or source_map.get("validation"),
         "salmonRef": source_map.get("salmonRef") or source_map.get("salmon"),
     }
