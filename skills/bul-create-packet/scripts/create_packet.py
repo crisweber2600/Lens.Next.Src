@@ -241,6 +241,24 @@ def manifest_for_paths(paths: list[Path]) -> list[dict[str, str]]:
     return [{"path": str(path), "kind": "file"} for path in paths]
 
 
+def manifest_snapshot(root: Path) -> dict[Path, tuple[int, int]]:
+    if not root.exists():
+        return {}
+    snapshot: dict[Path, tuple[int, int]] = {}
+    for path in root.rglob("*"):
+        if path.is_file():
+            stat = path.stat()
+            snapshot[path.resolve()] = (stat.st_size, stat.st_mtime_ns)
+    return snapshot
+
+
+def changed_paths_since(root: Path, before: dict[Path, tuple[int, int]]) -> list[Path]:
+    after = manifest_snapshot(root)
+    changed = [path for path, state in after.items() if before.get(path) != state]
+    deleted = [path for path in before if path not in after]
+    return sorted(changed + deleted, key=lambda item: str(item))
+
+
 def atomic_write_json(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.NamedTemporaryFile("w", encoding="utf-8", dir=str(path.parent), delete=False) as handle:
@@ -348,14 +366,15 @@ def write_accepted_packet(packet: dict[str, Any], packet_output_path: Path) -> d
     accepted_packet["receiptReference"] = {"receiptPath": str(receipt_path), "runMetadataPath": str(metadata_path)}
 
     written_paths = [packet_path, metadata_path, receipt_path]
+    before_snapshot = manifest_snapshot(packet_output_path)
     run_metadata = {
         "schemaVersion": "bul.run-metadata.v1",
         "runId": f"run-{accepted_packet['packetId']}",
         "packetId": accepted_packet["packetId"],
         "createdAt": now,
         "explicitInputsOnly": True,
-        "writtenFiles": manifest_for_paths(written_paths),
-        "changedFiles": manifest_for_paths(written_paths),
+        "writtenFiles": [],
+        "changedFiles": [],
         "environmentCaptured": False,
         "secretsCaptured": False,
     }
@@ -364,13 +383,30 @@ def write_accepted_packet(packet: dict[str, Any], packet_output_path: Path) -> d
         "packetId": accepted_packet["packetId"],
         "runId": run_metadata["runId"],
         "status": "pending-verification",
-        "writtenFiles": manifest_for_paths(written_paths),
-        "changedFiles": manifest_for_paths(written_paths),
+        "writtenFiles": [],
+        "changedFiles": [],
         "nonEffects": canonical_non_effects(),
     }
 
     try:
         atomic_write_json(packet_path, accepted_packet)
+        observed_changed = changed_paths_since(packet_output_path, before_snapshot)
+        observed_written = [path for path in written_paths if path.exists()]
+        run_metadata["writtenFiles"] = manifest_for_paths(observed_written)
+        run_metadata["changedFiles"] = manifest_for_paths(observed_changed)
+        atomic_write_json(metadata_path, run_metadata)
+        observed_changed = changed_paths_since(packet_output_path, before_snapshot)
+        run_metadata["writtenFiles"] = manifest_for_paths([path for path in written_paths if path.exists()])
+        run_metadata["changedFiles"] = manifest_for_paths(observed_changed)
+        receipt["writtenFiles"] = run_metadata["writtenFiles"]
+        receipt["changedFiles"] = run_metadata["changedFiles"]
+        atomic_write_json(metadata_path, run_metadata)
+        atomic_write_json(receipt_path, receipt)
+        observed_changed = changed_paths_since(packet_output_path, before_snapshot)
+        run_metadata["writtenFiles"] = manifest_for_paths([path for path in written_paths if path.exists()])
+        run_metadata["changedFiles"] = manifest_for_paths(observed_changed)
+        receipt["writtenFiles"] = run_metadata["writtenFiles"]
+        receipt["changedFiles"] = run_metadata["changedFiles"]
         atomic_write_json(metadata_path, run_metadata)
         atomic_write_json(receipt_path, receipt)
     except Exception as exc:  # pragma: no cover - defensive rollback guidance
@@ -387,13 +423,26 @@ def write_accepted_packet(packet: dict[str, Any], packet_output_path: Path) -> d
 
     receipt["status"] = "verified"
     atomic_write_json(receipt_path, receipt)
+    final_changed = changed_paths_since(packet_output_path, before_snapshot)
+    run_metadata["writtenFiles"] = manifest_for_paths([path for path in written_paths if path.exists()])
+    run_metadata["changedFiles"] = manifest_for_paths(final_changed)
+    receipt["writtenFiles"] = run_metadata["writtenFiles"]
+    receipt["changedFiles"] = run_metadata["changedFiles"]
+    atomic_write_json(metadata_path, run_metadata)
+    atomic_write_json(receipt_path, receipt)
+    final_verification = verify_receipt(
+        json.loads(receipt_path.read_text(encoding="utf-8")),
+        json.loads(metadata_path.read_text(encoding="utf-8")),
+    )
+    if final_verification["status"] != "pass":
+        return {"status": "fail", "acceptedPacketWritten": False, "verification": final_verification, "runValid": False}
     return {
         "status": "pass",
         "acceptedPacketWritten": True,
         "packetPath": str(packet_path),
         "runMetadataPath": str(metadata_path),
         "receiptPath": str(receipt_path),
-        "verification": verification,
+        "verification": final_verification,
         "labels": [PACKET_VALID_LABEL, validation["bmadReady"]["label"], "Non-effects verified"],
     }
 

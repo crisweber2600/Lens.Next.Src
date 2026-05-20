@@ -8,6 +8,7 @@ import csv
 import json
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -107,13 +108,120 @@ def run_pytest(repo_root: Path) -> dict[str, Any]:
     return {"command": " ".join(command), "returncode": completed.returncode, "stdout": completed.stdout, "stderr": completed.stderr}
 
 
-def validate_module(repo_root: Path, run_tests: bool = False) -> dict[str, Any]:
+def _resolve_json_path(data: dict[str, Any], path: str) -> list[Any]:
+    current: list[Any] = [data]
+    for part in path.split("."):
+        wildcard = part.endswith("[*]")
+        key = part[:-3] if wildcard else part
+        next_values: list[Any] = []
+        for value in current:
+            if isinstance(value, dict) and key in value:
+                child = value[key]
+                if wildcard and isinstance(child, list):
+                    next_values.extend(child)
+                else:
+                    next_values.append(child)
+        current = next_values
+    return current
+
+
+def _assert_eval(output: dict[str, Any], assertion: dict[str, Any]) -> bool:
+    values = _resolve_json_path(output, str(assertion.get("path", "")))
+    if "equals" in assertion:
+        return any(value == assertion["equals"] for value in values)
+    if "contains" in assertion:
+        expected = assertion["contains"]
+        for value in values:
+            if isinstance(value, list) and expected in value:
+                return True
+            if isinstance(value, str) and str(expected) in value:
+                return True
+            if value == expected:
+                return True
+    return False
+
+
+def _run_eval_case(repo_root: Path, suite_path: Path, eval_case: dict[str, Any], tmp_root: Path) -> list[dict[str, str]]:
+    errors: list[dict[str, str]] = []
+    command = str(eval_case.get("command") or "")
+    if not command:
+        return [_error("missingEvalCommand", str(suite_path), "Eval case command is missing.", "Add an executable command for every eval case.")]
+
+    replacements = {"{tmp}": str(tmp_root), "{input}": "", "{receipt}": "", "{runMetadata}": ""}
+    for key, token in (("input", "{input}"), ("receipt", "{receipt}"), ("runMetadata", "{runMetadata}")):
+        if key in eval_case:
+            replacements[token] = str((suite_path.parent / str(eval_case[key])).resolve())
+    for token, value in replacements.items():
+        command = command.replace(token, value)
+
+    completed = subprocess.run(command, cwd=repo_root, text=True, capture_output=True, shell=True)
+    stdout = completed.stdout.strip()
+    try:
+        output = json.loads(stdout)
+    except json.JSONDecodeError as exc:
+        return [
+            _error(
+                "evalOutputNotJson",
+                str(suite_path),
+                f"Eval '{eval_case.get('name')}' did not emit JSON: {exc}.",
+                "Make eval commands emit machine-readable JSON before release.",
+            )
+        ]
+
+    allowed_nonzero_statuses = {"fail", "blocked", "dry-run"}
+    expected_success = not any(
+        str(assertion.get("path", "")).endswith("status") and assertion.get("equals") in allowed_nonzero_statuses
+        for assertion in eval_case.get("assertions", [])
+    )
+    if expected_success and completed.returncode != 0:
+        errors.append(_error("evalCommandFailed", str(suite_path), f"Eval '{eval_case.get('name')}' exited {completed.returncode}.", completed.stderr.strip() or "Fix the eval command."))
+
+    for assertion in eval_case.get("assertions", []):
+        if not _assert_eval(output, assertion):
+            errors.append(
+                _error(
+                    "evalAssertionFailed",
+                    str(suite_path),
+                    f"Eval '{eval_case.get('name')}' assertion failed: {assertion}.",
+                    "Update the fixture, command, or implementation so eval assertions prove behavior.",
+                )
+            )
+    return errors
+
+
+def run_artifact_evals(repo_root: Path) -> dict[str, Any]:
+    eval_paths = [
+        repo_root / "evals" / "bul-create-packet" / "evals.json",
+        repo_root / "evals" / "bul-validate-packet" / "evals.json",
+        repo_root / "evals" / "bul-verify-receipt" / "evals.json",
+    ]
+    errors: list[dict[str, str]] = []
+    executed = 0
+    with tempfile.TemporaryDirectory(prefix="bul-evals-") as tmp:
+        tmp_root = Path(tmp)
+        for suite_path in eval_paths:
+            suite = load_json(suite_path)
+            cases = suite.get("evals")
+            if not isinstance(cases, list) or not cases:
+                errors.append(_error("missingEvalCases", str(suite_path), "Eval suite has no cases.", "Add executable eval cases before release."))
+                continue
+            for eval_case in cases:
+                executed += 1
+                errors.extend(_run_eval_case(repo_root, suite_path, eval_case, tmp_root / str(executed)))
+    return {"status": "pass" if not errors else "fail", "executed": executed, "errors": errors}
+
+
+def validate_module(repo_root: Path, run_tests: bool = False, run_evals: bool = False) -> dict[str, Any]:
     errors = validate_marketplace(repo_root) + validate_help(repo_root) + validate_evals(repo_root)
     tests: dict[str, Any] | None = None
+    evals: dict[str, Any] | None = None
     if run_tests:
         tests = run_pytest(repo_root)
         if tests["returncode"] != 0:
             errors.append(_error("testsFailed", "tests", "Unit or fixture tests failed.", "Fix tests before release."))
+    if run_evals:
+        evals = run_artifact_evals(repo_root)
+        errors.extend(evals["errors"])
     return {
         "schemaVersion": "bul.module-validation.v1",
         "status": "pass" if not errors else "fail",
@@ -127,6 +235,7 @@ def validate_module(repo_root: Path, run_tests: bool = False) -> dict[str, Any]:
             "Read-only consumer and traceability contracts pass",
         ],
         "tests": tests,
+        "evals": evals,
     }
 
 
@@ -134,12 +243,13 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Validate Bottom-Up LENS module release readiness.")
     parser.add_argument("--repo-root", default=".")
     parser.add_argument("--run-tests", action="store_true")
+    parser.add_argument("--run-evals", action="store_true")
     return parser.parse_args()
 
 
 def main() -> int:
     args = parse_args()
-    result = validate_module(Path(args.repo_root).resolve(), run_tests=args.run_tests)
+    result = validate_module(Path(args.repo_root).resolve(), run_tests=args.run_tests, run_evals=args.run_evals)
     print(json.dumps(result, indent=2, sort_keys=True))
     return 0 if result["status"] == "pass" else 1
 

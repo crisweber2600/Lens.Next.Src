@@ -42,6 +42,13 @@ def test_path_guard_blocks_forbidden_fixture_categories(tmp_path: Path) -> None:
     assert categories_seen >= set(DENIED_CATEGORIES) - {"control-github"}
 
 
+def test_path_guard_allows_harmless_substrings_under_output_root(tmp_path: Path) -> None:
+    allowed = tmp_path / "docs" / "bottom-up-lens"
+    for relative in ("my-graphical-ui/packet.json", "release-notes/packet.json", "team-services-output/packet.json"):
+        result = guard_path(allowed / relative, [allowed], "packetPath")
+        assert result["status"] == "pass", relative
+
+
 def test_write_plan_uses_guard_for_all_paths(tmp_path: Path) -> None:
     allowed = tmp_path / "docs" / "bottom-up-lens"
     result = guard_write_plan([allowed / "packet.json", tmp_path / "docs" / "derived-graph" / "graph.json"], [allowed])

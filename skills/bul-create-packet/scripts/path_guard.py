@@ -21,8 +21,25 @@ DENIED_CATEGORIES: dict[str, tuple[str, ...]] = {
     "roadmap": ("roadmap",),
     "lens-lifecycle-metadata": ("feature.yaml", "feature-yaml", "sprint-status.yaml", "dev-session.yaml"),
     "service-domain-program-truth": ("service.yaml", "domain.yaml", "program.yaml", "services", "domains", "programs"),
-    "top-down-runtime": ("bmad-nextlens", "nextlens-top-down", "nextlens-doctor", "nextlens-salmon"),
+    "top-down-runtime": ("bmad-nextlens", "bmad-nextlens-doctor", "bmad-nextlens-salmon", "nextlens-top-down", "nextlens-doctor", "nextlens-salmon"),
     "control-github": (".github",),
+}
+
+COMPOUND_MARKERS = {
+    "derived-graph",
+    "derivedgraph",
+    "lens.core.governance",
+    "governance-mirror",
+    "release-clone",
+    "release-clones",
+    "living-landscape",
+    "bmad-nextlens",
+    "bmad-nextlens-doctor",
+    "bmad-nextlens-salmon",
+    "top-down-runtime",
+    "nextlens-top-down",
+    "nextlens-doctor",
+    "nextlens-salmon",
 }
 
 
@@ -54,14 +71,13 @@ def denied_category_for(path: Path) -> str | None:
     parts = {part.lower() for part in path.parts}
     name = path.name.lower()
     stem = path.stem.lower()
+    normalized = str(path).lower().replace("\\", "/")
     for category, markers in DENIED_CATEGORIES.items():
         for marker in markers:
             marker_l = marker.lower()
             if marker_l in parts or marker_l == name or marker_l == stem:
                 return category
-            if any(marker_l in part for part in parts):
-                return category
-            if marker_l in str(path).lower().replace("\\", "/") and marker_l in {"derived-graph", "lens.core.governance", "governance-mirror", "top-down-runtime"}:
+            if marker_l in COMPOUND_MARKERS and marker_l in normalized:
                 return category
     return None
 

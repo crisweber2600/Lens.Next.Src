@@ -40,6 +40,29 @@ def test_false_graph_receipt_fails_with_evidence() -> None:
     assert any(error["code"] == "falseReceiptClaim" for error in result["hardBlockers"])
 
 
+def test_forbidden_written_files_are_checked_even_with_benign_changed_files() -> None:
+    receipt = load_json("evals/bul-verify-receipt/files/valid-receipt.json")
+    metadata = load_json("evals/bul-verify-receipt/files/run-metadata.json")
+    metadata["writtenFiles"] = [{"path": "docs/derived-graph/graph.json", "kind": "file"}]
+    metadata["changedFiles"] = [{"path": "docs/bottom-up-lens/benign.json", "kind": "file"}]
+    receipt["writtenFiles"] = metadata["writtenFiles"]
+    receipt["changedFiles"] = metadata["changedFiles"]
+    result = verify_receipt(receipt, metadata)
+    assert result["status"] == "fail"
+    assert any(error["code"] == "forbiddenChangedFile" for error in result["hardBlockers"])
+
+
+def test_non_effect_claims_must_all_be_present_and_false() -> None:
+    receipt = load_json("evals/bul-verify-receipt/files/valid-receipt.json")
+    metadata = load_json("evals/bul-verify-receipt/files/run-metadata.json")
+    receipt["nonEffects"]["governancePublished"] = True
+    del receipt["nonEffects"]["releaseCloneWritten"]
+    result = verify_receipt(receipt, metadata)
+    assert result["status"] == "fail"
+    assert any(error["code"] == "forbiddenNonEffectClaim" for error in result["hardBlockers"])
+    assert any(error["code"] == "missingNonEffectClaim" for error in result["hardBlockers"])
+
+
 def test_missing_metadata_fails_closed() -> None:
     result = verify_receipt(
         load_json("evals/bul-verify-receipt/files/valid-receipt.json"),

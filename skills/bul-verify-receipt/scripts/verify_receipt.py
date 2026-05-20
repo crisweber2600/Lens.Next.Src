@@ -20,6 +20,36 @@ RUN_METADATA_SCHEMA_VERSION = "bul.run-metadata.v1"
 PASS_LABEL = "Non-effects verified"
 FAIL_LABEL = "Receipt mismatch detected"
 
+REQUIRED_NON_EFFECTS = {
+    "featureYamlWritten": False,
+    "governancePublished": False,
+    "governanceMirrorWritten": False,
+    "lensBranchesCreated": False,
+    "constitutionRuntimeWritten": False,
+    "releaseCloneWritten": False,
+    "topDownRuntimeWritten": False,
+    "landscapeWritten": False,
+    "derivedGraphWritten": False,
+    "salmonRouted": False,
+    "topologyPromoted": False,
+    "serviceDomainProgramTruthWritten": False,
+}
+
+CATEGORY_NON_EFFECT_FIELDS = {
+    "governance": ("governancePublished", "governanceMirrorWritten"),
+    "release": ("releaseCloneWritten",),
+    "landscape": ("landscapeWritten",),
+    "graph": ("derivedGraphWritten",),
+    "salmon": ("salmonRouted",),
+    "promotion": ("topologyPromoted",),
+    "adjacency": ("topologyPromoted",),
+    "pressure": ("topologyPromoted",),
+    "roadmap": ("topologyPromoted",),
+    "lens-lifecycle-metadata": ("featureYamlWritten",),
+    "service-domain-program-truth": ("serviceDomainProgramTruthWritten",),
+    "top-down-runtime": ("topDownRuntimeWritten",),
+}
+
 
 def _error(code: str, field: str, message: str, recommendation: str, evidence: Any | None = None) -> dict[str, Any]:
     result: dict[str, Any] = {
@@ -92,7 +122,7 @@ def verify_receipt(receipt: dict[str, Any], run_metadata: dict[str, Any]) -> dic
                 {"receipt": receipt_written, "runMetadata": metadata_written},
             )
         )
-    if receipt_changed and _normalize_paths(receipt_changed) != _normalize_paths(metadata_changed):
+    if _normalize_paths(receipt_changed) != _normalize_paths(metadata_changed):
         errors.append(
             _error(
                 "changedFilesMismatch",
@@ -103,8 +133,8 @@ def verify_receipt(receipt: dict[str, Any], run_metadata: dict[str, Any]) -> dic
             )
         )
 
-    changed_evidence = sorted(set(metadata_changed or metadata_written))
-    for changed in changed_evidence:
+    checked_evidence = sorted(set(metadata_written) | set(metadata_changed))
+    for changed in checked_evidence:
         category = denied_category_for(Path(changed).expanduser())
         if category:
             errors.append(
@@ -121,18 +151,40 @@ def verify_receipt(receipt: dict[str, Any], run_metadata: dict[str, Any]) -> dic
     if not isinstance(non_effects, dict):
         errors.append(_error("missingNonEffects", "receipt.nonEffects", "Receipt nonEffects claims are required.", "Include explicit false/no-effect claims for forbidden categories."))
     else:
-        false_graph_claim = non_effects.get("derivedGraphWritten") is False or non_effects.get("graphWritten") is False
-        graph_changes = [path for path in changed_evidence if denied_category_for(Path(path).expanduser()) == "graph"]
-        if false_graph_claim and graph_changes:
-            errors.append(
-                _error(
-                    "falseReceiptClaim",
-                    "receipt.nonEffects.derivedGraphWritten",
-                    "Receipt claims no graph update but changed files include graph paths.",
-                    "Report Receipt mismatch detected and mark this run invalid.",
-                    {"category": "graph", "changedFiles": graph_changes},
+        for field, expected in REQUIRED_NON_EFFECTS.items():
+            if field not in non_effects:
+                errors.append(
+                    _error(
+                        "missingNonEffectClaim",
+                        f"receipt.nonEffects.{field}",
+                        f"Receipt nonEffects.{field} claim is required.",
+                        "Include every canonical non-effect claim and set it to false unless this verifier is explicitly expanded.",
+                    )
                 )
-            )
+            elif non_effects.get(field) is not expected:
+                errors.append(
+                    _error(
+                        "forbiddenNonEffectClaim",
+                        f"receipt.nonEffects.{field}",
+                        f"Receipt nonEffects.{field} must be false for Bottom-Up LENS.",
+                        "Do not claim governance, topology, release, runtime, or service/domain/program side effects.",
+                        {"field": field, "value": non_effects.get(field)},
+                    )
+                )
+
+        for category, fields in CATEGORY_NON_EFFECT_FIELDS.items():
+            changed_for_category = [path for path in checked_evidence if denied_category_for(Path(path).expanduser()) == category]
+            contradicted_fields = [field for field in fields if non_effects.get(field) is False]
+            if changed_for_category and contradicted_fields:
+                errors.append(
+                    _error(
+                        "falseReceiptClaim",
+                        f"receipt.nonEffects.{contradicted_fields[0]}",
+                        f"Receipt claims no {category} update but changed files include {category} paths.",
+                        "Report Receipt mismatch detected and mark this run invalid.",
+                        {"category": category, "changedFiles": changed_for_category},
+                    )
+                )
 
     status = "pass" if not errors else "fail"
     return {
@@ -143,7 +195,7 @@ def verify_receipt(receipt: dict[str, Any], run_metadata: dict[str, Any]) -> dic
         "checkedFiles": {
             "writtenFiles": metadata_written,
             "changedFiles": metadata_changed,
-            "count": len(changed_evidence),
+            "count": len(checked_evidence),
         },
         "errors": errors,
         "hardBlockers": errors,

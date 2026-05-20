@@ -106,6 +106,7 @@ def test_release_traceability_and_module_validation_contract() -> None:
     release = (REPO_ROOT / "docs" / "release-readiness.md").read_text(encoding="utf-8")
     assert "product brief, research, brainstorm, PRD, and UX artifacts together satisfy the business-plan equivalent" in release
     assert "architecture.md` satisfies the tech-plan equivalent" in release
-    result = validate_module(REPO_ROOT, run_tests=False)
+    result = validate_module(REPO_ROOT, run_tests=False, run_evals=True)
     assert result["status"] == "pass", result["errors"]
+    assert result["evals"]["executed"] >= 8
     assert "Marketplace metadata complete" in result["releaseChecklist"]

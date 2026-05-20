@@ -86,7 +86,10 @@ def test_atomic_write_and_receipt_verification(tmp_path: Path) -> None:
         assert path.exists()
         assert path.is_relative_to((tmp_path / "packets").resolve())
     receipt = json.loads(Path(result["receiptPath"]).read_text(encoding="utf-8"))
+    metadata = json.loads(Path(result["runMetadataPath"]).read_text(encoding="utf-8"))
     assert receipt["status"] == "verified"
+    assert {item["path"] for item in receipt["changedFiles"]} == {item["path"] for item in metadata["changedFiles"]}
+    assert str(Path(result["receiptPath"])) in {item["path"] for item in metadata["changedFiles"]}
     assert result["verification"]["status"] == "pass"
 
 
