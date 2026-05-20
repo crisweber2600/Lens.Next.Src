@@ -1,0 +1,5 @@
+{
+  "skill_name": "bul-verify-receipt",
+  "_design_notes": "Placeholder artifact eval suite. Later stories add receipt and run metadata verification expectations.",
+  "evals": []
+}

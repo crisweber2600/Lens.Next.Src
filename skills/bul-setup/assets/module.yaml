@@ -1,0 +1,44 @@
+code: bul
+name: Bottom-Up LENS
+module_version: 1.0.0
+description: Creates and verifies one safe bottom-up feature packet without inventing topology or emitting downstream side effects.
+default_selected: false
+module_greeting: Bottom-Up LENS is ready. Use setup once, then create, validate, and verify packet artifacts under configured output roots.
+capabilities:
+  - command: bottom-up-lens-setup
+    action: configure
+    skill: bul-setup
+    description: Register or refresh the Bottom-Up LENS BMad module in this project.
+    entry_point: skills/bul-setup/SKILL.md
+    skill_type: workflow
+  - command: bottom-up-lens-create-packet
+    action: create-packet
+    skill: bul-create-packet
+    description: Create one safe bottom-up feature packet after preview and explicit confirmation.
+    entry_point: skills/bul-create-packet/SKILL.md
+    skill_type: workflow
+  - command: bottom-up-lens-validate-packet
+    action: validate-packet
+    skill: bul-validate-packet
+    description: Validate packet schema and BMAD readiness without mutating source artifacts.
+    entry_point: skills/bul-validate-packet/SKILL.md
+    skill_type: workflow
+  - command: bottom-up-lens-verify-receipt
+    action: verify-receipt
+    skill: bul-verify-receipt
+    description: Verify receipt and run metadata non-effects claims without mutating source artifacts.
+    entry_point: skills/bul-verify-receipt/SKILL.md
+    skill_type: workflow
+packet_output_path:
+  prompt: Where should Bottom-Up LENS write accepted packet artifacts?
+  default: '{project-root}/docs/bottom-up-lens'
+reports_output_path:
+  prompt: Where should Bottom-Up LENS write validation and verification reports?
+  default: '{project-root}/_bmad-output/bottom-up-lens'
+default_packet_schema_version:
+  prompt: Which packet schema version should new packets use by default?
+  default: bul.feature-packet.v1
+directories:
+  - '{packet_output_path}'
+  - '{reports_output_path}'
+post-install-notes: Bottom-Up LENS is standalone and does not use Lens governance, topology, release clones, Landscape, Graph, Salmon, promotion, adjacency, pressure, or roadmap surfaces.

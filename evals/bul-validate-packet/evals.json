@@ -1,0 +1,5 @@
+{
+  "skill_name": "bul-validate-packet",
+  "_design_notes": "Placeholder artifact eval suite. Later stories add packet validity and BMAD readiness expectations.",
+  "evals": []
+}

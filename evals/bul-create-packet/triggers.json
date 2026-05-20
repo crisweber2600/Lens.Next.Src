@@ -1,0 +1,10 @@
+[
+  {
+    "query": "Create a Bottom-Up LENS feature packet from these notes.",
+    "should_trigger": true
+  },
+  {
+    "query": "Run the NextLens top-down doctor on this feature packet.",
+    "should_trigger": false
+  }
+]

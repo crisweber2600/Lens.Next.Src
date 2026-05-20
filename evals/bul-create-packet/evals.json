@@ -1,0 +1,5 @@
+{
+  "skill_name": "bul-create-packet",
+  "_design_notes": "Placeholder artifact eval suite. Later stories add discriminating packet creation expectations.",
+  "evals": []
+}
