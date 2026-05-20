@@ -1,4 +1,94 @@
 {
   "schemaVersion": "bul.feature-packet.v1",
-  "fixtureStatus": "placeholder"
+  "packetId": "bul-safe-local-export-001",
+  "packetStatus": "draft",
+  "sourceMode": "bottom_up",
+  "identity": {
+    "featureName": "Safe local export",
+    "actor": "Repository maintainer",
+    "problem": "Local feature notes need one bounded implementation packet before any downstream handoff.",
+    "outcome": "The maintainer can validate one explicit feature packet without governance or topology side effects."
+  },
+  "selectedFeature": {
+    "id": "candidate-1",
+    "title": "Safe local export"
+  },
+  "candidateFeatures": [
+    {
+      "id": "candidate-1",
+      "title": "Safe local export",
+      "selected": true
+    },
+    {
+      "id": "candidate-2",
+      "title": "Future reporting view",
+      "selected": false,
+      "deferredNote": "Deferred unranked local note only."
+    }
+  ],
+  "scope": {
+    "included": [
+      "Create one packet from explicit local context.",
+      "Validate packet validity and BMAD readiness as separate results."
+    ],
+    "explicitOutOfScope": [
+      "Governance publication.",
+      "Topology promotion or roadmap creation."
+    ]
+  },
+  "acceptanceCriteria": [
+    "Given explicit local context, when validation runs, then packet validity and BMAD readiness are reported separately."
+  ],
+  "constraints": [
+    "Do not infer identity, phase, topology, or scope from branch name, open editor, or cwd/current working directory.",
+    "Do not write Lens governance, release clone, top-down runtime, Landscape, Derived Graph, Salmon, promotion, adjacency, pressure, roadmap, service, domain, or program truth paths."
+  ],
+  "assumptions": [
+    {
+      "text": "The operator supplied the source notes explicitly.",
+      "status": "unpromoted"
+    }
+  ],
+  "provenance": {
+    "rawUserWording": "Start from one feature: safe local export.",
+    "inputRefs": [
+      "operator-paste:2026-05-20"
+    ],
+    "explicitInputsOnly": true,
+    "noBranchEditorCwdInference": true,
+    "inferenceSources": []
+  },
+  "handoff": {
+    "implementationContext": "Implement only the safe local export packet behavior and validators described here.",
+    "antiInferenceInstructions": "Use only packet fields and explicit inputRefs; do not infer from branch, open editor, or cwd/current working directory."
+  },
+  "receiptReference": null,
+  "topology": {
+    "status": "unpromoted",
+    "domain": null,
+    "service": null,
+    "program": null,
+    "landscape": null,
+    "derivedGraph": null,
+    "salmon": null,
+    "promotion": null,
+    "adjacency": null,
+    "pressure": null,
+    "roadmap": null,
+    "branchTopology": null
+  },
+  "nonEffects": {
+    "featureYamlWritten": false,
+    "governancePublished": false,
+    "governanceMirrorWritten": false,
+    "lensBranchesCreated": false,
+    "constitutionRuntimeWritten": false,
+    "releaseCloneWritten": false,
+    "topDownRuntimeWritten": false,
+    "landscapeWritten": false,
+    "derivedGraphWritten": false,
+    "salmonRouted": false,
+    "topologyPromoted": false,
+    "serviceDomainProgramTruthWritten": false
+  }
 }

@@ -1,5 +1,39 @@
 {
   "skill_name": "bul-validate-packet",
-  "_design_notes": "Placeholder artifact eval suite. Later stories add packet validity and BMAD readiness expectations.",
-  "evals": []
+  "schemaVersion": "bul.eval-suite.v1",
+  "evals": [
+    {
+      "name": "valid packet separates packet validity and BMAD readiness",
+      "type": "artifact",
+      "input": "files/valid-packet.json",
+      "command": "python skills/bul-validate-packet/scripts/validate_packet.py --packet {input}",
+      "assertions": [
+        {"path": "packetValid.status", "equals": "pass"},
+        {"path": "packetValid.label", "equals": "Feature packet is valid"},
+        {"path": "bmadReady.status", "equals": "pass"},
+        {"path": "bmadReady.label", "equals": "Ready for BMAD: ready"}
+      ]
+    },
+    {
+      "name": "valid not ready preserves valid packet and fails readiness",
+      "type": "artifact",
+      "input": "files/valid-not-bmad-ready.json",
+      "command": "python skills/bul-validate-packet/scripts/validate_packet.py --packet {input}",
+      "assertions": [
+        {"path": "packetValid.status", "equals": "pass"},
+        {"path": "bmadReady.status", "equals": "fail"},
+        {"path": "bmadReady.label", "equals": "Ready for BMAD: not yet"}
+      ]
+    },
+    {
+      "name": "invalid multi candidate fails closed",
+      "type": "artifact",
+      "input": "files/invalid-multi-candidate.json",
+      "command": "python skills/bul-validate-packet/scripts/validate_packet.py --packet {input}",
+      "assertions": [
+        {"path": "packetValid.status", "equals": "fail"},
+        {"path": "hardBlockers[*].code", "contains": "invalidCandidateSelection"}
+      ]
+    }
+  ]
 }

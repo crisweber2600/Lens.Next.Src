@@ -21,16 +21,16 @@ Receipt verification is read-only for receipts, run metadata, packet artifacts, 
 
 ## Outputs
 
-Future stories will return structured verification results and optional report artifacts under `reports_output_path`. This scaffold only defines the contract.
+Verification returns structured JSON with `status`, `runValid`, checked-file summaries, `hardBlockers`, and the labels `Non-effects verified` or `Receipt mismatch detected`. Optional reports may be written only under configured `reports_output_path`.
 
 ## On Activation
 
 1. Load module configuration from Bottom-Up LENS setup.
 2. Normalize receipt and metadata paths.
-3. Run deterministic verification scripts once they are implemented.
+3. Run `./scripts/verify_receipt.py`.
 4. Fail closed on missing metadata, forbidden writes, or claims that conflict with observed changes.
 5. Preserve input artifacts unchanged.
 
-## Future Validation Route
+## Verification Route
 
-Later stories add Python verification of changed files, forbidden surfaces, claimed writes, schema version, timestamps, and non-effects booleans.
+The verifier compares `writtenFiles`, `changedFiles`, and `nonEffects` claims against run metadata and denied path categories. False claims, missing metadata, governance/topology/runtime/release path changes, and report paths outside `reports_output_path` are hard failures.

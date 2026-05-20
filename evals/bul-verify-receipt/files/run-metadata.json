@@ -1,4 +1,37 @@
 {
   "schemaVersion": "bul.run-metadata.v1",
-  "fixtureStatus": "placeholder"
+  "runId": "run-bul-safe-local-export-001",
+  "packetId": "bul-safe-local-export-001",
+  "createdAt": "2026-05-20T00:00:00Z",
+  "explicitInputsOnly": true,
+  "writtenFiles": [
+    {
+      "path": "docs/bottom-up-lens/bul-safe-local-export-001.json",
+      "kind": "file"
+    },
+    {
+      "path": "docs/bottom-up-lens/bul-safe-local-export-001.run-metadata.json",
+      "kind": "file"
+    },
+    {
+      "path": "docs/bottom-up-lens/bul-safe-local-export-001.receipt.json",
+      "kind": "file"
+    }
+  ],
+  "changedFiles": [
+    {
+      "path": "docs/bottom-up-lens/bul-safe-local-export-001.json",
+      "kind": "file"
+    },
+    {
+      "path": "docs/bottom-up-lens/bul-safe-local-export-001.run-metadata.json",
+      "kind": "file"
+    },
+    {
+      "path": "docs/bottom-up-lens/bul-safe-local-export-001.receipt.json",
+      "kind": "file"
+    }
+  ],
+  "environmentCaptured": false,
+  "secretsCaptured": false
 }

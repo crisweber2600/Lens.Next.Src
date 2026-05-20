@@ -1,57 +1,56 @@
 {
   "schemaVersion": "bul.feature-packet.v1",
-  "packetId": "bul-valid-not-ready-001",
+  "packetId": "bul-invalid-missing-out-of-scope-001",
   "packetStatus": "draft",
   "sourceMode": "bottom_up",
   "identity": {
-    "featureName": "Capture archive evidence",
+    "featureName": "Missing exclusion list",
     "actor": "Maintainer",
-    "problem": "The maintainer needs valid archive evidence before implementation details are complete.",
-    "outcome": "The packet can be stored as valid evidence without implying BMAD readiness."
+    "problem": "Included scope is known but explicit exclusions are absent.",
+    "outcome": "Validation fails before downstream agents infer extra work."
   },
   "selectedFeature": {
     "id": "candidate-1",
-    "title": "Capture archive evidence"
+    "title": "Missing exclusion list"
   },
   "candidateFeatures": [
     {
       "id": "candidate-1",
-      "title": "Capture archive evidence",
+      "title": "Missing exclusion list",
       "selected": true
     }
   ],
   "scope": {
     "included": [
-      "Capture the selected local feature as archive evidence."
+      "Validate missing explicit out-of-scope behavior."
     ],
-    "explicitOutOfScope": [
-      "Executing BMAD implementation."
-    ]
+    "explicitOutOfScope": []
   },
   "acceptanceCriteria": [
-    "The packet records the evidence."
+    "Given explicit out-of-scope is missing, when validation runs, then it fails with missingExplicitOutOfScope."
   ],
   "constraints": [
-    "Do not infer identity, phase, topology, or scope from branch name, open editor, or cwd/current working directory."
+    "Do not infer identity, phase, topology, or scope from branch name, open editor, or cwd/current working directory.",
+    "Do not write forbidden surfaces."
   ],
   "assumptions": [
     {
-      "text": "Implementation context will be added later.",
+      "text": "The operator has not supplied exclusions yet.",
       "status": "unpromoted"
     }
   ],
   "provenance": {
-    "rawUserWording": "Capture archive evidence only.",
+    "rawUserWording": "Missing explicit out-of-scope fixture.",
     "inputRefs": [
-      "operator-paste:valid-not-ready"
+      "fixture:invalid-missing-out-of-scope"
     ],
     "explicitInputsOnly": true,
     "noBranchEditorCwdInference": true,
     "inferenceSources": []
   },
   "handoff": {
-    "implementationContext": "",
-    "antiInferenceInstructions": "Use only explicit inputRefs; do not infer from branch, open editor, or cwd/current working directory."
+    "implementationContext": "Do not proceed until exclusions are explicit.",
+    "antiInferenceInstructions": "Use only packet fields and explicit inputRefs; do not infer from branch, open editor, or cwd/current working directory."
   },
   "receiptReference": null,
   "topology": {

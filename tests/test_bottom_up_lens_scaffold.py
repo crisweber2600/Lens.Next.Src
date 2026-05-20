@@ -56,8 +56,10 @@ def test_bottom_up_lens_marketplace_plugin_lists_existing_skill_paths() -> None:
     manifest = json.loads((REPO_ROOT / ".claude-plugin" / "marketplace.json").read_text(encoding="utf-8"))
     plugins = {plugin["name"]: plugin for plugin in manifest["plugins"]}
 
-    assert "nxl" in plugins, "existing top-down plugin must remain registered"
-    assert manifest["plugins"] == [plugins["nxl"]], "E1-S4 owns final Bottom-Up LENS marketplace registration"
+    assert manifest["name"] == "Bottom-Up LENS"
+    assert "bul" in plugins, "Bottom-Up LENS plugin must be registered"
+    assert manifest["plugins"] == [plugins["bul"]]
+    assert plugins["bul"]["displayName"] == "Bottom-Up LENS"
     for skill in EXPECTED_SKILLS:
         assert (REPO_ROOT / "skills" / skill / "SKILL.md").is_file()
 

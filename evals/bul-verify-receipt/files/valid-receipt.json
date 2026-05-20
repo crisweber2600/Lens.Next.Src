@@ -1,4 +1,49 @@
 {
   "schemaVersion": "bul.receipt.v1",
-  "fixtureStatus": "placeholder"
+  "packetId": "bul-safe-local-export-001",
+  "runId": "run-bul-safe-local-export-001",
+  "status": "verified",
+  "writtenFiles": [
+    {
+      "path": "docs/bottom-up-lens/bul-safe-local-export-001.json",
+      "kind": "file"
+    },
+    {
+      "path": "docs/bottom-up-lens/bul-safe-local-export-001.run-metadata.json",
+      "kind": "file"
+    },
+    {
+      "path": "docs/bottom-up-lens/bul-safe-local-export-001.receipt.json",
+      "kind": "file"
+    }
+  ],
+  "changedFiles": [
+    {
+      "path": "docs/bottom-up-lens/bul-safe-local-export-001.json",
+      "kind": "file"
+    },
+    {
+      "path": "docs/bottom-up-lens/bul-safe-local-export-001.run-metadata.json",
+      "kind": "file"
+    },
+    {
+      "path": "docs/bottom-up-lens/bul-safe-local-export-001.receipt.json",
+      "kind": "file"
+    }
+  ],
+  "nonEffects": {
+    "featureYamlWritten": false,
+    "governancePublished": false,
+    "governanceMirrorWritten": false,
+    "lensBranchesCreated": false,
+    "constitutionRuntimeWritten": false,
+    "releaseCloneWritten": false,
+    "topDownRuntimeWritten": false,
+    "landscapeWritten": false,
+    "derivedGraphWritten": false,
+    "graphWritten": false,
+    "salmonRouted": false,
+    "topologyPromoted": false,
+    "serviceDomainProgramTruthWritten": false
+  }
 }

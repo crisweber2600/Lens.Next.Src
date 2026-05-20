@@ -1,0 +1,9 @@
+{
+  "schemaVersion": "bul.run-metadata.v1",
+  "runId": "run-missing-metadata",
+  "packetId": "bul-missing-metadata",
+  "createdAt": "2026-05-20T00:00:00Z",
+  "explicitInputsOnly": true,
+  "environmentCaptured": false,
+  "secretsCaptured": false
+}

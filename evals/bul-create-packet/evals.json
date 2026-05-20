@@ -1,5 +1,40 @@
 {
   "skill_name": "bul-create-packet",
-  "_design_notes": "Placeholder artifact eval suite. Later stories add discriminating packet creation expectations.",
-  "evals": []
+  "schemaVersion": "bul.eval-suite.v1",
+  "evals": [
+    {
+      "name": "headless valid create writes packet metadata receipt only after confirm",
+      "type": "artifact",
+      "input": "files/headless-valid-input.json",
+      "command": "python skills/bul-create-packet/scripts/create_packet.py --input {input} --packet-output-path {tmp}/docs/bottom-up-lens --reports-output-path {tmp}/_bmad-output/bottom-up-lens --confirm",
+      "assertions": [
+        {"path": "status", "equals": "pass"},
+        {"path": "acceptedPacketWritten", "equals": true},
+        {"path": "verification.status", "equals": "pass"},
+        {"path": "labels", "contains": "Non-effects verified"}
+      ]
+    },
+    {
+      "name": "headless create without confirm fails closed",
+      "type": "artifact",
+      "input": "files/headless-valid-input.json",
+      "command": "python skills/bul-create-packet/scripts/create_packet.py --input {input} --packet-output-path {tmp}/docs/bottom-up-lens --reports-output-path {tmp}/_bmad-output/bottom-up-lens",
+      "assertions": [
+        {"path": "status", "equals": "blocked"},
+        {"path": "acceptedPacketWritten", "equals": false},
+        {"path": "message", "contains": "--confirm"}
+      ]
+    },
+    {
+      "name": "dry run writes no accepted packet",
+      "type": "artifact",
+      "input": "files/headless-valid-input.json",
+      "command": "python skills/bul-create-packet/scripts/create_packet.py --input {input} --packet-output-path {tmp}/docs/bottom-up-lens --reports-output-path {tmp}/_bmad-output/bottom-up-lens --dry-run",
+      "assertions": [
+        {"path": "status", "equals": "dry-run"},
+        {"path": "acceptedPacketWritten", "equals": false},
+        {"path": "preview", "contains": "Confirmation token: CREATE PACKET"}
+      ]
+    }
+  ]
 }

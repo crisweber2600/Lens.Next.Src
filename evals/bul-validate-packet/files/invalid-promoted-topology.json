@@ -1,68 +1,69 @@
 {
   "schemaVersion": "bul.feature-packet.v1",
-  "packetId": "bul-valid-not-ready-001",
+  "packetId": "bul-invalid-promoted-topology-001",
   "packetStatus": "draft",
   "sourceMode": "bottom_up",
   "identity": {
-    "featureName": "Capture archive evidence",
+    "featureName": "Promoted topology fixture",
     "actor": "Maintainer",
-    "problem": "The maintainer needs valid archive evidence before implementation details are complete.",
-    "outcome": "The packet can be stored as valid evidence without implying BMAD readiness."
+    "problem": "A draft packet includes promoted topology values.",
+    "outcome": "Validation fails before topology truth is implied."
   },
   "selectedFeature": {
     "id": "candidate-1",
-    "title": "Capture archive evidence"
+    "title": "Promoted topology fixture"
   },
   "candidateFeatures": [
     {
       "id": "candidate-1",
-      "title": "Capture archive evidence",
+      "title": "Promoted topology fixture",
       "selected": true
     }
   ],
   "scope": {
     "included": [
-      "Capture the selected local feature as archive evidence."
+      "Detect promoted topology."
     ],
     "explicitOutOfScope": [
-      "Executing BMAD implementation."
+      "Landscape, Graph, roadmap, promotion, adjacency, and pressure outputs."
     ]
   },
   "acceptanceCriteria": [
-    "The packet records the evidence."
+    "Given topology is promoted, when validation runs, then it fails closed."
   ],
   "constraints": [
-    "Do not infer identity, phase, topology, or scope from branch name, open editor, or cwd/current working directory."
+    "Do not infer identity, phase, topology, or scope from branch name, open editor, or cwd/current working directory.",
+    "Do not write forbidden surfaces."
   ],
   "assumptions": [
     {
-      "text": "Implementation context will be added later.",
+      "text": "Topology must be null in MVP packets.",
       "status": "unpromoted"
     }
   ],
   "provenance": {
-    "rawUserWording": "Capture archive evidence only.",
+    "rawUserWording": "Promoted topology fixture.",
     "inputRefs": [
-      "operator-paste:valid-not-ready"
+      "fixture:invalid-promoted-topology"
     ],
     "explicitInputsOnly": true,
     "noBranchEditorCwdInference": true,
     "inferenceSources": []
   },
   "handoff": {
-    "implementationContext": "",
-    "antiInferenceInstructions": "Use only explicit inputRefs; do not infer from branch, open editor, or cwd/current working directory."
+    "implementationContext": "Do not proceed while topology is promoted.",
+    "antiInferenceInstructions": "Use only packet fields and explicit inputRefs; do not infer from branch, open editor, or cwd/current working directory."
   },
   "receiptReference": null,
   "topology": {
-    "status": "unpromoted",
-    "domain": null,
+    "status": "promoted",
+    "domain": "example-domain",
     "service": null,
     "program": null,
     "landscape": null,
     "derivedGraph": null,
     "salmon": null,
-    "promotion": null,
+    "promotion": "ready",
     "adjacency": null,
     "pressure": null,
     "roadmap": null,

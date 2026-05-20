@@ -1,5 +1,31 @@
 {
   "skill_name": "bul-verify-receipt",
-  "_design_notes": "Placeholder artifact eval suite. Later stories add receipt and run metadata verification expectations.",
-  "evals": []
+  "schemaVersion": "bul.eval-suite.v1",
+  "evals": [
+    {
+      "name": "valid receipt verifies non effects",
+      "type": "artifact",
+      "receipt": "files/valid-receipt.json",
+      "runMetadata": "files/run-metadata.json",
+      "command": "python skills/bul-verify-receipt/scripts/verify_receipt.py --receipt {receipt} --run-metadata {runMetadata}",
+      "assertions": [
+        {"path": "status", "equals": "pass"},
+        {"path": "runValid", "equals": true},
+        {"path": "label", "equals": "Non-effects verified"}
+      ]
+    },
+    {
+      "name": "false graph receipt fails closed",
+      "type": "artifact",
+      "receipt": "files/false-graph-receipt.json",
+      "runMetadata": "files/false-graph-run-metadata.json",
+      "command": "python skills/bul-verify-receipt/scripts/verify_receipt.py --receipt {receipt} --run-metadata {runMetadata}",
+      "assertions": [
+        {"path": "status", "equals": "fail"},
+        {"path": "runValid", "equals": false},
+        {"path": "label", "equals": "Receipt mismatch detected"},
+        {"path": "hardBlockers[*].evidence.category", "contains": "graph"}
+      ]
+    }
+  ]
 }

@@ -1,4 +1,91 @@
 {
   "schemaVersion": "bul.feature-packet.v1",
-  "fixtureStatus": "placeholder-invalid-multi-candidate"
+  "packetId": "bul-invalid-multi-candidate-001",
+  "packetStatus": "draft",
+  "sourceMode": "bottom_up",
+  "identity": {
+    "featureName": "Ambiguous local packet",
+    "actor": "Maintainer",
+    "problem": "Two candidate features remain selected.",
+    "outcome": "Validation must fail closed before any write."
+  },
+  "selectedFeature": {
+    "id": "candidate-1",
+    "title": "First candidate"
+  },
+  "candidateFeatures": [
+    {
+      "id": "candidate-1",
+      "title": "First candidate",
+      "selected": true
+    },
+    {
+      "id": "candidate-2",
+      "title": "Second candidate",
+      "selected": true
+    }
+  ],
+  "scope": {
+    "included": [
+      "One selected candidate should be captured."
+    ],
+    "explicitOutOfScope": [
+      "Multiple selected candidates."
+    ]
+  },
+  "acceptanceCriteria": [
+    "Given multiple candidates remain selected, when validation runs, then it fails with invalidCandidateSelection."
+  ],
+  "constraints": [
+    "Do not infer identity, phase, topology, or scope from branch name, open editor, or cwd/current working directory.",
+    "Do not write forbidden surfaces."
+  ],
+  "assumptions": [
+    {
+      "text": "The operator has not selected exactly one candidate.",
+      "status": "unpromoted"
+    }
+  ],
+  "provenance": {
+    "rawUserWording": "Candidate one and candidate two both appear useful.",
+    "inputRefs": [
+      "operator-paste:multi"
+    ],
+    "explicitInputsOnly": true,
+    "noBranchEditorCwdInference": true,
+    "inferenceSources": []
+  },
+  "handoff": {
+    "implementationContext": "Do not proceed until one candidate is chosen.",
+    "antiInferenceInstructions": "Use only packet fields and explicit inputRefs; do not infer from branch, open editor, or cwd/current working directory."
+  },
+  "receiptReference": null,
+  "topology": {
+    "status": "unpromoted",
+    "domain": null,
+    "service": null,
+    "program": null,
+    "landscape": null,
+    "derivedGraph": null,
+    "salmon": null,
+    "promotion": null,
+    "adjacency": null,
+    "pressure": null,
+    "roadmap": null,
+    "branchTopology": null
+  },
+  "nonEffects": {
+    "featureYamlWritten": false,
+    "governancePublished": false,
+    "governanceMirrorWritten": false,
+    "lensBranchesCreated": false,
+    "constitutionRuntimeWritten": false,
+    "releaseCloneWritten": false,
+    "topDownRuntimeWritten": false,
+    "landscapeWritten": false,
+    "derivedGraphWritten": false,
+    "salmonRouted": false,
+    "topologyPromoted": false,
+    "serviceDomainProgramTruthWritten": false
+  }
 }

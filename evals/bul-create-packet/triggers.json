@@ -1,10 +1,48 @@
-[
-  {
-    "query": "Create a Bottom-Up LENS feature packet from these notes.",
-    "should_trigger": true
-  },
-  {
-    "query": "Run the NextLens top-down doctor on this feature packet.",
-    "should_trigger": false
-  }
-]
+{
+  "schemaVersion": "bul.trigger-evals.v1",
+  "positive": [
+    {
+      "query": "Start from one feature and create a packet from these local notes.",
+      "expectedSkill": "bul-create-packet"
+    },
+    {
+      "query": "Create a Bottom-Up LENS feature packet from these notes.",
+      "expectedSkill": "bul-create-packet"
+    },
+    {
+      "query": "Validate this bottom-up feature packet.",
+      "expectedSkill": "bul-validate-packet"
+    },
+    {
+      "query": "Verify this Bottom-Up LENS non-effects receipt.",
+      "expectedSkill": "bul-verify-receipt"
+    }
+  ],
+  "negative": [
+    {
+      "query": "Initialize a new Lens feature and create feature.yaml.",
+      "mustNotTrigger": "bul-create-packet",
+      "reason": "Lens feature initialization belongs to Lens lifecycle tooling."
+    },
+    {
+      "query": "Publish this feature to governance mirrors.",
+      "mustNotTrigger": "bul-create-packet",
+      "reason": "Governance publish is outside Bottom-Up LENS."
+    },
+    {
+      "query": "Resolve the Lens constitution for this service.",
+      "mustNotTrigger": "bul-create-packet",
+      "reason": "Constitution runtime is not imported or required."
+    },
+    {
+      "query": "Create the Lens branch topology for the feature.",
+      "mustNotTrigger": "bul-create-packet",
+      "reason": "Branch topology work is excluded."
+    },
+    {
+      "query": "Run the NextLens top-down doctor on this feature packet.",
+      "mustNotTrigger": "bul-create-packet",
+      "reason": "Current top-down runtime modules are not Bottom-Up LENS dependencies."
+    }
+  ]
+}

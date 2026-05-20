@@ -1,0 +1,25 @@
+{
+  "schemaVersion": "bul.run-metadata.v1",
+  "runId": "run-bul-false-graph-001",
+  "packetId": "bul-false-graph-001",
+  "createdAt": "2026-05-20T00:00:00Z",
+  "explicitInputsOnly": true,
+  "writtenFiles": [
+    {
+      "path": "docs/bottom-up-lens/bul-false-graph-001.json",
+      "kind": "file"
+    }
+  ],
+  "changedFiles": [
+    {
+      "path": "docs/bottom-up-lens/bul-false-graph-001.json",
+      "kind": "file"
+    },
+    {
+      "path": "docs/derived-graph/graph.json",
+      "kind": "file"
+    }
+  ],
+  "environmentCaptured": false,
+  "secretsCaptured": false
+}

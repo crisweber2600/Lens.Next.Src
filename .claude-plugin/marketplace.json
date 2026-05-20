@@ -1,36 +1,42 @@
 {
-  "name": "NextLens Top-Down Bridge",
+  "name": "Bottom-Up LENS",
   "owner": {
-    "name": "NextLens Team"
+    "name": "NextLens Maintainers"
   },
   "license": "MIT",
-  "homepage": "https://github.com/crisweber2600/NextLens",
+  "homepage": "https://github.com/crisweber2600/NextLens#bottom-up-lens",
   "repository": "https://github.com/crisweber2600/NextLens",
   "keywords": [
+    "bottom-up-lens",
+    "bul",
+    "start-from-one-feature",
     "nextlens",
-    "top-down",
     "feature-packet",
     "bmad-module",
-    "doctor-validation",
-    "salmon-routing"
+    "packet-validation",
+    "non-effects-receipt"
   ],
   "plugins": [
     {
-      "name": "nxl",
+      "name": "bul",
       "source": "./",
-      "description": "Deterministic top-down feature packet bridge with doctor validation and salmon correction routing.",
+      "displayName": "Bottom-Up LENS",
+      "description": "Standalone BMad module for starting from one feature, creating a safe bottom-up packet, validating readiness, and verifying non-effects receipts without Lens governance side effects.",
       "version": "1.0.0",
       "author": {
-        "name": "NextLens Team"
+        "name": "NextLens Maintainers"
       },
       "skills": [
-        ".agents/skills/bmad-nextlens-setup",
-        ".agents/skills/bmad-nextlens",
-        ".agents/skills/bmad-nextlens-new",
-        ".agents/skills/bmad-nextlens-doctor",
-        ".agents/skills/bmad-nextlens-validate",
-        ".agents/skills/bmad-nextlens-salmon"
-      ]
+        "skills/bul-setup",
+        "skills/bul-create-packet",
+        "skills/bul-validate-packet",
+        "skills/bul-verify-receipt"
+      ],
+      "module": {
+        "name": "Bottom-Up LENS",
+        "code": "bul",
+        "moduleVersion": "1.0.0"
+      }
     }
   ]
 }

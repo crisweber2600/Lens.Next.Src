@@ -1,0 +1,18 @@
+{
+  "schemaVersion": "bul.forbidden-write-fixtures.v1",
+  "fixtures": [
+    {"category": "git", "path": ".git/config"},
+    {"category": "governance", "path": "TargetProjects/lens/Lens.Core.governance/features/example/feature.yaml"},
+    {"category": "release", "path": "TargetProjects/nextlens/release/packet.json"},
+    {"category": "landscape", "path": "docs/landscape/state.json"},
+    {"category": "graph", "path": "docs/derived-graph/graph.json"},
+    {"category": "salmon", "path": "docs/salmon/correction.json"},
+    {"category": "promotion", "path": "docs/promotion/promote.json"},
+    {"category": "adjacency", "path": "docs/adjacency/map.json"},
+    {"category": "pressure", "path": "docs/pressure/pressure.json"},
+    {"category": "roadmap", "path": "docs/roadmap/roadmap.json"},
+    {"category": "lens-lifecycle-metadata", "path": "docs/example/feature.yaml"},
+    {"category": "service-domain-program-truth", "path": "docs/service.yaml"},
+    {"category": "top-down-runtime", "path": ".agents/skills/bmad-nextlens-doctor/SKILL.md"}
+  ]
+}

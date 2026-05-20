@@ -1,0 +1,36 @@
+{
+  "rawContext": "Start from one feature: safe local export. The maintainer needs a packet created from explicit local notes only.",
+  "operatorIntent": "Create one bottom-up packet.",
+  "contextSource": "operator-paste:headless-valid",
+  "candidateFeatures": [
+    {
+      "id": "candidate-1",
+      "title": "Safe local export"
+    }
+  ],
+  "selectedCandidateId": "candidate-1",
+  "actor": "Repository maintainer",
+  "problem": "Local feature notes need one bounded implementation packet before any downstream handoff.",
+  "outcome": "The maintainer can validate one explicit feature packet without governance or topology side effects.",
+  "includedScope": [
+    "Create one packet from explicit local context."
+  ],
+  "explicitOutOfScope": [
+    "Governance publication.",
+    "Topology promotion or roadmap creation."
+  ],
+  "acceptanceCriteria": [
+    "Given explicit local context, when the create workflow runs with --confirm, then it writes packet, run metadata, and receipt only under the configured packet root."
+  ],
+  "constraints": [
+    "Do not infer identity, phase, topology, or scope from branch name, open editor, or cwd/current working directory.",
+    "Do not write Lens governance, release clone, top-down runtime, Landscape, Derived Graph, Salmon, promotion, adjacency, pressure, roadmap, service, domain, or program truth paths."
+  ],
+  "assumptions": [
+    "The operator supplied the source notes explicitly."
+  ],
+  "inputRefs": [
+    "operator-paste:headless-valid"
+  ],
+  "implementationContext": "Implement only the safe local export packet behavior and validators described here."
+}
