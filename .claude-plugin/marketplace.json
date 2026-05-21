@@ -1,44 +1,11 @@
 {
-<<<<<<< Updated upstream
-  "name": "NextLens Top-Down Bridge",
-  "owner": {
-    "name": "NextLens Team"
-  },
-  "license": "MIT",
-  "homepage": "https://github.com/crisweber2600/NextLens",
-  "repository": "https://github.com/crisweber2600/NextLens",
-  "keywords": [
-    "nextlens",
-    "top-down",
-    "feature-packet",
-    "bmad-module",
-    "doctor-validation",
-    "salmon-routing"
-  ],
-  "plugins": [
-    {
-      "name": "nxl",
-      "source": "./",
-      "description": "Deterministic top-down feature packet bridge with doctor validation and salmon correction routing.",
-      "version": "1.0.0",
-      "author": {
-        "name": "NextLens Team"
-      },
-      "skills": [
-        ".agents/skills/bmad-nextlens-setup",
-        ".agents/skills/bmad-nextlens",
-        ".agents/skills/bmad-nextlens-new",
-        ".agents/skills/bmad-nextlens-doctor",
-        ".agents/skills/bmad-nextlens-validate",
-        ".agents/skills/bmad-nextlens-salmon"
-=======
   "name": "auspex",
   "owner": {
     "name": "CrisWeber"
   },
   "license": "UNLICENSED",
-  "homepage": "",
-  "repository": "",
+  "homepage": "https://github.com/crisweber2600/NextLens",
+  "repository": "https://github.com/crisweber2600/NextLens",
   "keywords": [
     "bmad",
     "lens",
@@ -56,13 +23,15 @@
         "name": "CrisWeber"
       },
       "skills": [
+        "./skills/ausx-work-intake",
+        "./skills/ausx-lens-doctor",
         "./skills/ausx-map-audit",
+        "./skills/ausx-projection-rebuild",
         "./skills/ausx-ledger-promotion",
         "./skills/ausx-salmon-impact",
         "./skills/ausx-topology-design",
         "./skills/ausx-reporting-snapshot",
         "./skills/ausx-setup"
->>>>>>> Stashed changes
       ]
     }
   ]
