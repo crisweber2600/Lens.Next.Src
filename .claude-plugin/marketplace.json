@@ -1,5 +1,5 @@
 {
-  "name": "auspex",
+  "name": "lens",
   "owner": {
     "name": "CrisWeber"
   },
@@ -9,13 +9,13 @@
   "keywords": [
     "bmad",
     "lens",
-    "auspex",
+    "lens",
     "topology",
     "governance"
   ],
   "plugins": [
     {
-      "name": "auspex",
+      "name": "lens",
       "source": "./",
       "description": "Workflow suite for LENS/BMAD topology governance, living ledgers, Salmon impact analysis, and stakeholder reporting artifacts.",
       "version": "1.0.0",
@@ -23,15 +23,15 @@
         "name": "CrisWeber"
       },
       "skills": [
-        "./skills/ausx-work-intake",
-        "./skills/ausx-lens-doctor",
-        "./skills/ausx-map-audit",
-        "./skills/ausx-projection-rebuild",
-        "./skills/ausx-ledger-promotion",
-        "./skills/ausx-salmon-impact",
-        "./skills/ausx-topology-design",
-        "./skills/ausx-reporting-snapshot",
-        "./skills/ausx-setup"
+        "./skills/lens-work-intake",
+        "./skills/lens-doctor",
+        "./skills/lens-map-audit",
+        "./skills/lens-projection-rebuild",
+        "./skills/lens-ledger-promotion",
+        "./skills/lens-salmon-impact",
+        "./skills/lens-topology-design",
+        "./skills/lens-reporting-snapshot",
+        "./skills/lens-setup"
       ]
     }
   ]

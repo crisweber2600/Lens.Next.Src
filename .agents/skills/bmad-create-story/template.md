@@ -32,9 +32,9 @@ so that {{benefit}}.
 - Alignment with unified project structure (paths, modules, naming)
 - Detected conflicts or variances (with rationale)
 
-### Auspex Work Unit
+### Lens Work Unit
 
-- Work archive: [Add path to work.md or handoff.md when this story comes from `ausx-work-intake`]
+- Work archive: [Add path to work.md or handoff.md when this story comes from `lens-work-intake`]
 - Work stable ID: [Add `feature:<work-id>`]
 - Work ID: [Add work archive folder ID]
 - Publication state: [Add `draft` until completion evidence is published]

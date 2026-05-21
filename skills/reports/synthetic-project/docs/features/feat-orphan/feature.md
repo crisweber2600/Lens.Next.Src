@@ -12,5 +12,5 @@ updated_at: 2026-05-20
 # Orphan Feature
 
 This completed feature intentionally points at a missing service to verify that
-Auspex classifies unresolved parentage as blocking.
+Lens classifies unresolved parentage as blocking.
 
