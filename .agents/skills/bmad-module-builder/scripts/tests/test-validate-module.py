@@ -208,51 +208,6 @@ def test_valid_standalone_module():
         assert data["summary"]["total_findings"] == 0
 
 
-def test_valid_direct_standalone_skill_path():
-    """A direct standalone skill folder path should validate without orphan CSV findings."""
-    with tempfile.TemporaryDirectory() as tmp:
-        tmp = Path(tmp)
-        module_dir = create_standalone_module(tmp)
-        skill_dir = module_dir / "my-skill"
-
-        code, data = run_validate(skill_dir)
-        assert code == 0, f"Expected pass: {data}"
-        assert data["status"] == "pass"
-        assert data["info"].get("standalone") is True
-        assert data["info"].get("skill_folders") == ["my-skill"]
-        assert not [f for f in data.get("findings", []) if f["category"] == "orphan-entry"]
-
-
-def test_valid_direct_setup_skill_path_for_flat_module():
-    """A direct setup skill folder path should validate a flat multi-skill module family."""
-    with tempfile.TemporaryDirectory() as tmp:
-        tmp = Path(tmp)
-        skills_root = tmp / "skills"
-        skills_root.mkdir()
-        setup = skills_root / "bmad-nextlens-setup"
-        setup.mkdir()
-        (setup / "SKILL.md").write_text("---\nname: bmad-nextlens-setup\n---\n# Setup\n")
-        (setup / "assets").mkdir()
-        (setup / "assets" / "module.yaml").write_text('code: nxl\nname: "NextLens"\ndescription: "A test module"\n')
-        (setup / "assets" / "module-help.csv").write_text(
-            CSV_HEADER
-            + "NextLens,bmad-nextlens-setup,Setup,SN,Setup module,configure,,anytime,,bmad-nextlens-new:new,true,{project-root}/_bmad,config\n"
-            + "NextLens,bmad-nextlens-new,New,NF,Create packet,new,,anytime,bmad-nextlens-setup:configure,,false,output_folder,packet\n"
-        )
-        action = skills_root / "bmad-nextlens-new"
-        action.mkdir()
-        (action / "SKILL.md").write_text("---\nname: bmad-nextlens-new\n---\n# New\n")
-        unrelated = skills_root / "bmad-other-skill"
-        unrelated.mkdir()
-        (unrelated / "SKILL.md").write_text("---\nname: bmad-other-skill\n---\n# Other\n")
-
-        code, data = run_validate(setup)
-        assert code == 0, f"Expected pass: {data}"
-        assert data["status"] == "pass"
-        assert data["info"].get("setup_skill") == "bmad-nextlens-setup"
-        assert data["info"].get("skill_folders") == ["bmad-nextlens-new"]
-
-
 def test_standalone_missing_module_setup_md():
     """Standalone module without assets/module-setup.md should fail."""
     with tempfile.TemporaryDirectory() as tmp:
@@ -336,8 +291,6 @@ if __name__ == "__main__":
         test_missing_yaml_fields,
         test_empty_csv,
         test_valid_standalone_module,
-        test_valid_direct_standalone_skill_path,
-        test_valid_direct_setup_skill_path_for_flat_module,
         test_standalone_missing_module_setup_md,
         test_standalone_missing_merge_scripts,
         test_standalone_csv_validation,

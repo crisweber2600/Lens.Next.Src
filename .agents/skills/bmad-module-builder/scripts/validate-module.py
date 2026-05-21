@@ -35,36 +35,23 @@ CSV_HEADER = [
 
 def find_setup_skill(module_dir: Path) -> Path | None:
     """Find the setup skill folder (*-setup)."""
-    if module_dir.name.endswith("-setup") and (module_dir / "SKILL.md").is_file():
-        return module_dir
-
     for d in module_dir.iterdir():
         if d.is_dir() and d.name.endswith("-setup"):
             return d
     return None
 
 
-def find_skill_folders(module_dir: Path, exclude_name: str = "", name_prefix: str = "") -> list[str]:
+def find_skill_folders(module_dir: Path, exclude_name: str = "") -> list[str]:
     """Find all skill folders (directories with SKILL.md), optionally excluding one."""
     skills = []
     for d in module_dir.iterdir():
-        if name_prefix and not d.name.startswith(name_prefix):
-            continue
         if d.is_dir() and d.name != exclude_name and (d / "SKILL.md").is_file():
             skills.append(d.name)
     return sorted(skills)
 
 
 def detect_standalone_module(module_dir: Path) -> Path | None:
-    """Detect a standalone module.
-
-    Supports both accepted invocation styles:
-    - the standalone skill folder itself
-    - a parent folder containing exactly one standalone skill folder
-    """
-    if (module_dir / "SKILL.md").is_file() and (module_dir / "assets" / "module.yaml").is_file():
-        return module_dir
-
+    """Detect a standalone module: single skill folder with assets/module.yaml."""
     skill_dirs = [
         d for d in module_dir.iterdir()
         if d.is_dir() and (d / "SKILL.md").is_file()
@@ -204,18 +191,8 @@ def validate(module_dir: Path, verbose: bool = False) -> dict:
 
     # 6. Collect skills from CSV and filesystem
     csv_skills = {row.get("skill", "") for row in rows}
-    if standalone_dir and module_dir == standalone_dir:
-        skill_folders = [standalone_dir.name]
-        skill_lookup_root = standalone_dir.parent
-    else:
-        exclude_name = setup_dir.name if setup_dir else ""
-        if setup_dir and setup_dir == module_dir:
-            skill_lookup_root = setup_dir.parent
-            module_prefix = setup_dir.name.removesuffix("-setup") + "-"
-            skill_folders = find_skill_folders(skill_lookup_root, exclude_name, module_prefix)
-        else:
-            skill_lookup_root = module_dir
-            skill_folders = find_skill_folders(module_dir, exclude_name)
+    exclude_name = setup_dir.name if setup_dir else ""
+    skill_folders = find_skill_folders(module_dir, exclude_name)
     info["skill_folders"] = skill_folders
     info["csv_skills"] = sorted(csv_skills)
 
@@ -229,7 +206,7 @@ def validate(module_dir: Path, verbose: bool = False) -> dict:
     for skill in csv_skills:
         if skill not in skill_folders and skill != setup_name:
             # Check if it's the setup skill itself (valid)
-            if not (skill_lookup_root / skill / "SKILL.md").is_file():
+            if not (module_dir / skill / "SKILL.md").is_file():
                 finding("high", "orphan-entry", f"CSV references skill '{skill}' which does not exist in the module folder")
 
     # 9. Unique menu codes

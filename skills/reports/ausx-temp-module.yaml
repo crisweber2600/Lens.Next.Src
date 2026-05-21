@@ -1,0 +1,31 @@
+code: ausx
+name: Auspex
+description: Workflow suite for LENS/BMAD topology governance, living ledgers, Salmon impact analysis, and stakeholder reporting artifacts.
+module_version: 1.0.0
+default_selected: false
+module_greeting: >
+  Auspex is configured. Use map audit, ledger promotion, Salmon impact,
+  topology design, and reporting snapshot workflows to govern LENS/BMAD
+  project knowledge without confusing authored truth with generated projections.
+feature_archive_path:
+  prompt: Where should Auspex look for permanent feature archives?
+  default: docs/features
+  result: "{project-root}/{value}"
+  user_setting: false
+landscape_root:
+  prompt: Where should Auspex look for living service/domain/program ledgers?
+  default: docs
+  result: "{project-root}/{value}"
+  user_setting: false
+reporting_output_path:
+  prompt: Where should Auspex write reports and snapshots?
+  default: _bmad-output/auspex
+  result: "{project-root}/{value}"
+  user_setting: false
+freshness_threshold_hours:
+  prompt: How old can reports be before Auspex marks them stale?
+  default: "24"
+  user_setting: false
+directories:
+  - "{reporting_output_path}"
+

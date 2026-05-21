@@ -1,4 +1,5 @@
 {
+<<<<<<< Updated upstream
   "name": "NextLens Top-Down Bridge",
   "owner": {
     "name": "NextLens Team"
@@ -30,6 +31,38 @@
         ".agents/skills/bmad-nextlens-doctor",
         ".agents/skills/bmad-nextlens-validate",
         ".agents/skills/bmad-nextlens-salmon"
+=======
+  "name": "auspex",
+  "owner": {
+    "name": "CrisWeber"
+  },
+  "license": "UNLICENSED",
+  "homepage": "",
+  "repository": "",
+  "keywords": [
+    "bmad",
+    "lens",
+    "auspex",
+    "topology",
+    "governance"
+  ],
+  "plugins": [
+    {
+      "name": "auspex",
+      "source": "./",
+      "description": "Workflow suite for LENS/BMAD topology governance, living ledgers, Salmon impact analysis, and stakeholder reporting artifacts.",
+      "version": "1.0.0",
+      "author": {
+        "name": "CrisWeber"
+      },
+      "skills": [
+        "./skills/ausx-map-audit",
+        "./skills/ausx-ledger-promotion",
+        "./skills/ausx-salmon-impact",
+        "./skills/ausx-topology-design",
+        "./skills/ausx-reporting-snapshot",
+        "./skills/ausx-setup"
+>>>>>>> Stashed changes
       ]
     }
   ]
