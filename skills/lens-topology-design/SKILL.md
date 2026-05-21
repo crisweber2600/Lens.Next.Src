@@ -27,7 +27,7 @@ Topology decisions define how programs, domains, services, and major shared capa
 
 Prefer stable IDs that survive file moves. Use `belongs_to` for parent references and the templates in `{project-root}/skills/lens-setup/assets/templates/` when scaffolding ledgers. Use generated projections only as derived views; if a projection conflicts with authored ledgers or feature archives, trust the authored source and record the projection problem.
 
-When Lens context exists, topology design may reference `lens_feature_id`, `lens_track`, `lens_phase`, and `lens_docs_path` as provenance. Domain, service, feature, and lifecycle authority in the Lens governance repo remains outside this workflow; use Lens wrappers for governance metadata changes.
+When Lens context exists, topology design may reference `lens_feature_id`, `lens_track`, `lens_phase`, `lens_docs_path`, and `lens_constitution_root` as provenance. Domain, service, feature, and lifecycle authority remains in authored ledgers and local feature records; use the owning lifecycle or constitution workflows for those changes.
 
 ## Workflow
 
@@ -58,7 +58,7 @@ The report must include:
 - Blocking inconsistencies and advisory cleanup
 - Migration or scaffold plan, including files to create/update
 - Projection rebuild guidance
-- Lens lifecycle, constitution, and governance repo impacts when Lens context is present
+- Lens lifecycle, constitution, and constitution-root impacts when Lens context is present
 - Machine-readable summary block:
 
 ```json
@@ -76,5 +76,5 @@ The report must include:
 
 Do not collapse program/domain/service boundaries just to fit an existing folder layout. If a folder path and a stable parent reference disagree, surface the conflict and explain which authored evidence supports each side.
 
-If a topology decision requires Lens domain, service, feature, or lifecycle metadata changes, stop at a proposed plan and route the change through Lens governance workflows instead of editing governance files directly.
+If a topology decision requires Lens domain, service, feature, lifecycle, or constitution-root changes, stop at a proposed plan and route the change through the owning local workflows instead of editing those sources directly.
 

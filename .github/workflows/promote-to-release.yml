@@ -1,0 +1,159 @@
+name: Promote to Release
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "skills/**"
+      - "_bmad/**"
+      - ".github/prompts/**"
+      - "guide.md"
+      - "setup.sh"
+      - ".github/workflows/promote-to-release.yml"
+  workflow_dispatch:
+
+env:
+  RELEASE_REPO_NAME: lens.next.release
+
+jobs:
+  determine-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Set matrix for branch
+        id: set-matrix
+        run: |
+          if [[ "${{ github.ref_name }}" == "main" ]]; then
+            echo 'matrix={"config":[{"release_branch":"latest","bmad_spec":"bmad-method@latest"}]}' >> "$GITHUB_OUTPUT"
+          elif [[ "${{ github.ref_name }}" == "develop" ]]; then
+            echo 'matrix={"config":[{"release_branch":"next","bmad_spec":"bmad-method@latest"}]}' >> "$GITHUB_OUTPUT"
+          else
+            echo 'matrix={"config":[]}' >> "$GITHUB_OUTPUT"
+          fi
+
+  promote-release:
+    needs: determine-matrix
+    if: ${{ needs.determine-matrix.outputs.matrix != '{"config":[]}' }}
+    runs-on: ubuntu-latest
+    concurrency:
+      group: promote-to-release-${{ matrix.config.release_branch }}
+      cancel-in-progress: false
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.determine-matrix.outputs.matrix) }}
+
+    steps:
+      - name: Checkout source repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Prepare release repo
+        run: |
+          RELEASE_BRANCH="${{ matrix.config.release_branch }}"
+
+          mkdir release-repo
+          cd release-repo
+          git init
+          git remote add origin \
+            "https://x-access-token:${{ secrets.RELEASE_REPO_TOKEN }}@github.com/${{ github.repository_owner }}/${{ env.RELEASE_REPO_NAME }}.git"
+
+          if git ls-remote --exit-code --heads origin "$RELEASE_BRANCH" >/dev/null 2>&1; then
+            git fetch --prune --no-tags origin \
+              "+refs/heads/$RELEASE_BRANCH:refs/remotes/origin/$RELEASE_BRANCH"
+            git checkout -B "$RELEASE_BRANCH" "refs/remotes/origin/$RELEASE_BRANCH"
+          else
+            git checkout --orphan "$RELEASE_BRANCH"
+            git rm -rf . 2>/dev/null || true
+          fi
+
+      - name: Prepare clean build workspace
+        run: |
+          rm -rf build-output
+          mkdir -p build-output
+
+      - name: Build NextLens release payload
+        working-directory: build-output
+        run: |
+          npx --yes ${{ matrix.config.bmad_spec }} install \
+            --yes \
+            --action update \
+            --directory . \
+            --modules "bmm,bmb,cis" \
+            --custom-source "https://github.com/${{ github.repository }}" \
+            --tools "claude-code,codex,github-copilot" \
+            --set "core.user_name=Cweber" \
+            --set "core.project_name=NextLensRelease" \
+            --set "core.communication_language=English" \
+            --set "core.document_output_language=English" \
+            --set "core.output_folder=docs"
+
+      - name: Overlay source prompt stubs and entrypoints
+        run: |
+          mkdir -p build-output/.github
+          if [[ -d .github/prompts ]]; then
+            mkdir -p build-output/.github/prompts
+            cp -r .github/prompts/. build-output/.github/prompts/
+          fi
+
+          if [[ -f setup.sh ]]; then
+            cp setup.sh build-output/setup.sh
+          fi
+
+          if [[ -f guide.md ]]; then
+            cp guide.md build-output/guide.md
+          fi
+
+      - name: Validate release payload
+        run: |
+          REQUIRED=(
+            "build-output/guide.md"
+          )
+
+          MISSING=0
+          for file in "${REQUIRED[@]}"; do
+            if [[ ! -f "$file" ]]; then
+              echo "::error::Missing required release file: $file"
+              MISSING=1
+            fi
+          done
+
+          if [[ -d .github/prompts ]] && [[ ! -d build-output/.github/prompts ]]; then
+            echo "::error::Prompt stubs were not copied into the release payload"
+            MISSING=1
+          fi
+
+          if [[ -f setup.sh ]] && [[ ! -f build-output/setup.sh ]]; then
+            echo "::error::setup.sh exists in source but was not copied into the release payload"
+            MISSING=1
+          fi
+
+          if [[ "$MISSING" -eq 1 ]]; then
+            exit 1
+          fi
+
+      - name: Commit and push release branch
+        working-directory: release-repo
+        run: |
+          RELEASE_BRANCH="${{ matrix.config.release_branch }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          rsync -a --delete --exclude '.git' ../build-output/ ./
+
+          git add -A
+
+          if git diff --cached --quiet; then
+            echo "No changes to promote — skipping"
+            echo "has_changes=false" >> "$GITHUB_ENV"
+          else
+            git commit -m "[PROMOTE] NextLens release from ${{ github.sha }} -> $RELEASE_BRANCH"
+            git push --set-upstream origin "$RELEASE_BRANCH"
+            echo "has_changes=true" >> "$GITHUB_ENV"
+          fi

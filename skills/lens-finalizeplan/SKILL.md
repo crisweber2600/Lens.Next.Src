@@ -15,14 +15,23 @@ FinalizePlan turns accepted planning inputs into a dev-ready local bundle: `fina
 2. Read the feature record and determine the track:
    - `full`: use `prd.md`, `ux-design.md`, `architecture.md`, and prior review artifacts.
    - `express`: use `business-plan.md`, `tech-plan.md`, `sprint-plan.md`, and `expressplan-adversarial-review.md`.
-3. Run `bmad-review-adversarial-general` across the approved input packet; write `finalizeplan-review.md`.
-4. Reconcile accepted review findings into the feature archive before generating the bundle.
-5. Use local BMAD skills in this order:
+3. Resolve constitution before delegation:
+
+```bash
+python skills/lens-constitution/scripts/constitution_ops.py resolve --project-root {project-root} --feature-id {feature_id}
+python skills/lens-constitution/scripts/constitution_ops.py progressive-display --project-root {project-root} --feature-id {feature_id}
+python skills/lens-constitution/scripts/constitution_ops.py check-compliance --project-root {project-root} --feature-id {feature_id}
+```
+
+4. Stop immediately if constitution resolution fails, if the resolved gate mode is hard and the track is not permitted, or if the resolved constitution identifies a hard-gate requirement the finalized bundle would violate. Surface the applicable hard-gate rules and carry the combined constitution prose into every downstream bundle-generation delegation.
+5. Run `bmad-review-adversarial-general` across the approved input packet; write `finalizeplan-review.md`.
+6. Reconcile accepted review findings into the feature archive before generating the bundle.
+7. Use local BMAD skills in this order:
    - `bmad-create-epics-and-stories` -> `epics.md`, `stories.md`
    - `bmad-check-implementation-readiness` -> `implementation-readiness.md`
    - `bmad-sprint-planning` -> `sprint-status.yaml`
    - `bmad-create-story` -> `stories/*.md`
-6. Validate and advance:
+8. Validate and advance:
 
 ```bash
 python skills/lens-lifecycle/scripts/lifecycle_ops.py --project-root {project-root} validate-phase --feature-id {feature_id} --phase finalizeplan

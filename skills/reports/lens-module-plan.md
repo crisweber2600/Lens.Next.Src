@@ -8,6 +8,7 @@ architecture: 'multi-skill workflow suite'
 standalone: true
 expands_module: ''
 skills_planned:
+  - lens-constitution
   - lens-lifecycle
   - lens-next
   - lens-preplan
@@ -32,7 +33,7 @@ config_variables:
   - reporting_output_path
   - freshness_threshold_hours
   - lens_mode
-  - lens_governance_repo_path
+  - lens_constitution_root
   - lens_lifecycle_contract
   - lens_context_path
 created: '2026-05-20'
@@ -54,6 +55,7 @@ Lens is a multi-skill workflow suite. It does not need a long-lived conversation
 The suite is workflow-only:
 
 - `lens-preflight` checks Lens config, paths, reporting write scope, and optional Lens context without invoking Lens tools.
+- `lens-constitution` resolves governance constitutions for local feature archives and checks hard-gate compliance without invoking `lens.core`.
 - `lens-work-intake` creates durable feature archives and hands them to the local NextLens lifecycle.
 - `lens-lifecycle` provides deterministic local phase routing, artifact validation, and phase advancement.
 - `lens-next` inspects local feature state and routes to the next command.
@@ -73,7 +75,7 @@ The suite is workflow-only:
 
 Lens uses `skills/lens-setup/assets/metadata-schema.md` as the shared metadata contract and `skills/lens-setup/assets/templates/` as the scaffold source for work archives, feature archives, ledgers, and generated projections. Local lifecycle authority lives in `docs/features/<feature-id>/feature.yaml`. `status` tracks delivery state; `phase` tracks the clean-room lifecycle phase; `publication_state` replaces planning-branch assumptions by marking artifacts as `draft`, `published`, or `retired`. Published projections exclude drafts unless a workflow explicitly requests a draft-inclusive preview.
 
-Lens also supports optional external provenance fields such as `lens_feature_id`, `lens_track`, `lens_phase`, `lens_docs_path`, `lens_governance_repo_path`, `lens_feature_yaml_path`, `lens_constitution_status`, and `lens_preflight_status`. These fields are evidence only; they do not replace the local NextLens feature record.
+Lens also supports optional external provenance fields such as `lens_feature_id`, `lens_track`, `lens_phase`, `lens_docs_path`, `lens_constitution_root`, `lens_feature_yaml_path`, `lens_constitution_status`, and `lens_preflight_status`. These fields are evidence only; they do not replace the local NextLens feature record.
 
 ### Clean-Room Lifecycle Ownership
 
@@ -112,11 +114,31 @@ Lens memory is file-based and project-scoped. Each unit of work owns `memory.md`
 
 | Capability | Outcome | Inputs | Outputs |
 | ---------- | ------- | ------ | ------- |
-| Check readiness | Validates Lens paths, metadata schema, reporting output scope, Lens workspace markers, active Lens context, lifecycle contract presence, and governance repo availability when Lens is required | Project root, config paths, optional Lens paths | JSON preflight result with blocking/advisory findings |
+| Check readiness | Validates Lens paths, metadata schema, reporting output scope, Lens workspace markers, active Lens context, lifecycle contract presence, and constitution-root availability when Lens is required | Project root, config paths, optional Lens paths | JSON preflight result with blocking/advisory findings |
 
 **Activation Modes:** Interactive and headless.
 
 **Design Notes:** This is an Lens-native clean-room counterpart to Lens preflight. It is supplemental in Lens mode and authoritative only for local Lens readiness.
+
+### lens-constitution
+
+**Type:** internal workflow with deterministic script
+
+**Core Outcome:** Local feature archives can resolve the effective governance constitution for their domain, service, and optional repo scope without invoking `lens.core`.
+
+**The Non-Negotiable:** Governance rules are read-only evidence. Constitution checks may block delegation, but they do not replace local lifecycle authority under `docs/features/<feature-id>/feature.yaml`.
+
+**Capabilities:**
+
+| Capability | Outcome | Inputs | Outputs |
+| ---------- | ------- | ------ | ------- |
+| Resolve constitution | Merges org/domain/service/repo constitutions for the local feature scope | Feature ID or explicit scope, project root, optional constitution-root override | JSON with resolved scope, merged structured rules, and combined prose |
+| Progressive display | Shows phase-relevant rules and track permission for the current local phase | Feature ID or explicit scope, optional local phase and track | JSON with gate mode, reviewers, required artifacts, and combined prose |
+| Check compliance | Validates local artifacts against the resolved constitution using the feature docs path by default | Feature ID or explicit scope, optional artifact path and local phase | JSON pass/fail result with hard-gate and informational failures |
+
+**Activation Modes:** Headless deterministic script used by phase skills.
+
+**Design Notes:** This is a clean-room adaptation of the Lens constitution resolver. It infers domain and service from local stable-id lineage under `docs/`, maps local phases to constitution phases, and never treats governance metadata as local lifecycle truth.
 
 ### lens-work-intake
 
@@ -316,7 +338,7 @@ Lens memory is file-based and project-scoped. Each unit of work owns `memory.md`
 | reporting_output_path | Where should Lens write reports and snapshots? | _bmad-output/lens | Prefix the answer with the literal project-root token | false |
 | freshness_threshold_hours | How old can reports be before Lens marks them stale? | 24 | {value} | false |
 | lens_mode | How should Lens handle Lens context? | auto | {value} | false |
-| lens_governance_repo_path | Optional Lens governance repo path for required Lens mode. | empty | {value} | false |
+| lens_constitution_root | Optional Lens constitution root path for required Lens mode. | empty | Prefix the answer with the literal project-root token | false |
 | lens_lifecycle_contract | Optional NextLens lifecycle contract path. | skills/lens-lifecycle/assets/lifecycle.yaml | Prefix the answer with the literal project-root token | false |
 | lens_context_path | Optional Lens feature context path. | .lens/personal/context.yaml | Prefix the answer with the literal project-root token | false |
 

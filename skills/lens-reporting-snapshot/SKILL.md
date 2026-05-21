@@ -60,7 +60,7 @@ The Markdown report must include:
 - Overall status: `GREEN`, `YELLOW`, or `RED`
 - Blocking inconsistencies separated from advisory findings
 - Completed features and unpromoted feature knowledge
-- Preflight, lifecycle, constitution, and governance repo readiness when Lens context is present
+- Preflight, lifecycle, constitution, and constitution-root readiness when Lens context is present
 - Ledger health and topology health
 - Salmon upstream-impact status
 - Freshness summary
@@ -85,7 +85,7 @@ The JSON artifact must include:
   "preflight": {},
   "lifecycle": {},
   "constitution": {},
-  "governance_repo": {},
+  "constitution_root": {},
   "lens_context": {},
   "artifact_index": [],
   "facets": {},
@@ -100,5 +100,5 @@ The JSON artifact must include:
 
 Never hide blocking inconsistencies in an executive summary. Summaries can be concise, but they must preserve the distinction between advisory cleanup and decisions that should block publication, promotion, or projection rebuilds.
 
-Do not treat Lens snapshot fields as Lens authority. When Lens context is present, report the observed lifecycle, constitution, governance repo, and preflight status, but do not advance phases or write governance metadata.
+Do not treat Lens snapshot fields as Lens authority. When Lens context is present, report the observed lifecycle, constitution, constitution root, and preflight status, but do not advance phases or write constitution metadata.
 

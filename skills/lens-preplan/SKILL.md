@@ -13,18 +13,26 @@ PrePlan creates the first local planning packet for a feature archive: `brainsto
 
 1. Resolve `{feature_id}` and run `suggest-next`; stop if the feature is not on the `preplan` path.
 2. Load `docs/features/{feature_id}/feature.yaml`, `work.md`, `memory.md`, `links.md`, and any living ledger parent referenced by `belongs_to`.
-3. Use `bmad-agent-analyst` for problem framing when the feature lacks product clarity.
-4. Use `bmad-brainstorming` or the user-selected local ideation route to produce `brainstorm.md`.
-5. Use the narrowest research skill for `research.md`: `bmad-domain-research`, `bmad-market-research`, or `bmad-technical-research`.
-6. Use `bmad-product-brief` to produce `product-brief.md`.
-7. Run an adversarial planning review with `bmad-review-adversarial-general` and record `preplan-adversarial-review.md`.
-8. Validate artifacts:
+3. Resolve constitution before delegation:
+
+```bash
+python skills/lens-constitution/scripts/constitution_ops.py resolve --project-root {project-root} --feature-id {feature_id}
+python skills/lens-constitution/scripts/constitution_ops.py progressive-display --project-root {project-root} --feature-id {feature_id}
+```
+
+4. Stop immediately if constitution resolution fails, if the resolved gate mode is hard and the track is not permitted, or if the resolved constitution identifies a hard-gate requirement the planned PrePlan artifacts would violate. Surface the applicable hard-gate rules and carry the combined constitution prose into every downstream planning delegation.
+5. Use `bmad-agent-analyst` for problem framing when the feature lacks product clarity.
+6. Use `bmad-brainstorming` or the user-selected local ideation route to produce `brainstorm.md`.
+7. Use the narrowest research skill for `research.md`: `bmad-domain-research`, `bmad-market-research`, or `bmad-technical-research`.
+8. Use `bmad-product-brief` to produce `product-brief.md`.
+9. Run an adversarial planning review with `bmad-review-adversarial-general` and record `preplan-adversarial-review.md`.
+10. Validate artifacts:
 
 ```bash
 python skills/lens-lifecycle/scripts/lifecycle_ops.py --project-root {project-root} validate-phase --feature-id {feature_id} --phase preplan
 ```
 
-9. If validation passes, advance the local feature record:
+11. If validation passes, advance the local feature record:
 
 ```bash
 python skills/lens-lifecycle/scripts/lifecycle_ops.py --project-root {project-root} advance-phase --feature-id {feature_id} --phase preplan

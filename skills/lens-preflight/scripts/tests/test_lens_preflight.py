@@ -22,7 +22,7 @@ def make_args(root: Path, **overrides) -> argparse.Namespace:
         "landscape_root": "docs",
         "reporting_output_path": "_bmad-output/lens",
         "lens_enabled": False,
-        "lens_governance_repo_path": "",
+        "lens_constitution_root": "",
         "lens_lifecycle_contract": "",
         "lens_context_path": "",
     }
@@ -62,12 +62,12 @@ class LensPreflightTests(unittest.TestCase):
             )
             (root / "lens.core").mkdir(exist_ok=True)
             (root / "lens.core" / "AGENTS.md").write_text("# Lens\n", encoding="utf-8")
-            (root / "governance").mkdir()
-            (root / ".lens" / "personal").mkdir(parents=True)
-            (root / ".lens" / "governance-setup.yaml").write_text(
-                "governance_repo_path: governance\n",
+            (root / ".lens" / ".constitution" / "org").mkdir(parents=True)
+            (root / ".lens" / ".constitution" / "org" / "constitution.md").write_text(
+                "---\npermitted_tracks:\n  - full\n---\n",
                 encoding="utf-8",
             )
+            (root / ".lens" / "personal").mkdir(parents=True)
             (root / ".lens" / "personal" / "context.yaml").write_text(
                 "feature_id: feature-one\ntrack: full\nphase: preplan\ndocs_path: docs/features/feature-one\n",
                 encoding="utf-8",
@@ -80,9 +80,9 @@ class LensPreflightTests(unittest.TestCase):
             self.assertTrue(result["lens"]["detected"])
             self.assertEqual(result["lens"]["feature_id"], "feature-one")
             self.assertEqual(result["lens"]["track"], "full")
-            self.assertTrue(result["lens"]["governance_repo_ready"])
+            self.assertTrue(result["lens"]["constitution_root_ready"])
 
-    def test_lens_mode_blocks_when_governance_repo_is_missing(self) -> None:
+    def test_lens_mode_blocks_when_constitution_root_is_missing(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             (root / "docs" / "features").mkdir(parents=True)
@@ -98,7 +98,7 @@ class LensPreflightTests(unittest.TestCase):
             codes = {finding["code"] for finding in result["blocking"]}
 
             self.assertEqual(result["status"], "blocked")
-            self.assertIn("lens_governance_repo_unavailable", codes)
+            self.assertIn("lens_constitution_root_unavailable", codes)
 
 
 if __name__ == "__main__":

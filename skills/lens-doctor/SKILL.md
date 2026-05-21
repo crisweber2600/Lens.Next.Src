@@ -20,7 +20,7 @@ Load available config from `{project-root}/_bmad/config.yaml`, `{project-root}/_
 - `freshness_threshold_hours`: `24`
 - `lens_mode`: `auto`
 
-Use the shared metadata contract at `{project-root}/skills/lens-setup/assets/metadata-schema.md`. Run `lens-preflight` first when Lens context or governance repo readiness matters. If local execution is available, run:
+Use the shared metadata contract at `{project-root}/skills/lens-setup/assets/metadata-schema.md`. Run `lens-preflight` first when Lens context or constitution-root readiness matters. If local execution is available, run:
 
 ```bash
 python {project-root}/skills/lens-projection-rebuild/scripts/lens_projection.py doctor {project-root} --work-intake-path {work_intake_path} --feature-archive-path {feature_archive_path} --landscape-root {landscape_root}

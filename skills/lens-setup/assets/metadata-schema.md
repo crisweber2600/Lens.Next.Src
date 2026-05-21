@@ -70,9 +70,9 @@ These legacy fields let NextLens record observed external context without making
 | `lens_track` | optional | Lens lifecycle track, such as `full`, `express`, `quickdev`, `hotfix-express`, or `spike`. |
 | `lens_phase` | optional | Current Lens phase observed from context or governance metadata. |
 | `lens_docs_path` | optional | Lens planning documents path associated with the feature. |
-| `lens_governance_repo_path` | optional | Local path to the Lens governance repo when known. |
+| `lens_constitution_root` | optional | Local path to the Lens constitution root when known. |
 | `lens_feature_yaml_path` | optional | Local path or repo-relative path to an external Lens feature record. |
-| `lens_constitution_status` | optional | Summary status supplied by Lens constitution checks, such as `pass`, `advisory`, `blocked`, or `unknown`. |
+| `lens_constitution_status` | optional | Summary status supplied by Lens or clean-room NextLens constitution checks, such as `pass`, `advisory`, `blocked`, or `unknown`. |
 | `lens_preflight_status` | optional | Summary status supplied by Lens or Lens preflight, such as `pass`, `blocked`, or `unknown`. |
 
 ## Publication Semantics

@@ -96,36 +96,24 @@ def detect_lens_contract(root: Path, args: argparse.Namespace) -> dict:
         None,
     )
     agents_path = root / "lens.core" / "AGENTS.md"
-    governance_setup_path = root / ".lens" / "governance-setup.yaml"
     context_path = resolve_path(root, args.lens_context_path) or root / ".lens" / "personal" / "context.yaml"
-    governance_setup = read_simple_mapping(governance_setup_path)
+    constitution_root = resolve_path(root, args.lens_constitution_root) or root / ".lens" / ".constitution"
     context = read_simple_mapping(context_path)
     docs = context.get("docs") if isinstance(context.get("docs"), dict) else {}
-    explicit_governance = args.lens_governance_repo_path or str(
-        governance_setup.get("governance_repo_path")
-        or governance_setup.get("governance_path")
-        or ""
-    )
-    governance_repo_path = resolve_path(root, explicit_governance)
     detected = bool(
         args.lens_enabled
         or lifecycle_path
         or agents_path.exists()
-        or governance_setup_path.exists()
         or context_path.exists()
+        or constitution_root.exists()
     )
     return {
         "detected": detected,
         "requested": bool(args.lens_enabled),
         "agents_contract_path": agents_path.as_posix() if agents_path.exists() else "",
         "lifecycle_contract_path": lifecycle_path.as_posix() if lifecycle_path else "",
-        "governance_setup_path": governance_setup_path.as_posix()
-        if governance_setup_path.exists()
-        else "",
-        "governance_repo_path": governance_repo_path.as_posix()
-        if governance_repo_path
-        else "",
-        "governance_repo_ready": bool(governance_repo_path and governance_repo_path.exists()),
+        "constitution_root": constitution_root.as_posix(),
+        "constitution_root_ready": constitution_root.exists() and constitution_root.is_dir(),
         "context_path": context_path.as_posix() if context_path.exists() else "",
         "feature_id": str(context.get("feature_id") or context.get("featureId") or ""),
         "track": str(context.get("track") or ""),
@@ -213,24 +201,24 @@ def validate_lens_context(lens: dict) -> tuple[list[dict], list[dict]]:
                 "Provide lens_lifecycle_contract or run through Lens wrappers.",
             )
         )
-    if lens["requested"] and not lens["governance_repo_ready"]:
+    if lens["requested"] and not lens["constitution_root_ready"]:
         blocking.append(
             finding(
                 "blocking",
-                "lens_governance_repo_unavailable",
+                "lens_constitution_root_unavailable",
                 None,
-                "Lens mode was requested but the governance repo path is missing or unavailable.",
-                "Configure lens_governance_repo_path or run Lens preflight first.",
+                "Lens mode was requested but the constitution root is missing or unavailable.",
+                "Configure lens_constitution_root or create .lens/.constitution before continuing.",
             )
         )
-    elif not lens["governance_repo_ready"]:
+    elif not lens["constitution_root_ready"]:
         advisory.append(
             finding(
                 "advisory",
-                "lens_governance_repo_unavailable",
+                "lens_constitution_root_unavailable",
                 None,
-                "Lens was detected, but the governance repo path is missing or unavailable.",
-                "Run Lens preflight before relying on governance lifecycle context.",
+                "Lens was detected, but the constitution root is missing or unavailable.",
+                "Create .lens/.constitution or configure lens_constitution_root before relying on constitution checks.",
             )
         )
     return blocking, advisory
@@ -267,7 +255,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--landscape-root", default=DEFAULT_LANDSCAPE_ROOT)
     parser.add_argument("--reporting-output-path", default=DEFAULT_REPORTING_OUTPUT_PATH)
     parser.add_argument("--lens-enabled", action="store_true")
-    parser.add_argument("--lens-governance-repo-path", default="")
+    parser.add_argument("--lens-constitution-root", default="")
     parser.add_argument("--lens-lifecycle-contract", default="")
     parser.add_argument("--lens-context-path", default="")
     return parser

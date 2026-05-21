@@ -53,7 +53,7 @@ Write `feature.yaml` with at least `stable_id`, `entity_type: feature`, `title`,
 
 Write `work.md` with frontmatter that includes `stable_id`, `entity_type: feature`, `title`, `status: intake`, `publication_state: draft`, `work_id`, `feature_id`, `created_at` or `updated_at`, relationship fields when present, and `lifecycle_stage`. The body must capture the goal, non-goals, success criteria, current understanding, risks or open questions, and completion evidence placeholders.
 
-When external Lens context is detected or supplied, also record `lens_feature_id`, `lens_track`, `lens_phase`, `lens_docs_path`, `lens_governance_repo_path`, `lens_feature_yaml_path`, `lens_constitution_status`, and `lens_preflight_status` as provenance fields only. Do not treat external branch or governance mirror state as local lifecycle authority.
+When external Lens context is detected or supplied, also record `lens_feature_id`, `lens_track`, `lens_phase`, `lens_docs_path`, `lens_constitution_root`, `lens_feature_yaml_path`, `lens_constitution_status`, and `lens_preflight_status` as provenance fields only. Do not treat external branch or constitution-root state as local lifecycle authority.
 
 Write `memory.md` as the work's durable notebook. Capture the user's raw intent, decisions with reasons, assumptions, open loops, source artifacts, and related-work learnings. Treat this as the explicit file memory inspired by long-running agent threads: useful knowledge survives compaction because it is serialized into project artifacts.
 

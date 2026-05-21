@@ -10,7 +10,7 @@ lens_feature_id: ""
 lens_track: ""
 lens_phase: ""
 lens_docs_path: ""
-lens_governance_repo_path: ""
+lens_constitution_root: ""
 lens_feature_yaml_path: ""
 lens_constitution_status: unknown
 lens_preflight_status: unknown

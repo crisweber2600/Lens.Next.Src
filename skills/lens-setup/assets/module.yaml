@@ -38,9 +38,10 @@ lens_mode:
   prompt: How should Lens handle Lens context? Use auto, disabled, or required.
   default: auto
   user_setting: false
-lens_governance_repo_path:
-  prompt: Optional Lens governance repo path for required Lens mode.
+lens_constitution_root:
+  prompt: Optional Lens constitution root path for required Lens mode.
   default: ""
+  result: "{project-root}/{value}"
   user_setting: false
 lens_lifecycle_contract:
   prompt: Optional NextLens lifecycle contract path.

@@ -24,7 +24,7 @@ Support interactive, yolo, and headless use. In headless mode, infer paths from 
 
 ## Source Model
 
-Audit Markdown and YAML-bearing artifacts under the work intake path, feature archive, and landscape root. Treat frontmatter as canonical when present. Use the shared metadata contract at `{project-root}/skills/lens-setup/assets/metadata-schema.md` when available. Recognize these metadata keys when available: `stable_id`, `entity_type`, `title`, `work_id`, `belongs_to`, `status`, `publication_state`, `lifecycle_stage`, `updated_at`, `source_feature`, `related_to`, `extends`, `promotion_status`, `salmon_upstream`, `links`, `replaces`, `lens_feature_id`, `lens_track`, `lens_phase`, `lens_docs_path`, `lens_governance_repo_path`, `lens_feature_yaml_path`, `lens_constitution_status`, and `lens_preflight_status`.
+Audit Markdown and YAML-bearing artifacts under the work intake path, feature archive, and landscape root. Treat frontmatter as canonical when present. Use the shared metadata contract at `{project-root}/skills/lens-setup/assets/metadata-schema.md` when available. Recognize these metadata keys when available: `stable_id`, `entity_type`, `title`, `work_id`, `belongs_to`, `status`, `publication_state`, `lifecycle_stage`, `updated_at`, `source_feature`, `related_to`, `extends`, `promotion_status`, `salmon_upstream`, `links`, `replaces`, `lens_feature_id`, `lens_track`, `lens_phase`, `lens_docs_path`, `lens_constitution_root`, `lens_feature_yaml_path`, `lens_constitution_status`, and `lens_preflight_status`.
 
 The living tree is the service/domain/program ledger structure, typically `{project-root}/docs/<program>/<domain>/<service>/ledger/` or a shallower landscape path. The work/feature tree is `{work_intake_path}/<work-id>/` or `{feature_archive_path}/<feature-id>/` and remains the permanent historical record. Derived governance maps are projections and must not be treated as authored truth.
 
@@ -41,7 +41,7 @@ Use "unknown" instead of guessing when metadata is absent. Do not fabricate pare
 
 First identify the audit scope and whether the user wants Markdown only or an HTML-capable report. If a previous Lens audit exists in `reporting_output_path`, use it only as comparison context; re-read current source artifacts before judging.
 
-If Lens context is present, read the latest Lens preflight output or run `lens-preflight` before relying on governance repo, lifecycle, or constitution status. Treat Lens wrapper-provided constitution status as an input signal; do not resolve constitutions or update governance state inside map audit.
+If Lens context is present, read the latest Lens preflight output or run `lens-preflight` before relying on constitution-root, lifecycle, or constitution status. Treat Lens wrapper-provided constitution status as an input signal; do not resolve constitutions or update constitution data inside map audit.
 
 Inventory governed entities by stable ID, file path, entity type, status, publication state, parent reference, lifecycle stage, and outbound links. Build an in-memory parent graph from `belongs_to`, then check duplicate IDs, missing parents, orphaned nodes, cycles, invalid local links, and source feature references. Separately scan completed work archives and feature archives for promotion signals and stale living ledgers for freshness warnings. Draft artifacts may be audited but must be excluded from published projection readiness unless the user explicitly requests a draft-inclusive preview.
 
@@ -77,5 +77,5 @@ The report must include:
 
 This workflow is read-only. Never edit feature archives, ledgers, generated projections, or config files. If the audit reveals an obvious fix, describe the patch in the report instead of applying it.
 
-Never write Lens governance state. Governance feature metadata and lifecycle transitions belong to Lens tools, not Lens map audit.
+Never write Lens constitution or lifecycle authority state. Feature metadata and lifecycle transitions belong to the owning local workflows, not Lens map audit.
 

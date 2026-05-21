@@ -35,11 +35,11 @@ Run the deterministic checker when local execution is available:
 python {project-root}/skills/lens-preflight/scripts/lens_preflight.py {project-root} --work-intake-path {work_intake_path} --feature-archive-path {feature_archive_path} --landscape-root {landscape_root} --reporting-output-path {reporting_output_path}
 ```
 
-If `lens_mode` is `required`, include `--lens-enabled` plus configured Lens paths. If script execution is unavailable, perform the same checks directly: validate configured Lens paths, metadata schema presence, reporting output scope, Lens lifecycle contract discovery, Lens feature context discovery, and governance repo availability when Lens mode is required.
+If `lens_mode` is `required`, include `--lens-enabled` plus configured Lens paths. If script execution is unavailable, perform the same checks directly: validate configured Lens paths, metadata schema presence, reporting output scope, Lens lifecycle contract discovery, Lens feature context discovery, and constitution-root availability when Lens mode is required.
 
 ## Clean-Room Lens Boundary
 
-Lens preflight is supplemental. It detects and reports Lens context, but it does not run Lens repo sync, advance lifecycle phases, resolve constitutions, or write governance repo state. When a Lens wrapper has already run Lens preflight, treat that wrapper output as authoritative and include the Lens result as local readiness evidence.
+Lens preflight is supplemental. It detects and reports Lens context, but it does not run Lens repo sync, advance lifecycle phases, resolve constitutions, or write constitution-root state. When a Lens wrapper has already run Lens preflight, treat that wrapper output as authoritative and include the Lens result as local readiness evidence.
 
 ## Output Contract
 
@@ -49,9 +49,9 @@ Return or write JSON with `module`, `report_type: preflight`, `status`, `paths`,
 
 - Missing Lens config or paths: run `lens-setup` or correct config.
 - Missing metadata schema: restore the Lens setup assets.
-- Lens governance unavailable in required mode: run Lens preflight or provide the governance repo path.
+- Lens constitution root unavailable in required mode: create `.lens/.constitution` or provide `lens_constitution_root`.
 - Clean preflight: continue to `lens-doctor`, `lens-map-audit`, or the requested Lens workflow.
 
 ## Safety Rules
 
-Preflight is read-only. It may inspect project files and report paths, but it must not create output directories, repair config, run Lens commands, or write governance state.
+Preflight is read-only. It may inspect project files and report paths, but it must not create output directories, repair config, run Lens commands, or write constitution data.
