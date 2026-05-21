@@ -24,7 +24,7 @@ Support interactive and headless use. In headless mode, inspect explicit paths o
 
 Treat any of these as an upstream-impact signal: `salmon_upstream: true`, `impact: upstream`, `upstream_impact`, `UPSTREAM IMPACT`, an explicit user request, or a feature/ledger note saying a downstream finding changes parent assumptions.
 
-The review follows `belongs_to` and local references from the originating artifact toward parent service, domain, and program ledgers. It may also inspect sibling services when the source explicitly names shared contracts, dependencies, or reused decisions.
+The review follows `belongs_to` from the originating artifact toward parent service, domain, and program ledgers, then walks back down through inverse references and named dependents. Inspect siblings or downstream artifacts when they are connected by `links`, `related_to`, `extends`, `replaces`, `source_feature`, shared contracts, dependencies, or reused decisions.
 
 ## Classification
 
@@ -39,7 +39,7 @@ Be explicit about confidence. Label inferences as inferred, and keep speculative
 
 Identify the origin of the Salmon signal and the upstream path to review. If the origin lacks stable IDs or parent references, run a focused inline map audit for just that scope and record any metadata gaps.
 
-Read the origin artifact, parent chain, referenced ledgers, recent promotion reports, and recent map audit reports if available. Build an impact tree showing each upstream node, the claim being tested, evidence for/against consistency, and the action needed.
+Read the origin artifact, parent chain, inverse child references, named sibling or dependent artifacts, recent promotion reports, and recent map audit or lens-doctor reports if available. Build an impact tree showing each upstream and downstream node, the claim being tested, evidence for/against consistency, confidence, and the action needed.
 
 Do not edit source docs by default. If the user asks for patches, propose scoped ledger or topology updates in the report first and apply only after confirmation.
 
@@ -51,9 +51,9 @@ The report must include:
 
 - Origin artifact, signal type, timestamp, and reviewed upstream path
 - Impact verdict: `NO_UPSTREAM_CHANGE`, `ADVISORY_REFRESH`, `BLOCKING_CONTRADICTION`, or `TOPOLOGY_REVIEW_REQUIRED`
-- Impact tree from origin to service/domain/program parents
+- Impact tree from origin to service/domain/program parents and back down to named dependents
 - Blocking findings and advisory findings in separate tables
-- Proposed recursive consistency actions, ordered from highest parent to source artifact
+- Proposed recursive consistency actions, ordered from highest parent to dependent artifacts and back to the source artifact
 - Evidence notes distinguishing direct facts from inference
 - Machine-readable summary block:
 
@@ -63,8 +63,11 @@ The report must include:
   "report_type": "salmon_impact",
   "origin": "",
   "verdict": "ADVISORY_REFRESH",
+  "reviewed_upstream": [],
+  "reviewed_downstream": [],
   "blocking_count": 0,
-  "advisory_count": 0
+  "advisory_count": 0,
+  "confidence": "evidence-backed"
 }
 ```
 

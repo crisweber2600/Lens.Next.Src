@@ -16,14 +16,17 @@ The fixture at `skills/reports/synthetic-project` contains:
 - One mismatched parent reference: `service:clever-sso` belongs to missing `domain:student-auth`.
 - One completed-but-unpromoted feature: `feature:roster-sync` targets valid `service:attendance-api`.
 - One Salmon upstream-impact note: `feature:district-link-impact`.
+- All authored fixture entities declare `publication_state: published` so doctor findings focus on intended topology and promotion cases.
 
 ## Workflow Exercise
 
 | Workflow | Expected Result | Blocking | Advisory |
 | -------- | --------------- | -------- | -------- |
+| `ausx-lens-doctor` | Published projection readiness is blocked until parent references are fixed. | Missing `service:missing-service`; missing `domain:student-auth`. | Completed-but-unpromoted features; Salmon upstream signal. |
 | `ausx-map-audit` | Projection rebuild is blocked until parent references are fixed. | Missing `service:missing-service`; missing `domain:student-auth`. | `feature:roster-sync` is completed but unpromoted. |
+| `ausx-projection-rebuild` | Rebuild refuses to write a published map unless forced because doctor status is blocked. | Carries forward doctor blockers. | Forced draft/preview rebuilds must be labeled derived and unsafe. |
 | `ausx-ledger-promotion` | Promotion can plan `feature:roster-sync`; orphan promotion is blocked. | `feature:orphan-001` has no resolvable ledger target. | `feature:roster-sync` can promote to `service:attendance-api`. |
-| `ausx-salmon-impact` | Upstream review requires blocking consistency action. | Domain says district account linking is out of scope; Salmon note says it is required. | Add source breadcrumbs after resolution. |
+| `ausx-salmon-impact` | Upstream and downstream review requires blocking consistency action. | Domain says district account linking is out of scope; Salmon note says it is required. | Add source breadcrumbs after resolution. |
 | `ausx-topology-design` | Decision report should propose fixing `service:clever-sso` parentage or creating `domain:student-auth`. | Current topology has an unresolved service parent. | Document whether student auth is a domain or service boundary. |
 | `ausx-reporting-snapshot` | Snapshot is read-only and overall status is `RED`. | Carries forward map and Salmon blockers. | Shows unpromoted roster-sync as advisory, not blocking. |
 

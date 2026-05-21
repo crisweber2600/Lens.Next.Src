@@ -13,6 +13,7 @@ This skill promotes completed LENS/BMAD feature knowledge into living service, d
 
 Load available config from `{project-root}/_bmad/config.yaml`, `{project-root}/_bmad/config.user.yaml`, `{project-root}/_bmad/config.toml`, and `{project-root}/_bmad/config.user.toml`, checking both root values and the `ausx` or `modules.ausx` section. If config is missing, let the user know `ausx-setup` can configure Auspex at any time. Use these defaults:
 
+- `work_intake_path`: `{project-root}/docs/features`
 - `feature_archive_path`: `{project-root}/docs/features`
 - `landscape_root`: `{project-root}/docs`
 - `reporting_output_path`: `{project-root}/_bmad-output/auspex`
@@ -22,9 +23,9 @@ Support interactive and headless use. In headless mode, produce a promotion plan
 
 ## Promotion Contract
 
-The feature archive remains the immutable record of delivery history. The living ledger is the current operational truth for service/domain/program knowledge. Promotion copies or synthesizes durable knowledge from completed features into the right ledger while preserving `source_feature` references and stable IDs.
+The feature archive remains the immutable record of delivery history. The living ledger is the current operational truth for service/domain/program knowledge. Promotion copies or synthesizes durable knowledge from completed published features into the right ledger while preserving `source_feature` references and stable IDs.
 
-Promotion candidates usually have `status: completed`, `status: done`, an accepted story closeout, or a completion note in `{feature_archive_path}/<feature-id>/`. Skip drafts, in-progress work, and already-promoted records unless the user explicitly asks for a re-promotion review.
+Promotion candidates usually have `status: completed`, `status: done`, an accepted story closeout, or a completion note in `{work_intake_path}/<work-id>/` or `{feature_archive_path}/<feature-id>/`, plus `publication_state: published`. When a work archive includes `memory.md`, promote only durable decisions and completion evidence; leave open loops, discarded options, and working notes in the archive. Skip drafts, in-progress work, retired work, and already-promoted records unless the user explicitly asks for a re-promotion review.
 
 ## Classification
 
@@ -37,7 +38,7 @@ When a completed feature has clear durable knowledge but no matching ledger, rec
 
 ## Workflow
 
-Start by identifying the feature scope: one feature folder, all completed unpromoted features, or a specific service/domain/program ledger. If there is no recent map audit, recommend running `ausx-map-audit` first; continue only when the user accepts the risk or the scope is narrow enough to verify inline.
+Start by identifying the scope: one work archive, one feature folder, all completed unpromoted work, or a specific service/domain/program ledger. If there is no recent map audit, recommend running `ausx-map-audit` first; continue only when the user accepts the risk or the scope is narrow enough to verify inline.
 
 Read the feature archive and target ledger before proposing edits. Compare stable IDs, parent references, current ledger content, and source feature breadcrumbs. Build a promotion plan that separates direct ledger updates, new ledger entries, deferred items, and blocked items.
 

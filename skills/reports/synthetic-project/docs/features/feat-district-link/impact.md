@@ -3,7 +3,9 @@ stable_id: feature:district-link-impact
 entity_type: feature
 title: District Link Upstream Impact
 status: completed
+publication_state: published
 belongs_to: service:attendance-api
+promotion_status: pending
 salmon_upstream: true
 updated_at: 2026-05-20
 ---

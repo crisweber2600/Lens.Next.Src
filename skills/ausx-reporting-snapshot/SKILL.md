@@ -32,7 +32,7 @@ Use the latest relevant artifacts unless the user pins specific paths:
 
 - Feature archives under `feature_archive_path`
 - Living ledgers under `landscape_root`
-- Recent `map-audit-*`, `ledger-promotion-*`, `salmon-impact-*`, and `topology-decision-*` reports under `reporting_output_path`
+- Recent `lens-doctor-*`, `map-audit-*`, `governance-map.*`, `ledger-promotion-*`, `salmon-impact-*`, and `topology-decision-*` reports under `reporting_output_path`
 - Existing snapshot JSON only for trend comparison, never as current truth
 
 If audit or impact reports are older than `freshness_threshold_hours`, mark freshness as advisory. If blocking findings exist in the latest audit or Salmon report, carry them forward as blocking snapshot risks.
@@ -72,12 +72,19 @@ The JSON artifact must include:
   "created_at": "",
   "scope": "",
   "overall_status": "YELLOW",
+  "summary_cards": [],
   "blocking": [],
   "advisory": [],
   "features": [],
   "ledgers": [],
+  "projection": {},
   "salmon_impacts": [],
-  "freshness": {}
+  "artifact_index": [],
+  "facets": {},
+  "search_fields": ["stable_id", "title", "entity_type", "status", "publication_state"],
+  "freshness": {},
+  "refresh": { "mode": "manual", "generated_from": [] },
+  "access": { "model": "repository-read", "notes": "UI host must enforce access outside this snapshot." }
 }
 ```
 

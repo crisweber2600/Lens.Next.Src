@@ -3,6 +3,7 @@ stable_id: feature:roster-sync
 entity_type: feature
 title: Roster Sync Completion
 status: completed
+publication_state: published
 belongs_to: service:attendance-api
 promotion_status: pending
 updated_at: 2026-05-20

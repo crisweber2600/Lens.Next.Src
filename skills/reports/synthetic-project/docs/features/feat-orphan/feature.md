@@ -3,6 +3,7 @@ stable_id: feature:orphan-001
 entity_type: feature
 title: Orphan Feature
 status: completed
+publication_state: published
 belongs_to: service:missing-service
 promotion_status: pending
 updated_at: 2026-05-20

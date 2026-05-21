@@ -1,0 +1,32 @@
+---
+stable_id: feature:<work-id>
+entity_type: feature
+title: <work title>
+status: intake
+publication_state: draft
+work_id: <work-id>
+lifecycle_stage: intake
+belongs_to: unknown
+created_at: <date>
+updated_at: <date>
+related_to: []
+extends: []
+replaces: []
+promotion_status: not_started
+salmon_upstream: false
+links: []
+---
+
+# <Work Title>
+
+## Goal
+
+## Non-Goals
+
+## Success Criteria
+
+## Current Understanding
+
+## Risks And Open Questions
+
+## Completion Evidence

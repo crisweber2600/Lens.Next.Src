@@ -2,6 +2,8 @@
 stable_id: program:alpha
 entity_type: program
 title: Program Alpha
+status: active
+publication_state: published
 updated_at: 2026-05-20
 ---
 

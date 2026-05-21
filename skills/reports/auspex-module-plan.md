@@ -8,25 +8,29 @@ architecture: 'multi-skill workflow suite'
 standalone: true
 expands_module: ''
 skills_planned:
+  - ausx-work-intake
+  - ausx-lens-doctor
   - ausx-map-audit
+  - ausx-projection-rebuild
   - ausx-ledger-promotion
   - ausx-salmon-impact
   - ausx-topology-design
   - ausx-reporting-snapshot
 config_variables:
+  - work_intake_path
   - feature_archive_path
   - landscape_root
   - reporting_output_path
   - freshness_threshold_hours
 created: '2026-05-20'
-updated: '2026-05-20'
+updated: '2026-05-21'
 ---
 
 # Auspex Module Plan
 
 ## Vision
 
-Auspex helps teams manage LENS/BMAD project knowledge with a Two-Tree Model: permanent feature archives preserve delivery history, and living service/domain/program ledgers preserve current operational truth. The module also produces read-only reporting artifacts so stakeholders can see status, risk, promotion gaps, and topology health without treating generated projections as authored truth.
+Auspex helps teams manage LENS/BMAD project knowledge with a Two-Tree Model: permanent work and feature archives preserve delivery history, and living service/domain/program ledgers preserve current operational truth. The module creates a single entry point for new units of work, then produces governance and reporting artifacts so stakeholders can see status, risk, promotion gaps, and topology health without treating generated projections as authored truth.
 
 Target users are BMAD/LENS maintainers, feature teams promoting completed work, architects managing service topology, and stakeholders who need status snapshots without editing the source docs.
 
@@ -36,25 +40,52 @@ Auspex is a multi-skill workflow suite. It does not need a long-lived conversati
 
 The suite is workflow-only:
 
+- `ausx-work-intake` creates durable units of work and hands them to the Lens/BMad lifecycle.
+- `ausx-lens-doctor` runs lightweight deterministic health checks over authored topology metadata.
 - `ausx-map-audit` validates source topology, stable IDs, parent references, links, and projection rebuild readiness.
+- `ausx-projection-rebuild` materializes derived governance map JSON and Markdown from authored frontmatter.
 - `ausx-ledger-promotion` promotes completed feature knowledge into living ledgers with provenance.
 - `ausx-salmon-impact` reviews upstream-impact signals and recursive consistency risk.
 - `ausx-topology-design` creates or updates topology decision reports and optional ledger scaffolds.
 - `ausx-reporting-snapshot` creates read-only stakeholder artifacts for human review and future UI ingestion.
 
+### Metadata And Publication Contract
+
+Auspex uses `skills/ausx-setup/assets/metadata-schema.md` as the shared metadata contract and `skills/ausx-setup/assets/templates/` as the scaffold source for work archives, feature archives, ledgers, and generated projections. `status` tracks lifecycle; `publication_state` replaces planning-branch assumptions by marking artifacts as `draft`, `published`, or `retired`. Published projections exclude drafts unless a workflow explicitly requests a draft-inclusive preview.
+
 ### Memory Architecture
 
-No agent memory is required in v1. Durable state lives in project artifacts: feature archives, ledgers, topology decisions, promotion/audit/impact reports, and snapshots.
+Durable state lives in project artifacts, not hidden chat history. `ausx-work-intake` writes explicit work memory into each work archive so thread learnings, decisions, related-work context, open loops, and lifecycle status can be inspected, edited, diffed, and reused by future workers. Ledgers, topology decisions, promotion/audit/impact reports, and snapshots remain the other durable knowledge surfaces.
 
 ### Memory Contract
 
-Not applicable for v1. The workflows read project artifacts and write reports rather than storing personal or shared agent memory.
+Auspex memory is file-based and project-scoped. Each unit of work owns `memory.md` beside `work.md`, `journey.md`, `handoff.md`, and `links.md`. The memory file captures durable context only: decisions, source signals, user constraints, related work, assumptions, open loops, and discarded options worth preserving. It must not become a private agent persona or a replacement for authored ledgers.
 
 ### Cross-Agent Patterns
 
-No cross-agent handoff is required. Workflow ordering is evidence-driven: audit first, then promotion, Salmon review, topology decisions, and reporting snapshots. Users may invoke any workflow directly when they already know the scope.
+`ausx-work-intake` is the recommended single entry point for new work, then the handoff file routes to the appropriate Lens/BMad workflow: product brief, PRD, UX/design delivery, architecture, epics and stories, sprint planning, story creation, development, quick-dev, or governance. Existing Auspex workflows remain directly invokable for known scopes. Governance ordering is evidence-driven after delivery: lens doctor, map audit, projection rebuild, promotion, Salmon review when triggered, topology decisions when needed, and reporting snapshots.
 
 ## Skills
+
+### ausx-work-intake
+
+**Type:** workflow
+
+**Core Outcome:** A durable work archive exists for one feature/change and contains the next Lens/BMad handoff.
+
+**The Non-Negotiable:** Work starts as an inspectable file artifact, not as hidden chat memory.
+
+**Capabilities:**
+
+| Capability | Outcome | Inputs | Outputs |
+| ---------- | ------- | ------ | ------- |
+| Start work | Creates or resumes a work archive with goal, success criteria, memory, journey, links, and handoff | Feature idea, change request, existing work ID, optional relation | Work archive with `work.md`, `memory.md`, `journey.md`, `handoff.md`, and `links.md` |
+| Create related work | Starts a follow-up feature using relevant durable context from prior work | Related feature ID, extension/replacement signal, new goal | New archive with relationship metadata and inherited durable decisions |
+| Route lifecycle | Selects the next Lens/BMad workflow | Work readiness, existing artifacts, sprint state hints | `handoff.md` with next skill and required context |
+
+**Activation Modes:** Interactive and headless.
+
+**Design Notes:** This workflow gives Auspex a single front door without absorbing the responsibilities of PRD, architecture, sprint status, story creation, development, or ledger promotion.
 
 ### ausx-map-audit
 
@@ -73,6 +104,42 @@ No cross-agent handoff is required. Workflow ordering is evidence-driven: audit 
 **Activation Modes:** Interactive and headless.
 
 **Design Notes:** This workflow anchors the rest of the suite because promotion and reporting should not proceed blindly when the source map is inconsistent.
+
+### ausx-lens-doctor
+
+**Type:** workflow
+
+**Core Outcome:** A lightweight topology health report states whether projection rebuilds are safe.
+
+**The Non-Negotiable:** Diagnose only; do not repair source docs.
+
+**Capabilities:**
+
+| Capability | Outcome | Inputs | Outputs |
+| ---------- | ------- | ------ | ------- |
+| Run doctor | Checks required metadata, stable IDs, parentage, cycles, links, draft state, promotion gaps, and Salmon signals | Project root or docs scope, optional draft inclusion | JSON doctor result with blocking/advisory findings and projection readiness |
+
+**Activation Modes:** Interactive and headless.
+
+**Design Notes:** This is the fast preflight path. It shares deterministic checks with projection rebuild so the readiness signal is consistent.
+
+### ausx-projection-rebuild
+
+**Type:** workflow with deterministic script
+
+**Core Outcome:** Derived `governance-map.json` and `governance-map.md` are rebuilt from authored frontmatter.
+
+**The Non-Negotiable:** Generated maps are disposable projections, never source truth.
+
+**Capabilities:**
+
+| Capability | Outcome | Inputs | Outputs |
+| ---------- | ------- | ------ | ------- |
+| Rebuild projection | Runs doctor checks, then writes derived map artifacts when safe or explicitly forced | Project root, configured source paths, optional `--include-drafts` or `--force` | Governance map JSON and Markdown with source metadata and doctor status |
+
+**Activation Modes:** Interactive and headless.
+
+**Design Notes:** The stdlib script provides deterministic graph checks without adding external dependencies.
 
 ### ausx-ledger-promotion
 
@@ -108,7 +175,7 @@ No cross-agent handoff is required. Workflow ordering is evidence-driven: audit 
 
 **Activation Modes:** Interactive and headless.
 
-**Design Notes:** Salmon review recommends topology review when parentage or ownership changes are needed.
+**Design Notes:** Salmon review now traverses upward through parent ledgers and downward through inverse or named dependent references. It recommends topology review when parentage or ownership changes are needed.
 
 ### ausx-topology-design
 
@@ -144,12 +211,13 @@ No cross-agent handoff is required. Workflow ordering is evidence-driven: audit 
 
 **Activation Modes:** Interactive and headless.
 
-**Design Notes:** The snapshot is explicitly time-bound and cannot become source truth.
+**Design Notes:** The snapshot is explicitly time-bound and cannot become source truth. Its JSON contract is documented in `skills/ausx-reporting-snapshot/assets/reporting-snapshot.schema.json` for future MVP1 UI ingestion.
 
 ## Configuration
 
 | Variable | Prompt | Default | Result Template | User Setting |
 | -------- | ------ | ------- | --------------- | ------------ |
+| work_intake_path | Where should Auspex create durable work unit archives? | docs/features | Prefix the answer with the literal project-root token | false |
 | feature_archive_path | Where should Auspex look for permanent feature archives? | docs/features | Prefix the answer with the literal project-root token | false |
 | landscape_root | Where should Auspex look for living service/domain/program ledgers? | docs | Prefix the answer with the literal project-root token | false |
 | reporting_output_path | Where should Auspex write reports and snapshots? | _bmad-output/auspex | Prefix the answer with the literal project-root token | false |
@@ -157,11 +225,11 @@ No cross-agent handoff is required. Workflow ordering is evidence-driven: audit 
 
 ## External Dependencies
 
-No external CLI tools, MCP servers, web services, or UI runtimes are required in v1.
+No external CLI tools, MCP servers, web services, or UI runtimes are required in v1. `ausx-projection-rebuild` includes a Python stdlib script for deterministic doctor and rebuild checks.
 
 ## UI and Visualization
 
-No web UI is packaged in v1. `ausx-reporting-snapshot` writes JSON designed for future Auspex UI ingestion.
+No web UI is packaged in v1 because this repository does not contain an application host. `ausx-reporting-snapshot` writes JSON designed for future Auspex UI ingestion, and `skills/reports/auspex-reporting-ui-mvp1-plan.md` captures the deferred dashboard, artifact reader, search/filter, refresh, access, and deployment scope.
 
 ## Setup Extensions
 
@@ -169,19 +237,24 @@ The generated `ausx-setup` skill collects configuration values, merges help entr
 
 ## Integration
 
-Auspex is standalone and can be installed into any BMad/LENS project with compatible docs. It complements BMAD planning and implementation workflows but does not require another Auspex service or UI.
+Auspex is standalone and can be installed into any BMad/LENS project with compatible docs. It complements BMAD planning and implementation workflows by creating the initial work archive, then handing off to the existing Lens/BMad lifecycle rather than duplicating it.
 
 ## Creative Use Cases
 
-- Run map audits as a preflight gate before rebuilding derived governance projections.
+- Start every meaningful feature with `ausx-work-intake` so intent, memory, related work, and next lifecycle step are serialized before implementation begins.
+- Run lens doctor and map audits as preflight gates before rebuilding derived governance projections.
+- Rebuild `governance-map.json` for dashboards without making the dashboard authoritative.
 - Use promotion reports as release-closeout evidence.
 - Use Salmon impact reports to decide whether a downstream discovery should block publication.
 - Feed snapshot JSON into a lightweight dashboard without making the dashboard authoritative.
 
 ## Build Roadmap
 
-1. Build `ausx-map-audit` first because it validates the knowledge graph used by every later workflow.
-2. Build `ausx-ledger-promotion` next so completed feature knowledge can move into living truth.
-3. Build `ausx-salmon-impact` after promotion so upstream changes can be traced with current ledgers.
-4. Build `ausx-topology-design` after the evidence workflows so topology decisions can reference audit and impact findings.
-5. Build `ausx-reporting-snapshot` last because it summarizes the outputs of the other workflows.
+1. Build `ausx-work-intake` first so every later feature can start from a durable work archive and lifecycle handoff.
+2. Build `ausx-lens-doctor` so topology health can be checked quickly and deterministically.
+3. Build `ausx-map-audit` because it produces the reviewable audit report used by every later governance workflow.
+4. Build `ausx-projection-rebuild` so derived governance maps can be regenerated after a clean doctor/audit.
+5. Build `ausx-ledger-promotion` so completed published feature knowledge can move into living truth.
+6. Build `ausx-salmon-impact` after promotion so upstream and downstream changes can be traced with current ledgers.
+7. Build `ausx-topology-design` after the evidence workflows so topology decisions can reference audit and impact findings.
+8. Build `ausx-reporting-snapshot` last because it summarizes the outputs of the other workflows and feeds future UI ingestion.

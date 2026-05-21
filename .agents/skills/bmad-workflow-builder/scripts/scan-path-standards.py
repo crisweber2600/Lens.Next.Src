@@ -115,8 +115,9 @@ def check_frontmatter(content: str, filepath: Path) -> list[dict]:
 def check_root_md_files(skill_path: Path) -> list[dict]:
     """Check that no .md files exist at skill root except SKILL.md."""
     findings = []
+    allowed_root_md = {'SKILL.md', '.decision-log.md', 'addendum.md', 'distillate.md'}
     for md_file in skill_path.glob('*.md'):
-        if md_file.name != 'SKILL.md':
+        if md_file.name not in allowed_root_md:
             findings.append({
                 'file': md_file.name,
                 'line': 0,

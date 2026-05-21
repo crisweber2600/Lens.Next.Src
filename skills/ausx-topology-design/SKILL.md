@@ -24,7 +24,7 @@ Support interactive and headless use. In headless mode, create a decision report
 
 Topology decisions define how programs, domains, services, and major shared capabilities relate. They do not rewrite feature history. They may create or update living ledger scaffolds only when the user explicitly approves or when headless arguments explicitly request scaffolding.
 
-Prefer stable IDs that survive file moves. Use `belongs_to` for parent references. Use generated projections only as derived views; if a projection conflicts with authored ledgers or feature archives, trust the authored source and record the projection problem.
+Prefer stable IDs that survive file moves. Use `belongs_to` for parent references and the templates in `{project-root}/skills/ausx-setup/assets/templates/` when scaffolding ledgers. Use generated projections only as derived views; if a projection conflicts with authored ledgers or feature archives, trust the authored source and record the projection problem.
 
 ## Workflow
 
@@ -34,6 +34,7 @@ Develop a topology proposal covering:
 
 - Program/domain/service hierarchy and rationale
 - Stable ID assignments or migrations
+- `publication_state` decisions for draft, published, and retired topology records
 - Ledger path conventions, including shallower landscape paths when appropriate
 - Parent references and ownership boundaries
 - Source features or decisions that justify each entity
