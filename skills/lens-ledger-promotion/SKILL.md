@@ -28,7 +28,7 @@ The feature archive remains the immutable record of delivery history. The living
 
 Promotion candidates usually have `status: completed`, `status: done`, an accepted story closeout, or a completion note in `{work_intake_path}/<work-id>/` or `{feature_archive_path}/<feature-id>/`, plus `publication_state: published`. When a work archive includes `memory.md`, promote only durable decisions and completion evidence; leave open loops, discarded options, and working notes in the archive. Skip drafts, in-progress work, retired work, and already-promoted records unless the user explicitly asks for a re-promotion review.
 
-When Lens context fields are present, use `lens_feature_id`, `lens_track`, `lens_phase`, and `lens_docs_path` as provenance and readiness signals only. Do not update Lens governance `feature.yaml`; promotion writes only to approved living ledgers under `landscape_root` when apply is explicitly approved.
+When external Lens context fields are present, use `lens_feature_id`, `lens_track`, `lens_phase`, and `lens_docs_path` as provenance and readiness signals only. Do not update external governance records; promotion writes only to approved living ledgers under `landscape_root` when apply is explicitly approved.
 
 ## Classification
 

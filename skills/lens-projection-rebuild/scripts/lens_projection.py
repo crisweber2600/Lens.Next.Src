@@ -30,9 +30,13 @@ PARENT_PREFIXES = {
     "feature": {"service:", "domain:", "program:"},
 }
 
-LENS_TRACK_PHASES = {
+LOCAL_TRACK_PHASES = {
     "full": {"preplan", "businessplan", "techplan", "finalizeplan", "dev", "complete"},
     "express": {"expressplan", "finalizeplan", "dev", "complete"},
+}
+
+LENS_TRACK_PHASES = {
+    **LOCAL_TRACK_PHASES,
     "quickdev": {"finalizeplan", "dev", "complete"},
     "hotfix-express": {"techplan", "finalizeplan", "dev", "complete"},
     "spike": {"preplan", "complete"},
@@ -62,6 +66,9 @@ GOVERNED_KEYS = {
     "stable_id",
     "entity_type",
     "belongs_to",
+    "feature_id",
+    "track",
+    "phase",
     "work_id",
     "publication_state",
     "promotion_status",
@@ -121,6 +128,40 @@ def parse_frontmatter(path: Path) -> tuple[dict, str] | None:
     return metadata, body
 
 
+def parse_yaml_metadata(path: Path) -> tuple[dict, str] | None:
+    metadata = {}
+    current_list_key = None
+    for raw_line in path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.rstrip()
+        if not line.strip() or line.lstrip().startswith("#"):
+            continue
+        if current_list_key and line.startswith(("  - ", "- ")):
+            item = line.split("- ", 1)[1]
+            metadata[current_list_key].append(parse_scalar(item))
+            continue
+        current_list_key = None
+        if ":" not in line or line.startswith(" "):
+            continue
+        key, value = line.split(":", 1)
+        key = key.strip()
+        parsed_value = parse_scalar(value)
+        metadata[key] = parsed_value
+        if value.strip() == "":
+            metadata[key] = []
+            current_list_key = key
+    if not metadata:
+        return None
+    return metadata, ""
+
+
+def parse_metadata_file(path: Path) -> tuple[dict, str] | None:
+    if path.suffix.lower() == ".md":
+        return parse_frontmatter(path)
+    if path.suffix.lower() in {".yaml", ".yml"}:
+        return parse_yaml_metadata(path)
+    return None
+
+
 def as_list(value) -> list:
     if value is None or value == "":
         return []
@@ -145,13 +186,20 @@ def resolve_path(root: Path, value: str) -> Path:
     return root / path
 
 
-def discover_markdown(root: Path, paths: list[Path]) -> list[Path]:
+def discover_authored_files(root: Path, paths: list[Path]) -> list[Path]:
     discovered = []
     seen = set()
     for source_path in paths:
         if not source_path.exists():
             continue
-        candidates = [source_path] if source_path.is_file() else source_path.rglob("*.md")
+        if source_path.is_file():
+            candidates = [source_path]
+        else:
+            candidates = [
+                candidate
+                for candidate in source_path.rglob("*")
+                if candidate.suffix.lower() in {".md", ".yaml", ".yml"}
+            ]
         for candidate in candidates:
             resolved = candidate.resolve()
             if resolved in seen:
@@ -169,8 +217,8 @@ def collect_entities(args: argparse.Namespace) -> list[dict]:
         resolve_path(root, args.landscape_root),
     ]
     entities = []
-    for markdown_path in discover_markdown(root, source_paths):
-        parsed = parse_frontmatter(markdown_path)
+    for artifact_path in discover_authored_files(root, source_paths):
+        parsed = parse_metadata_file(artifact_path)
         if not parsed:
             continue
         metadata, body = parsed
@@ -185,10 +233,17 @@ def collect_entities(args: argparse.Namespace) -> list[dict]:
             "publication_state": str(metadata.get("publication_state", "")),
             "updated_at": str(metadata.get("updated_at", "")),
             "belongs_to": str(metadata.get("belongs_to", "")),
+            "feature_id": str(metadata.get("feature_id", "")),
+            "track": str(metadata.get("track", "")),
+            "phase": str(metadata.get("phase", "")),
+            "docs_path": str(metadata.get("docs_path", "")),
+            "target_repos": as_list(metadata.get("target_repos")),
+            "depends_on": as_list(metadata.get("depends_on")),
             "promotion_status": str(metadata.get("promotion_status", "")),
             "salmon_upstream": metadata.get("salmon_upstream", False),
+            "salmon_status": str(metadata.get("salmon_status", "")),
             "links": as_list(metadata.get("links")),
-            "path": rel_path(markdown_path, root),
+            "path": rel_path(artifact_path, root),
             "body": body,
             "metadata": metadata,
         }
@@ -419,6 +474,56 @@ def validate_promotion_and_salmon(entities: list[dict]) -> list[dict]:
     return findings
 
 
+def phase_without_completion_suffix(value: str) -> str:
+    phase = normalize_status(value)
+    if phase.endswith("-complete"):
+        return phase[: -len("-complete")]
+    return phase
+
+
+def validate_local_lifecycle(entities: list[dict], root: Path) -> list[dict]:
+    findings = []
+    for entity in entities:
+        if entity.get("entity_type") != "feature":
+            continue
+        track = normalize_status(entity.get("track"))
+        phase = phase_without_completion_suffix(entity.get("phase"))
+        if track and track not in LOCAL_TRACK_PHASES:
+            findings.append(
+                finding(
+                    severity_for(entity),
+                    "local_track_unknown",
+                    entity,
+                    f"Local lifecycle track `{track}` is not recognized.",
+                    "Use `full` or `express` in the feature record.",
+                )
+            )
+        if phase and track in LOCAL_TRACK_PHASES and phase not in LOCAL_TRACK_PHASES[track]:
+            findings.append(
+                finding(
+                    severity_for(entity),
+                    "local_phase_not_in_track",
+                    entity,
+                    f"Local lifecycle phase `{entity.get('phase')}` is not valid for track `{track}`.",
+                    "Set `phase` to a phase in the selected local track, optionally suffixed with `-complete`.",
+                )
+            )
+        docs_path = str(entity.get("docs_path") or "").strip()
+        if docs_path:
+            resolved_docs_path = resolve_path(root, docs_path)
+            if not resolved_docs_path.exists():
+                findings.append(
+                    finding(
+                        severity_for(entity),
+                        "local_docs_path_missing",
+                        entity,
+                        f"Local docs path `{docs_path}` does not exist.",
+                        "Create the feature archive path or correct `docs_path`.",
+                    )
+                )
+    return findings
+
+
 def has_lens_context(entity: dict) -> bool:
     metadata = entity.get("metadata", {})
     return any(metadata.get(field) not in (None, "", [], {}) for field in LENS_CONTEXT_FIELDS)
@@ -464,7 +569,7 @@ def validate_lens_context(entities: list[dict], root: Path) -> list[dict]:
                         "lens_phase_not_in_track",
                         entity,
                         f"Lens phase `{lens_phase}` is not valid for track `{lens_track}`.",
-                        "Refresh the Lens context from governance `feature.yaml` or correct the Lens metadata.",
+                        "Refresh the external Lens context or correct the Lens metadata.",
                     )
                 )
         docs_path = str(metadata.get("lens_docs_path") or "").strip()
@@ -514,6 +619,7 @@ def run_doctor(args: argparse.Namespace) -> dict:
     findings.extend(validate_cycles(entities))
     findings.extend(validate_links(entities, root))
     findings.extend(validate_promotion_and_salmon(entities))
+    findings.extend(validate_local_lifecycle(entities, root))
     findings.extend(validate_lens_context(entities, root))
     blocking = [item for item in findings if item["severity"] == "blocking"]
     advisory = [item for item in findings if item["severity"] == "advisory"]
@@ -545,6 +651,13 @@ def public_entity(entity: dict) -> dict:
         "updated_at": entity.get("updated_at"),
         "path": entity.get("path"),
     }
+    lifecycle = {
+        field: entity.get(field)
+        for field in ("feature_id", "track", "phase", "docs_path", "target_repos", "depends_on", "salmon_status")
+        if entity.get(field) not in (None, "", [], {})
+    }
+    if lifecycle:
+        public["lifecycle"] = lifecycle
     metadata = entity.get("metadata", {})
     lens_context = {
         field: metadata.get(field)
@@ -582,7 +695,7 @@ def write_markdown(output_path: Path, projection: dict) -> None:
         "",
         "# Lens Governance Map",
         "",
-        "This file is generated from authored frontmatter. Do not edit it as source truth.",
+        "This file is generated from authored metadata. Do not edit it as source truth.",
         "",
         "## Summary",
         "",
@@ -628,7 +741,7 @@ def run_rebuild(args: argparse.Namespace) -> tuple[int, dict]:
         "report_type": "governance_map",
         "generated_at": generated_at,
         "derived": True,
-        "source_model": "authored_frontmatter",
+        "source_model": "authored_metadata",
         "include_drafts": args.include_drafts,
         "doctor": {
             "status": doctor["status"],

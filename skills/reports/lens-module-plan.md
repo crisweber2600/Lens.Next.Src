@@ -3,11 +3,19 @@ title: 'Lens Module Plan'
 status: 'complete'
 module_name: 'Lens'
 module_code: 'lens'
-module_description: 'Workflow suite for LENS/BMAD topology governance, living ledgers, Salmon impact analysis, and stakeholder reporting artifacts.'
+module_description: 'Workflow suite for clean-room NextLens lifecycle planning, topology governance, living ledgers, Salmon impact analysis, and stakeholder reporting artifacts.'
 architecture: 'multi-skill workflow suite'
 standalone: true
 expands_module: ''
 skills_planned:
+  - lens-lifecycle
+  - lens-next
+  - lens-preplan
+  - lens-businessplan
+  - lens-techplan
+  - lens-expressplan
+  - lens-finalizeplan
+  - lens-dev
   - lens-preflight
   - lens-work-intake
   - lens-doctor
@@ -35,9 +43,9 @@ updated: '2026-05-21'
 
 ## Vision
 
-Lens helps teams manage LENS/BMAD project knowledge with a Two-Tree Model: permanent work and feature archives preserve delivery history, and living service/domain/program ledgers preserve current operational truth. The module creates a single entry point for new units of work, then produces governance and reporting artifacts so stakeholders can see status, risk, promotion gaps, and topology health without treating generated projections as authored truth.
+Lens helps teams manage NextLens/BMAD project knowledge with a Two-Tree Model: permanent work and feature archives preserve delivery history, and living service/domain/program ledgers preserve current operational truth. The module creates a single entry point for new units of work, moves them through local clean-room lifecycle phases, then produces governance and reporting artifacts so stakeholders can see status, risk, promotion gaps, and topology health without treating generated projections as authored truth.
 
-Target users are BMAD/LENS maintainers, feature teams promoting completed work, architects managing service topology, and stakeholders who need status snapshots without editing the source docs.
+Target users are NextLens maintainers, BMAD planners, feature teams promoting completed work, architects managing service topology, and stakeholders who need status snapshots without editing the source docs.
 
 ## Architecture
 
@@ -46,7 +54,13 @@ Lens is a multi-skill workflow suite. It does not need a long-lived conversation
 The suite is workflow-only:
 
 - `lens-preflight` checks Lens config, paths, reporting write scope, and optional Lens context without invoking Lens tools.
-- `lens-work-intake` creates durable units of work and hands them to the Lens/BMad lifecycle.
+- `lens-work-intake` creates durable feature archives and hands them to the local NextLens lifecycle.
+- `lens-lifecycle` provides deterministic local phase routing, artifact validation, and phase advancement.
+- `lens-next` inspects local feature state and routes to the next command.
+- `lens-preplan`, `lens-businessplan`, and `lens-techplan` run the full planning track.
+- `lens-expressplan` runs the compact express track.
+- `lens-finalizeplan` converts full or express planning inputs into a dev-ready story bundle.
+- `lens-dev` executes finalized story work against configured target repositories and records evidence.
 - `lens-doctor` runs lightweight deterministic health checks over authored topology metadata.
 - `lens-map-audit` validates source topology, stable IDs, parent references, links, and projection rebuild readiness.
 - `lens-projection-rebuild` materializes derived governance map JSON and Markdown from authored frontmatter.
@@ -57,15 +71,20 @@ The suite is workflow-only:
 
 ### Metadata And Publication Contract
 
-Lens uses `skills/lens-setup/assets/metadata-schema.md` as the shared metadata contract and `skills/lens-setup/assets/templates/` as the scaffold source for work archives, feature archives, ledgers, and generated projections. `status` tracks lifecycle; `publication_state` replaces planning-branch assumptions by marking artifacts as `draft`, `published`, or `retired`. Published projections exclude drafts unless a workflow explicitly requests a draft-inclusive preview.
+Lens uses `skills/lens-setup/assets/metadata-schema.md` as the shared metadata contract and `skills/lens-setup/assets/templates/` as the scaffold source for work archives, feature archives, ledgers, and generated projections. Local lifecycle authority lives in `docs/features/<feature-id>/feature.yaml`. `status` tracks delivery state; `phase` tracks the clean-room lifecycle phase; `publication_state` replaces planning-branch assumptions by marking artifacts as `draft`, `published`, or `retired`. Published projections exclude drafts unless a workflow explicitly requests a draft-inclusive preview.
 
-Lens also supports optional Lens provenance fields such as `lens_feature_id`, `lens_track`, `lens_phase`, `lens_docs_path`, `lens_governance_repo_path`, `lens_feature_yaml_path`, `lens_constitution_status`, and `lens_preflight_status`. These fields let Lens report lifecycle and governance readiness, but they do not make Lens authoritative for Lens lifecycle state.
+Lens also supports optional external provenance fields such as `lens_feature_id`, `lens_track`, `lens_phase`, `lens_docs_path`, `lens_governance_repo_path`, `lens_feature_yaml_path`, `lens_constitution_status`, and `lens_preflight_status`. These fields are evidence only; they do not replace the local NextLens feature record.
 
-### Clean-Room Lens Integration
+### Clean-Room Lifecycle Ownership
 
-Lens behavior is treated as a contract source, not an implementation dependency. Lens implements independent preflight and lifecycle consistency checks from its own scripts and metadata schema. It may detect Lens workspace markers, consume Lens feature context, and surface Lens preflight or constitution status as blocking/advisory findings, but it does not run Lens repo sync, resolve constitutions, advance lifecycle phases, or write governance `feature.yaml` files.
+NextLens owns the local lifecycle implementation. Legacy behavior is treated as a behavioral reference, not an implementation dependency. The clean-room lifecycle uses local feature records, local feature archives, and local BMAD skills. It does not run repo sync, create planning branches, depend on branch location for validity, or write external governance mirrors.
 
-When installed in a Lens workspace, the existing `lens-*` wrappers remain the authoritative entry points for preflight, constitution enforcement, governance repo handling, and phase movement. Standalone Lens remains portable and degrades to local config/path/schema checks when Lens is absent.
+The lifecycle tracks are explicit:
+
+- `full`: `preplan -> businessplan -> techplan -> finalizeplan -> dev`
+- `express`: `expressplan -> finalizeplan -> dev`
+
+After delivery, governance remains evidence-driven: doctor, projection rebuild, ledger promotion, Salmon review when triggered, topology decisions when needed, and reporting snapshots.
 
 ### Memory Architecture
 
@@ -77,7 +96,7 @@ Lens memory is file-based and project-scoped. Each unit of work owns `memory.md`
 
 ### Cross-Agent Patterns
 
-`lens-work-intake` is the recommended single entry point for new work, then the handoff file routes to the appropriate Lens/BMad workflow: product brief, PRD, UX/design delivery, architecture, epics and stories, sprint planning, story creation, development, quick-dev, or governance. Existing Lens workflows remain directly invokable for known scopes. Governance ordering is evidence-driven after delivery: lens doctor, map audit, projection rebuild, promotion, Salmon review when triggered, topology decisions when needed, and reporting snapshots.
+`lens-work-intake` is the recommended single entry point for new work, then the handoff file routes to `/next` or a specific lifecycle command. Local lifecycle commands may use BMAD planning, architecture, sprint, story, development, and review skills, but the feature record, phase state, and artifacts remain under `docs/features/<feature-id>/`. Governance ordering is evidence-driven after delivery: lens doctor, map audit, projection rebuild, promotion, Salmon review when triggered, topology decisions when needed, and reporting snapshots.
 
 ## Skills
 
@@ -103,7 +122,7 @@ Lens memory is file-based and project-scoped. Each unit of work owns `memory.md`
 
 **Type:** workflow
 
-**Core Outcome:** A durable work archive exists for one feature/change and contains the next Lens/BMad handoff.
+**Core Outcome:** A durable feature archive exists for one feature/change and contains the next local lifecycle handoff.
 
 **The Non-Negotiable:** Work starts as an inspectable file artifact, not as hidden chat memory.
 
@@ -111,13 +130,55 @@ Lens memory is file-based and project-scoped. Each unit of work owns `memory.md`
 
 | Capability | Outcome | Inputs | Outputs |
 | ---------- | ------- | ------ | ------- |
-| Start work | Creates or resumes a work archive with goal, success criteria, memory, journey, links, and handoff | Feature idea, change request, existing work ID, optional relation | Work archive with `work.md`, `memory.md`, `journey.md`, `handoff.md`, and `links.md` |
+| Start work | Creates or resumes a feature archive with goal, success criteria, memory, journey, links, `feature.yaml`, and handoff | Feature idea, change request, existing feature ID, optional relation | Feature archive with `feature.yaml`, `work.md`, `memory.md`, `journey.md`, `handoff.md`, and `links.md` |
 | Create related work | Starts a follow-up feature using relevant durable context from prior work | Related feature ID, extension/replacement signal, new goal | New archive with relationship metadata and inherited durable decisions |
-| Route lifecycle | Selects the next Lens/BMad workflow | Work readiness, existing artifacts, sprint state hints | `handoff.md` with next skill and required context |
+| Route lifecycle | Selects the next local lifecycle workflow | Work readiness, existing artifacts, sprint state hints | `handoff.md` with next skill and required context |
 
 **Activation Modes:** Interactive and headless.
 
-**Design Notes:** This workflow gives Lens a single front door without absorbing the responsibilities of PRD, architecture, sprint status, story creation, development, or ledger promotion.
+**Design Notes:** This workflow gives Lens a single front door and initializes local lifecycle state without absorbing the responsibilities of PRD, architecture, sprint status, story creation, development, or ledger promotion.
+
+### lens-lifecycle
+
+**Type:** internal workflow with deterministic script
+
+**Core Outcome:** Local feature records can be resolved, checked, routed, and advanced without external lifecycle state.
+
+**The Non-Negotiable:** The script never imports or invokes external lifecycle code.
+
+**Capabilities:**
+
+| Capability | Outcome | Inputs | Outputs |
+| ---------- | ------- | ------ | ------- |
+| Suggest next | Routes a feature to the next lifecycle command | Feature ID or feature path | JSON recommendation with blockers and missing artifacts |
+| Validate phase | Checks required artifacts for a phase | Feature ID and phase | JSON pass/fail result |
+| Advance phase | Marks a phase complete after validation | Feature ID and phase | Updated local `feature.yaml` |
+
+**Activation Modes:** Headless deterministic script used by command skills.
+
+**Design Notes:** The lifecycle contract lives in `skills/lens-lifecycle/assets/lifecycle.yaml`; implementation lives in `skills/lens-lifecycle/scripts/lifecycle_ops.py`.
+
+### lens-next, lens-preplan, lens-businessplan, lens-techplan, lens-expressplan, lens-finalizeplan, lens-dev
+
+**Type:** command workflow suite
+
+**Core Outcome:** Feature work moves through either the full or express local lifecycle using durable feature-archive artifacts.
+
+**The Non-Negotiable:** Planning state is file-backed under `docs/features/<feature-id>/`; branch state and external governance mirrors are not authoritative.
+
+**Capabilities:**
+
+| Command | Track | Outcome |
+| ------- | ----- | ------- |
+| `next` | all | Suggests and loads the next local lifecycle command. |
+| `preplan` | full | Creates brainstorm, research, product brief, and review artifacts. |
+| `businessplan` | full | Creates PRD, UX design, and review artifacts. |
+| `techplan` | full | Creates architecture and review artifacts. |
+| `expressplan` | express | Creates compact business, technical, sprint, and review artifacts. |
+| `finalizePlan` | all | Creates final review, epics, stories, implementation readiness, sprint status, and story files. |
+| `dev` | all | Executes finalized stories against configured target repositories and records evidence. |
+
+**Activation Modes:** Interactive and headless where enough feature context exists.
 
 ### lens-map-audit
 
@@ -256,12 +317,12 @@ Lens memory is file-based and project-scoped. Each unit of work owns `memory.md`
 | freshness_threshold_hours | How old can reports be before Lens marks them stale? | 24 | {value} | false |
 | lens_mode | How should Lens handle Lens context? | auto | {value} | false |
 | lens_governance_repo_path | Optional Lens governance repo path for required Lens mode. | empty | {value} | false |
-| lens_lifecycle_contract | Optional Lens lifecycle contract path. | lens.core/_bmad/lens-work/lifecycle.yaml | Prefix the answer with the literal project-root token | false |
+| lens_lifecycle_contract | Optional NextLens lifecycle contract path. | skills/lens-lifecycle/assets/lifecycle.yaml | Prefix the answer with the literal project-root token | false |
 | lens_context_path | Optional Lens feature context path. | .lens/personal/context.yaml | Prefix the answer with the literal project-root token | false |
 
 ## External Dependencies
 
-No external CLI tools, MCP servers, web services, or UI runtimes are required in v1. `lens-preflight` and `lens-projection-rebuild` include Python stdlib scripts for deterministic readiness, doctor, and rebuild checks.
+No external CLI tools, MCP servers, web services, or UI runtimes are required in v1. `lens-preflight`, `lens-lifecycle`, and `lens-projection-rebuild` include Python stdlib scripts for deterministic readiness, lifecycle routing, doctor, and rebuild checks.
 
 ## UI and Visualization
 
@@ -273,13 +334,14 @@ The generated `lens-setup` skill collects configuration values, merges help entr
 
 ## Integration
 
-Lens is standalone and can be installed into any BMad/LENS project with compatible docs. It complements BMAD planning and implementation workflows by creating the initial work archive, then handing off to the existing Lens/BMad lifecycle rather than duplicating it.
+Lens is standalone and can be installed into any BMAD-compatible project with compatible docs. It complements BMAD planning and implementation workflows by creating the initial feature archive, then running the local NextLens lifecycle around BMAD planning, architecture, story, development, and review skills.
 
-In Lens workspaces, Lens consumes Lens context as provenance and readiness evidence. Lifecycle state remains governed by Lens `feature.yaml`; constitution enforcement remains governed by Lens constitution workflows; governance repo writes remain governed by Lens wrappers. Lens outputs may block or advise based on those signals, but any required governance change is routed back to Lens.
+External Lens context, when present, is consumed only as provenance and readiness evidence. Local lifecycle state remains governed by `docs/features/<feature-id>/feature.yaml`; generated projections remain derived caches; living ledgers remain authored operational truth.
 
 ## Creative Use Cases
 
-- Start every meaningful feature with `lens-work-intake` so intent, memory, related work, and next lifecycle step are serialized before implementation begins.
+- Start every meaningful feature with `lens-work-intake` so intent, memory, related work, `feature.yaml`, and next lifecycle step are serialized before implementation begins.
+- Use `/next` to route full-track and express-track features from the local feature record.
 - Run Lens preflight, lens doctor, and map audits as readiness gates before rebuilding derived governance projections.
 - Rebuild `governance-map.json` for dashboards without making the dashboard authoritative.
 - Use promotion reports as release-closeout evidence.
@@ -288,12 +350,13 @@ In Lens workspaces, Lens consumes Lens context as provenance and readiness evide
 
 ## Build Roadmap
 
-1. Build `lens-preflight` first so every later workflow has a consistent local readiness and optional Lens context signal.
-2. Build `lens-work-intake` so every later feature can start from a durable work archive and lifecycle handoff.
-3. Build `lens-doctor` so topology and optional Lens lifecycle metadata can be checked quickly and deterministically.
-4. Build `lens-map-audit` because it produces the reviewable audit report used by every later governance workflow.
-5. Build `lens-projection-rebuild` so derived governance maps can be regenerated after a clean doctor/audit.
-6. Build `lens-ledger-promotion` so completed published feature knowledge can move into living truth.
-7. Build `lens-salmon-impact` after promotion so upstream and downstream changes can be traced with current ledgers.
-8. Build `lens-topology-design` after the evidence workflows so topology decisions can reference audit and impact findings.
-9. Build `lens-reporting-snapshot` last because it summarizes the outputs of the other workflows and feeds future UI ingestion.
+1. Build `lens-preflight` first so every later workflow has a consistent local readiness and optional external context signal.
+2. Build `lens-work-intake` so every later feature can start from a durable feature archive and lifecycle handoff.
+3. Build `lens-lifecycle` and the command skills so local phase routing, validation, and advancement are deterministic.
+4. Build `lens-doctor` so topology and local lifecycle metadata can be checked quickly and deterministically.
+5. Build `lens-map-audit` because it produces the reviewable audit report used by every later governance workflow.
+6. Build `lens-projection-rebuild` so derived governance maps can be regenerated after a clean doctor/audit.
+7. Build `lens-ledger-promotion` so completed published feature knowledge can move into living truth.
+8. Build `lens-salmon-impact` after promotion so upstream and downstream changes can be traced with current ledgers.
+9. Build `lens-topology-design` after the evidence workflows so topology decisions can reference audit and impact findings.
+10. Build `lens-reporting-snapshot` last because it summarizes the outputs of the other workflows and feeds future UI ingestion.

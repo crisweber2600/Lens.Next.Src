@@ -9,7 +9,8 @@
   "keywords": [
     "bmad",
     "lens",
-    "lens",
+    "lifecycle",
+    "planning",
     "topology",
     "governance"
   ],
@@ -17,12 +18,20 @@
     {
       "name": "lens",
       "source": "./",
-      "description": "Workflow suite for LENS/BMAD topology governance, living ledgers, Salmon impact analysis, and stakeholder reporting artifacts.",
+      "description": "Workflow suite for clean-room NextLens lifecycle planning, topology governance, living ledgers, Salmon impact analysis, and stakeholder reporting artifacts.",
       "version": "1.0.0",
       "author": {
         "name": "CrisWeber"
       },
       "skills": [
+        "./skills/lens-lifecycle",
+        "./skills/lens-next",
+        "./skills/lens-preplan",
+        "./skills/lens-businessplan",
+        "./skills/lens-techplan",
+        "./skills/lens-expressplan",
+        "./skills/lens-finalizeplan",
+        "./skills/lens-dev",
         "./skills/lens-work-intake",
         "./skills/lens-doctor",
         "./skills/lens-map-audit",
