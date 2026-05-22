@@ -40,6 +40,9 @@
         "./skills/lens-salmon-impact",
         "./skills/lens-topology-design",
         "./skills/lens-reporting-snapshot",
+        "./skills/lens-preflight",
+        "./skills/lens-nextlens-bugfix",
+        "./skills/lens-constitution",
         "./skills/lens-setup"
       ]
     }
