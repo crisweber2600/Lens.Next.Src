@@ -13,6 +13,8 @@ REQUIRED_INSTALLER_FILES = {
     "_bmad/_config/skill-manifest.csv",
     "_bmad/_config/files-manifest.csv",
 }
+FILES_MANIFEST_PATH = "_bmad/_config/files-manifest.csv"
+SKILL_MANIFEST_PATH = "_bmad/_config/skill-manifest.csv"
 
 INSPECTED_SKILL_GLOBS = (
     "skills/*/SKILL.md",
@@ -128,11 +130,11 @@ def validate_diff(entries: list[DiffEntry]) -> int:
         print("[diff] No skill file additions, removals, or modifications detected in diff.")
         return 0
 
-    missing_required: set[str] = set()
+    missing_required = set()
     if added_or_removed_skill_files:
         missing_required.update(REQUIRED_INSTALLER_FILES - changed_paths)
-    if modified_skill_files and "_bmad/_config/files-manifest.csv" not in changed_paths:
-        missing_required.add("_bmad/_config/files-manifest.csv")
+    if modified_skill_files and FILES_MANIFEST_PATH not in changed_paths:
+        missing_required.add(FILES_MANIFEST_PATH)
 
     if not missing_required:
         print("[diff] Skill file changes detected and BMAD installer manifests were updated.")
@@ -156,8 +158,8 @@ def validate_diff(entries: list[DiffEntry]) -> int:
 
 
 def validate_strict(repo_root: Path) -> int:
-    skill_manifest_path = repo_root / "_bmad/_config/skill-manifest.csv"
-    files_manifest_path = repo_root / "_bmad/_config/files-manifest.csv"
+    skill_manifest_path = repo_root / SKILL_MANIFEST_PATH
+    files_manifest_path = repo_root / FILES_MANIFEST_PATH
 
     expected_paths = discover_expected_skill_paths(repo_root)
     skill_rows = load_csv_rows(skill_manifest_path)
