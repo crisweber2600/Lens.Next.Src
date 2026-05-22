@@ -116,7 +116,6 @@ def sha256(path: Path) -> str:
 
 
 def validate_diff(entries: list[DiffEntry]) -> int:
-    changed_paths = {entry.path for entry in entries}
     added_or_removed_skill_files = sorted(
         entry.path
         for entry in entries
@@ -130,11 +129,12 @@ def validate_diff(entries: list[DiffEntry]) -> int:
         print("[diff] No skill file additions, removals, or modifications detected in diff.")
         return 0
 
-    missing_required = set()
-    if added_or_removed_skill_files:
-        missing_required.update(REQUIRED_INSTALLER_FILES - changed_paths)
-    if modified_skill_files and FILES_MANIFEST_PATH not in changed_paths:
-        missing_required.add(FILES_MANIFEST_PATH)
+    changed_paths = {entry.path for entry in entries}
+    required_for_added_or_removed = (
+        REQUIRED_INSTALLER_FILES if added_or_removed_skill_files else set()
+    )
+    required_for_modified = {FILES_MANIFEST_PATH} if modified_skill_files else set()
+    missing_required = (required_for_added_or_removed | required_for_modified) - changed_paths
 
     if not missing_required:
         print("[diff] Skill file changes detected and BMAD installer manifests were updated.")
