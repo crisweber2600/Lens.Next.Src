@@ -7,7 +7,7 @@ description: NextLens clean-room constitution resolver. Use when the user reques
 
 ## Overview
 
-Lens Constitution is the clean-room constitution resolver for NextLens. It reads constitutions from the local constitution tree, derives scope from local feature archives under `docs/features/<feature-id>/`, and returns the effective ruleset for the current domain, service, and optional repo scope. It does not invoke `lens.core` and it does not write constitution state.
+Lens Constitution is the clean-room constitution resolver for NextLens. It reads constitutions from the local constitution tree, derives scope from local feature archives under `docs/features/<feature-id>/`, and returns the effective ruleset for the current domain, service, and optional repo scope. It does not invoke `lens.core`, and only writes constitution state when running the explicit `bootstrap` recovery operation.
 
 ## Source Model
 
@@ -31,6 +31,7 @@ Constitution root resolution should prefer an explicit `--constitution-root`, th
 python skills/lens-constitution/scripts/constitution_ops.py resolve --project-root {project-root} --feature-id {feature_id}
 python skills/lens-constitution/scripts/constitution_ops.py progressive-display --project-root {project-root} --feature-id {feature_id}
 python skills/lens-constitution/scripts/constitution_ops.py check-compliance --project-root {project-root} --feature-id {feature_id}
+python skills/lens-constitution/scripts/constitution_ops.py bootstrap --project-root {project-root}
 ```
 
 ## Capabilities
@@ -38,6 +39,7 @@ python skills/lens-constitution/scripts/constitution_ops.py check-compliance --p
 - `resolve`: merge org, domain, service, and optional repo constitutions for the requested scope.
 - `progressive-display`: show the current hard gates, reviewers, required artifacts, and track permissions for the local phase.
 - `check-compliance`: validate local artifacts against the resolved constitution using local feature docs as the default artifact path.
+- `bootstrap`: create a minimal `org/constitution.md` when the constitution tree is missing so blocked flows can recover.
 
 ## Local Phase Mapping
 
@@ -50,7 +52,7 @@ NextLens local phases map to constitution phases as follows:
 ## Safety Rules
 
 - Do not treat constitutions as local lifecycle authority.
-- Do not write to the constitution root from this skill.
+- Do not write to the constitution root except when explicitly running `bootstrap` for constitution recovery.
 - Do not infer feature scope from branch names or open editors.
 - Stop on org constitution parse errors or missing org constitutions.
 

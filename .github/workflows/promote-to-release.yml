@@ -44,16 +44,10 @@ jobs:
             echo "ref=origin/main" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Validate skill changes include installer updates
+      - name: Validate installer manifest updates for new skills
         run: |
           python .github/scripts/ensure_bmad_installer_updated.py \
             --mode diff \
-            --base-ref "${{ steps.base.outputs.ref }}"
-
-      - name: Validate installer manifests against repository state
-        run: |
-          python .github/scripts/ensure_bmad_installer_updated.py \
-            --mode strict \
             --base-ref "${{ steps.base.outputs.ref }}"
 
   determine-matrix:

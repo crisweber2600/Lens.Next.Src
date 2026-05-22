@@ -14,6 +14,7 @@ import argparse
 import copy
 import json
 import re
+import shlex
 import sys
 import tomllib
 from pathlib import Path
@@ -567,6 +568,19 @@ def _resolve_scope_inputs(args: argparse.Namespace) -> tuple[Path, dict | None, 
     return root, feature, docs_path, scope, feature_id
 
 
+def _bootstrap_command(project_root: Path, constitution_root: Path | None = None) -> str:
+    command_parts = [
+        "python",
+        "skills/lens-constitution/scripts/constitution_ops.py",
+        "bootstrap",
+        "--project-root",
+        str(project_root),
+    ]
+    if constitution_root is not None:
+        command_parts.extend(["--constitution-root", str(constitution_root)])
+    return " ".join(shlex.quote(part) for part in command_parts)
+
+
 def _resolve_constitution(args: argparse.Namespace) -> tuple[dict, int]:
     root, feature, docs_path, scope, feature_id = _resolve_scope_inputs(args)
 
@@ -588,6 +602,7 @@ def _resolve_constitution(args: argparse.Namespace) -> tuple[dict, int]:
     )
 
     if not constitution_root.exists():
+        suggested_org = constitution_root / "org" / "constitution.md"
         return {
             "error": "constitution_root_not_found",
             "path": str(constitution_root),
@@ -595,6 +610,11 @@ def _resolve_constitution(args: argparse.Namespace) -> tuple[dict, int]:
                 "Constitution root not found. Default location is .lens/.constitution; "
                 "create it or use --constitution-root to override."
             ),
+            "recovery": {
+                "action": "bootstrap_constitution",
+                "suggested_org_constitution": str(suggested_org),
+                "suggested_command": _bootstrap_command(root, constitution_root),
+            },
         }, 1
 
     level_specs: list[tuple[str, Path]] = [("org", constitution_root / "org" / "constitution.md")]
@@ -651,6 +671,10 @@ def _resolve_constitution(args: argparse.Namespace) -> tuple[dict, int]:
             "error": "org_constitution_missing",
             "path": str(constitution_root / "org" / "constitution.md"),
             "detail": "org/constitution.md is required inside the constitution root",
+            "recovery": {
+                "action": "bootstrap_constitution",
+                "suggested_command": _bootstrap_command(root, constitution_root),
+            },
         }, 1
 
     merged, merge_warnings = merge_constitutions(level_data)
@@ -909,6 +933,59 @@ def cmd_progressive_display(args: argparse.Namespace) -> tuple[dict, int]:
     return display, 0
 
 
+def cmd_bootstrap(args: argparse.Namespace) -> tuple[dict, int]:
+    root = Path(getattr(args, "project_root", ".")).resolve()
+    constitution_root = _resolve_constitution_root(
+        root,
+        feature=None,
+        override=getattr(args, "constitution_root", None),
+    )
+    org_constitution = constitution_root / "org" / "constitution.md"
+
+    if not _assert_within(org_constitution, constitution_root):
+        return {
+            "error": "path_traversal_detected",
+            "detail": "Computed constitution bootstrap path escapes the constitution root directory",
+        }, 1
+
+    if getattr(args, "dry_run", False):
+        return {
+            "status": "dry-run",
+            "constitution_root": str(constitution_root),
+            "org_constitution": str(org_constitution),
+        }, 0
+
+    created = False
+    if not org_constitution.exists():
+        org_constitution.parent.mkdir(parents=True, exist_ok=True)
+        org_constitution.write_text(
+            "---\n"
+            "permitted_tracks:\n"
+            "  - full\n"
+            "  - express\n"
+            "  - quickdev\n"
+            "required_artifacts:\n"
+            "  planning: []\n"
+            "  dev: []\n"
+            "gate_mode: informational\n"
+            "sensing_gate_mode: informational\n"
+            "additional_review_participants: []\n"
+            "enforce_stories: false\n"
+            "enforce_review: false\n"
+            "---\n"
+            "# Organization Constitution\n\n"
+            "Add domain and service constitutions under this root as needed.\n",
+            encoding="utf-8",
+        )
+        created = True
+
+    return {
+        "status": "created" if created else "exists",
+        "constitution_root": str(constitution_root),
+        "org_constitution": str(org_constitution),
+    }, 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="NextLens clean-room constitution operations",
@@ -946,6 +1023,15 @@ def build_parser() -> argparse.ArgumentParser:
     display_parser = sub.add_parser("progressive-display", help="Return context-filtered constitution rules")
     add_common_scope_arguments(display_parser)
 
+    bootstrap_parser = sub.add_parser("bootstrap", help="Create a minimal org constitution when missing")
+    bootstrap_parser.add_argument("--project-root", default=".", help="NextLens project root")
+    bootstrap_parser.add_argument(
+        "--constitution-root",
+        default=None,
+        help="Override constitution root path; defaults to .lens/.constitution",
+    )
+    bootstrap_parser.add_argument("--dry-run", action="store_true")
+
     return parser
 
 
@@ -957,6 +1043,7 @@ def main() -> int:
         "resolve": cmd_resolve,
         "check-compliance": cmd_check_compliance,
         "progressive-display": cmd_progressive_display,
+        "bootstrap": cmd_bootstrap,
     }
     handler = dispatch[args.subcommand]
     result, code = handler(args)

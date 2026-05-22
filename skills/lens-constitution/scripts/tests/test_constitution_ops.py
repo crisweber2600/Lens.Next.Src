@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import importlib.util
+import shlex
 import tempfile
 import unittest
 from pathlib import Path
@@ -36,6 +37,109 @@ def write_feature_yaml(path: Path, data: dict) -> None:
 
 
 class ConstitutionOpsTests(unittest.TestCase):
+    def test_resolve_reports_recovery_when_constitution_root_missing(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            write_feature_yaml(
+                root / "docs" / "features" / "rollcall" / "feature.yaml",
+                {
+                    "feature_id": "rollcall",
+                    "stable_id": "feature:rollcall",
+                    "entity_type": "feature",
+                    "track": "full",
+                    "phase": "preplan",
+                    "belongs_to": "domain:identity",
+                },
+            )
+
+            args = argparse.Namespace(
+                project_root=root,
+                constitution_root=None,
+                feature_id="rollcall",
+                feature_path=None,
+                domain=None,
+                service=None,
+                repo=None,
+                phase=None,
+                track=None,
+                dry_run=False,
+            )
+
+            result, code = constitution_ops.cmd_resolve(args)
+
+            self.assertEqual(code, 1)
+            self.assertEqual(result["error"], "constitution_root_not_found")
+            self.assertEqual(result["recovery"]["action"], "bootstrap_constitution")
+            self.assertIn("bootstrap", result["recovery"]["suggested_command"])
+            command_parts = shlex.split(result["recovery"]["suggested_command"])
+            self.assertEqual(
+                command_parts[-2:],
+                ["--constitution-root", str((root / ".lens" / ".constitution").resolve())],
+            )
+
+    def test_resolve_reports_recovery_when_org_constitution_missing(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            constitution_root = root / ".lens" / ".constitution"
+            constitution_root.mkdir(parents=True, exist_ok=True)
+
+            write_feature_yaml(
+                root / "docs" / "features" / "rollcall" / "feature.yaml",
+                {
+                    "feature_id": "rollcall",
+                    "stable_id": "feature:rollcall",
+                    "entity_type": "feature",
+                    "track": "full",
+                    "phase": "preplan",
+                    "belongs_to": "domain:identity",
+                },
+            )
+
+            args = argparse.Namespace(
+                project_root=root,
+                constitution_root=None,
+                feature_id="rollcall",
+                feature_path=None,
+                domain=None,
+                service=None,
+                repo=None,
+                phase=None,
+                track=None,
+                dry_run=False,
+            )
+
+            result, code = constitution_ops.cmd_resolve(args)
+
+            self.assertEqual(code, 1)
+            self.assertEqual(result["error"], "org_constitution_missing")
+            self.assertEqual(result["recovery"]["action"], "bootstrap_constitution")
+            self.assertIn("bootstrap", result["recovery"]["suggested_command"])
+            command_parts = shlex.split(result["recovery"]["suggested_command"])
+            self.assertEqual(
+                command_parts[-2:],
+                ["--constitution-root", str(constitution_root.resolve())],
+            )
+
+    def test_bootstrap_creates_org_constitution(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+
+            args = argparse.Namespace(
+                project_root=root,
+                constitution_root=None,
+                dry_run=False,
+            )
+            result, code = constitution_ops.cmd_bootstrap(args)
+
+            self.assertEqual(code, 0)
+            self.assertEqual(result["status"], "created")
+
+            org_path = Path(result["org_constitution"])
+            self.assertTrue(org_path.exists())
+            content = org_path.read_text(encoding="utf-8")
+            self.assertIn("permitted_tracks", content)
+            self.assertIn("gate_mode", content)
+
     def test_resolve_uses_local_feature_lineage_and_combines_prose(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
