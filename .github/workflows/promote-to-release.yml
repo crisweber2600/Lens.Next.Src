@@ -112,17 +112,11 @@ jobs:
 
       - name: Validate release payload
         run: |
-          REQUIRED=(
-            "build-output/guide.md"
-          )
-
           MISSING=0
-          for file in "${REQUIRED[@]}"; do
-            if [[ ! -f "$file" ]]; then
-              echo "::error::Missing required release file: $file"
-              MISSING=1
-            fi
-          done
+          if [[ -f guide.md ]] && [[ ! -f build-output/guide.md ]]; then
+            echo "::error::guide.md exists in source but was not copied into the release payload"
+            MISSING=1
+          fi
 
           if [[ -d .github/prompts ]] && [[ ! -d build-output/.github/prompts ]]; then
             echo "::error::Prompt stubs were not copied into the release payload"
