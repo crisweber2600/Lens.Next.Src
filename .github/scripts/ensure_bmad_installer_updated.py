@@ -114,28 +114,42 @@ def sha256(path: Path) -> str:
 
 
 def validate_diff(entries: list[DiffEntry]) -> int:
-    added_skill_files = sorted(
-        entry.path for entry in entries if entry.status == "A" and is_new_skill_file(entry.path)
+    changed_paths = {entry.path for entry in entries}
+    added_or_removed_skill_files = sorted(
+        entry.path
+        for entry in entries
+        if entry.status in {"A", "D"} and is_new_skill_file(entry.path)
+    )
+    modified_skill_files = sorted(
+        entry.path for entry in entries if entry.status == "M" and is_new_skill_file(entry.path)
     )
 
-    if not added_skill_files:
-        print("[diff] No new skills detected in diff.")
+    if not added_or_removed_skill_files and not modified_skill_files:
+        print("[diff] No skill file additions, removals, or modifications detected in diff.")
         return 0
 
-    changed_paths = {entry.path for entry in entries}
-    missing_required = sorted(REQUIRED_INSTALLER_FILES - changed_paths)
+    missing_required: set[str] = set()
+    if added_or_removed_skill_files:
+        missing_required.update(REQUIRED_INSTALLER_FILES - changed_paths)
+    if modified_skill_files and "_bmad/_config/files-manifest.csv" not in changed_paths:
+        missing_required.add("_bmad/_config/files-manifest.csv")
 
     if not missing_required:
-        print("[diff] New skills detected and BMAD installer manifests were updated.")
+        print("[diff] Skill file changes detected and BMAD installer manifests were updated.")
         return 0
 
-    print("::error::[diff] New skills were added but BMAD installer manifests were not fully updated.")
-    print("Added skills:")
-    for path in added_skill_files:
-        print(f"  - {path}")
+    print("::error::[diff] Skill files changed but BMAD installer manifests were not fully updated.")
+    if added_or_removed_skill_files:
+        print("Added or removed skill files:")
+        for path in added_or_removed_skill_files:
+            print(f"  - {path}")
+    if modified_skill_files:
+        print("Modified skill files:")
+        for path in modified_skill_files:
+            print(f"  - {path}")
 
     print("Required manifest updates missing:")
-    for path in missing_required:
+    for path in sorted(missing_required):
         print(f"  - {path}")
 
     return 1
