@@ -121,7 +121,7 @@ jobs:
             --yes \
             --action update \
             --directory . \
-            --modules "bmm,bmb,cis" \
+            --modules "bmm,bmb,cis,lens" \
             --custom-source "https://github.com/${{ github.repository }}" \
             --tools "claude-code,codex,github-copilot" \
             --set "core.user_name=Cweber" \
