@@ -21,18 +21,29 @@ python skills/lens-constitution/scripts/constitution_ops.py progressive-display 
 ```
 
 4. Stop immediately if constitution resolution fails, if the resolved gate mode is hard and the track is not permitted, or if the resolved constitution identifies a hard-gate requirement the planned PrePlan artifacts would violate. Surface the applicable hard-gate rules and carry the combined constitution prose into every downstream planning delegation.
-5. Use `bmad-agent-analyst` for problem framing when the feature lacks product clarity.
-6. Use `bmad-brainstorming` or the user-selected local ideation route to produce `brainstorm.md`.
-7. Use the narrowest research skill for `research.md`: `bmad-domain-research`, `bmad-market-research`, or `bmad-technical-research`.
-8. Use `bmad-product-brief` to produce `product-brief.md`.
-9. Run an adversarial planning review with `bmad-review-adversarial-general` and record `preplan-adversarial-review.md`.
-10. Validate artifacts:
+5. Run a scope sufficiency gate before any artifact generation. Treat the request as underscoped if any required planning signal is missing or ambiguous:
+- problem statement and gap to close
+- target user or operator persona
+- desired outcome and success signal
+- boundaries or non-goals
+6. If the request is underscoped, switch to interactive mode and collect clarifications before continuing:
+- Ask direct, numbered questions and wait for user answers.
+- Use `vscode_askQuestions` when available.
+- If `vscode_askQuestions` is unavailable, render the numbered menu and stop.
+- Do not generate, validate, or advance PrePlan artifacts until required answers are captured.
+7. Persist accepted clarifications into `memory.md` and reflect them in `brainstorm.md` assumptions before downstream delegation.
+8. Use `bmad-agent-analyst` for problem framing when the feature lacks product clarity.
+9. Use `bmad-brainstorming` or the user-selected local ideation route to produce `brainstorm.md`.
+10. Use the narrowest research skill for `research.md`: `bmad-domain-research`, `bmad-market-research`, or `bmad-technical-research`.
+11. Use `bmad-product-brief` to produce `product-brief.md`.
+12. Run an adversarial planning review with `bmad-review-adversarial-general` and record `preplan-adversarial-review.md`.
+13. Validate artifacts:
 
 ```bash
 python skills/lens-lifecycle/scripts/lifecycle_ops.py --project-root {project-root} validate-phase --feature-id {feature_id} --phase preplan
 ```
 
-11. If validation passes, advance the local feature record:
+14. If validation passes, advance the local feature record:
 
 ```bash
 python skills/lens-lifecycle/scripts/lifecycle_ops.py --project-root {project-root} advance-phase --feature-id {feature_id} --phase preplan
