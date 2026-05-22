@@ -47,6 +47,7 @@ jobs:
       - name: Validate new skills include installer updates
         run: |
           python .github/scripts/ensure_bmad_installer_updated.py \
+            --mode both \
             --base-ref "${{ steps.base.outputs.ref }}"
 
   determine-matrix:
