@@ -7,7 +7,7 @@ description: NextLens clean-room constitution resolver. Use when the user reques
 
 ## Overview
 
-Lens Constitution is the clean-room constitution resolver for NextLens. It reads constitutions from the local constitution tree, derives scope from local feature archives under `docs/features/<feature-id>/`, and returns the effective ruleset for the current domain, service, and optional repo scope. It does not invoke `lens.core` and it does not write constitution state.
+Lens Constitution is the clean-room constitution resolver for NextLens. It reads constitutions from the local constitution tree, derives scope from local feature archives under `docs/features/<feature-id>/`, and returns the effective ruleset for the current domain, service, and optional repo scope. It does not invoke `lens.core`, and only writes constitution state when running the explicit `bootstrap` recovery operation.
 
 ## Source Model
 
@@ -52,7 +52,7 @@ NextLens local phases map to constitution phases as follows:
 ## Safety Rules
 
 - Do not treat constitutions as local lifecycle authority.
-- Do not write to the constitution root from this skill.
+- Do not write to the constitution root except when explicitly running `bootstrap` for constitution recovery.
 - Do not infer feature scope from branch names or open editors.
 - Stop on org constitution parse errors or missing org constitutions.
 

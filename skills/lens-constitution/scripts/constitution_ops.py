@@ -14,6 +14,7 @@ import argparse
 import copy
 import json
 import re
+import shlex
 import sys
 import tomllib
 from pathlib import Path
@@ -567,6 +568,19 @@ def _resolve_scope_inputs(args: argparse.Namespace) -> tuple[Path, dict | None, 
     return root, feature, docs_path, scope, feature_id
 
 
+def _bootstrap_command(project_root: Path, constitution_root: Path | None = None) -> str:
+    command_parts = [
+        "python",
+        "skills/lens-constitution/scripts/constitution_ops.py",
+        "bootstrap",
+        "--project-root",
+        str(project_root),
+    ]
+    if constitution_root is not None:
+        command_parts.extend(["--constitution-root", str(constitution_root)])
+    return " ".join(shlex.quote(part) for part in command_parts)
+
+
 def _resolve_constitution(args: argparse.Namespace) -> tuple[dict, int]:
     root, feature, docs_path, scope, feature_id = _resolve_scope_inputs(args)
 
@@ -599,10 +613,7 @@ def _resolve_constitution(args: argparse.Namespace) -> tuple[dict, int]:
             "recovery": {
                 "action": "bootstrap_constitution",
                 "suggested_org_constitution": str(suggested_org),
-                "suggested_command": (
-                    "python skills/lens-constitution/scripts/constitution_ops.py bootstrap "
-                    f"--project-root {root}"
-                ),
+                "suggested_command": _bootstrap_command(root, constitution_root),
             },
         }, 1
 
@@ -662,10 +673,7 @@ def _resolve_constitution(args: argparse.Namespace) -> tuple[dict, int]:
             "detail": "org/constitution.md is required inside the constitution root",
             "recovery": {
                 "action": "bootstrap_constitution",
-                "suggested_command": (
-                    "python skills/lens-constitution/scripts/constitution_ops.py bootstrap "
-                    f"--project-root {root}"
-                ),
+                "suggested_command": _bootstrap_command(root, constitution_root),
             },
         }, 1
 

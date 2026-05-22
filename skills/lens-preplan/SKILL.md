@@ -23,9 +23,9 @@ python skills/lens-constitution/scripts/constitution_ops.py progressive-display 
 4. If constitution resolution fails with `constitution_root_not_found` or `org_constitution_missing`, enter recovery mode instead of hard stop:
 - Explain that constitution bootstrap is required and show the missing path.
 - Offer numbered options and use `vscode_askQuestions` when available:
-	1. Create a starter constitution and continue.
-	2. Show suggested constitution structure/examples, then choose whether to create.
-	3. Stop and let the user provide a custom constitution root.
+  1. Create a starter constitution and continue.
+  2. Show suggested constitution structure/examples, then choose whether to create.
+  3. Stop and let the user provide a custom constitution root.
 - For option 1, run:
 
 ```bash
