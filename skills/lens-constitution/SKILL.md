@@ -31,6 +31,7 @@ Constitution root resolution should prefer an explicit `--constitution-root`, th
 python skills/lens-constitution/scripts/constitution_ops.py resolve --project-root {project-root} --feature-id {feature_id}
 python skills/lens-constitution/scripts/constitution_ops.py progressive-display --project-root {project-root} --feature-id {feature_id}
 python skills/lens-constitution/scripts/constitution_ops.py check-compliance --project-root {project-root} --feature-id {feature_id}
+python skills/lens-constitution/scripts/constitution_ops.py bootstrap --project-root {project-root}
 ```
 
 ## Capabilities
@@ -38,6 +39,7 @@ python skills/lens-constitution/scripts/constitution_ops.py check-compliance --p
 - `resolve`: merge org, domain, service, and optional repo constitutions for the requested scope.
 - `progressive-display`: show the current hard gates, reviewers, required artifacts, and track permissions for the local phase.
 - `check-compliance`: validate local artifacts against the resolved constitution using local feature docs as the default artifact path.
+- `bootstrap`: create a minimal `org/constitution.md` when the constitution tree is missing so blocked flows can recover.
 
 ## Local Phase Mapping
 
