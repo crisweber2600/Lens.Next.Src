@@ -76,5 +76,20 @@ class StrictValidationTests(unittest.TestCase):
         self.assertEqual(status, 1)
 
 
+class DiffValidationTests(unittest.TestCase):
+    def test_diff_validation_fails_when_modified_skill_missing_files_manifest_update(self) -> None:
+        entries = [MODULE.DiffEntry(status="M", path="skills/lens-preplan/SKILL.md")]
+        status = MODULE.validate_diff(entries)
+        self.assertEqual(status, 1)
+
+    def test_diff_validation_passes_when_modified_skill_includes_files_manifest_update(self) -> None:
+        entries = [
+            MODULE.DiffEntry(status="M", path="skills/lens-preplan/SKILL.md"),
+            MODULE.DiffEntry(status="M", path="_bmad/_config/files-manifest.csv"),
+        ]
+        status = MODULE.validate_diff(entries)
+        self.assertEqual(status, 0)
+
+
 if __name__ == "__main__":
     unittest.main()

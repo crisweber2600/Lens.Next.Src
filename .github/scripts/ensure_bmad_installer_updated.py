@@ -13,6 +13,8 @@ REQUIRED_INSTALLER_FILES = {
     "_bmad/_config/skill-manifest.csv",
     "_bmad/_config/files-manifest.csv",
 }
+FILES_MANIFEST_PATH = "_bmad/_config/files-manifest.csv"
+SKILL_MANIFEST_PATH = "_bmad/_config/skill-manifest.csv"
 
 INSPECTED_SKILL_GLOBS = (
     "skills/*/SKILL.md",
@@ -114,36 +116,50 @@ def sha256(path: Path) -> str:
 
 
 def validate_diff(entries: list[DiffEntry]) -> int:
-    added_skill_files = sorted(
-        entry.path for entry in entries if entry.status == "A" and is_new_skill_file(entry.path)
+    added_or_removed_skill_files = sorted(
+        entry.path
+        for entry in entries
+        if entry.status in {"A", "D"} and is_new_skill_file(entry.path)
+    )
+    modified_skill_files = sorted(
+        entry.path for entry in entries if entry.status == "M" and is_new_skill_file(entry.path)
     )
 
-    if not added_skill_files:
-        print("[diff] No new skills detected in diff.")
+    if not added_or_removed_skill_files and not modified_skill_files:
+        print("[diff] No skill file additions, removals, or modifications detected in diff.")
         return 0
 
     changed_paths = {entry.path for entry in entries}
-    missing_required = sorted(REQUIRED_INSTALLER_FILES - changed_paths)
+    required_for_added_or_removed = (
+        REQUIRED_INSTALLER_FILES if added_or_removed_skill_files else set()
+    )
+    required_for_modified = {FILES_MANIFEST_PATH} if modified_skill_files else set()
+    missing_required = (required_for_added_or_removed | required_for_modified) - changed_paths
 
     if not missing_required:
-        print("[diff] New skills detected and BMAD installer manifests were updated.")
+        print("[diff] Skill file changes detected and BMAD installer manifests were updated.")
         return 0
 
-    print("::error::[diff] New skills were added but BMAD installer manifests were not fully updated.")
-    print("Added skills:")
-    for path in added_skill_files:
-        print(f"  - {path}")
+    print("::error::[diff] Skill files changed but BMAD installer manifests were not fully updated.")
+    if added_or_removed_skill_files:
+        print("Added or removed skill files:")
+        for path in added_or_removed_skill_files:
+            print(f"  - {path}")
+    if modified_skill_files:
+        print("Modified skill files:")
+        for path in modified_skill_files:
+            print(f"  - {path}")
 
     print("Required manifest updates missing:")
-    for path in missing_required:
+    for path in sorted(missing_required):
         print(f"  - {path}")
 
     return 1
 
 
 def validate_strict(repo_root: Path) -> int:
-    skill_manifest_path = repo_root / "_bmad/_config/skill-manifest.csv"
-    files_manifest_path = repo_root / "_bmad/_config/files-manifest.csv"
+    skill_manifest_path = repo_root / SKILL_MANIFEST_PATH
+    files_manifest_path = repo_root / FILES_MANIFEST_PATH
 
     expected_paths = discover_expected_skill_paths(repo_root)
     skill_rows = load_csv_rows(skill_manifest_path)
