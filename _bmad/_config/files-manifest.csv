@@ -1,4 +1,4 @@
-"type","name","module","path","hash"
+type,name,module,path,hash
 "yaml","manifest","_config","_config/manifest.yaml","e204d5c8e1c1688fd318155efaf892bb8605b5e8f1bb291c29664e3c830f06b3"
 "csv","module-help","automator","automator/module-help.csv","9f15c87b0158f4a7dd0035a85aaafbef97e479155bdfb970b93a61b5d1bf1d0e"
 "file","LICENSE","automator","automator/bmad-story-automator/LICENSE","64b7481a609b113f9d425325a160e3d721ae835ed73c490d5f77e145e1f46ba9"
