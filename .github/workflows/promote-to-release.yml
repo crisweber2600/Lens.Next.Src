@@ -1,12 +1,22 @@
 name: Promote to Release
 
 on:
+  pull_request:
+    paths:
+      - "skills/**"
+      - ".agents/skills/**"
+      - "_bmad/_config/**"
+      - ".github/scripts/ensure_bmad_installer_updated.py"
+      - ".github/workflows/promote-to-release.yml"
   push:
     branches: [main, develop]
     paths:
       - "skills/**"
+      - ".agents/skills/**"
       - "_bmad/**"
+      - "_bmad/_config/**"
       - ".github/prompts/**"
+      - ".github/scripts/ensure_bmad_installer_updated.py"
       - "guide.md"
       - "setup.sh"
       - ".github/workflows/promote-to-release.yml"
@@ -16,7 +26,32 @@ env:
   RELEASE_REPO_NAME: lens.next.release
 
 jobs:
+  validate-installer-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve base ref
+        id: base
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "ref=origin/${{ github.base_ref }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "ref=origin/main" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Validate new skills include installer updates
+        run: |
+          python .github/scripts/ensure_bmad_installer_updated.py \
+            --base-ref "${{ steps.base.outputs.ref }}"
+
   determine-matrix:
+    needs: validate-installer-sync
+    if: ${{ github.event_name == 'push' }}
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
@@ -27,7 +62,7 @@ jobs:
           if [[ "${{ github.ref_name }}" == "main" ]]; then
             echo 'matrix={"config":[{"release_branch":"latest","bmad_spec":"bmad-method@latest"}]}' >> "$GITHUB_OUTPUT"
           elif [[ "${{ github.ref_name }}" == "develop" ]]; then
-            echo 'matrix={"config":[{"release_branch":"next","bmad_spec":"bmad-method@latest"}]}' >> "$GITHUB_OUTPUT"
+            echo 'matrix={"config":[{"release_branch":"next","bmad_spec":"bmad-method@next"}]}' >> "$GITHUB_OUTPUT"
           else
             echo 'matrix={"config":[]}' >> "$GITHUB_OUTPUT"
           fi
